@@ -8,14 +8,16 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.2.0-alpha.1 — desktop foundation**
+**v0.2.1-alpha.1 — multi-output foundation**
 
 Implemented in source:
 
 - Electron desktop application shell
 - React + TypeScript operator renderer
-- separate Operator and Audience windows
-- automatic fullscreen Audience placement on an external display when available
+- separate Operator, Audience and Stage windows
+- separate Audience and Stage live state
+- generic screen assignment model with `local-display` and reserved `network` transports
+- automatic local routing: Audience to the first external display and Stage to the second when available
 - explicit Windows x64 installer target
 - operator selection kept separate from live output
 - ProPresenter-style independent output layers
@@ -43,9 +45,9 @@ npm install
 npm run dev
 ```
 
-The app should open the Operator window. Use the **Audience** control in the toolbar to show/hide the Audience output.
+The app should open the Operator window. Use the **Audience** and **Stage** controls in the toolbar to show/hide those logical outputs.
 
-If a second display is connected, the current v0.2 shell attempts to place Audience fullscreen on that display. With only one display, it opens a normal 16:9 Audience window so development can still be tested.
+With one external display, Audience uses it and Stage falls back to a normal development window. With two external displays, Audience uses the first and Stage uses the second. The `network` transport is now part of the model but the Android browser Stage server is intentionally deferred.
 
 ### Production-style build
 
@@ -91,7 +93,7 @@ See `docs/WINDOWS.md` for the Windows laptop + projector setup and test checklis
 
 1. **Operator selection is not live output.** Browsing a presentation must never implicitly change what the audience sees.
 2. **Output is layered.** Slide, media, prop, message, announcement, audio and live-video states are represented independently.
-3. **Audience output is separate.** It receives live state through a narrow IPC bridge.
+3. **Logical screens are separate.** Audience and Stage have independent state and receive it through a narrow generic IPC bridge.
 4. **Playlist items are typed.** The playlist is not restricted to ordinary slide presentations.
 5. **Integrations remain optional and isolated.** Downloader, CrowdLight and future services must not be able to destabilise the core presentation engine.
 6. **ProPresenter familiarity wins over arbitrary simplification** where training value is involved.

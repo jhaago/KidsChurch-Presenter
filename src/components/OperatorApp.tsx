@@ -3,9 +3,13 @@ import { mediaAssets, mediaById, presentationById, presentations, sundayKidsPlay
 import { AudienceOutput } from './AudienceOutput';
 import {
   EMPTY_OUTPUT_STATE,
+  EMPTY_STAGE_OUTPUT_STATE,
   type MediaAsset,
   type OutputState,
+  type PresenterOutputState,
   type PlaylistItem,
+  type ScreenKind,
+  type StageOutputState,
   type Presentation,
   type Slide,
 } from '../domain/types';
@@ -34,7 +38,11 @@ function outputLabel(output: OutputState) {
 export function OperatorApp() {
   const [selectedItemId, setSelectedItemId] = useState('pi-song');
   const [output, setOutput] = useState<OutputState>({ ...EMPTY_OUTPUT_STATE });
-  const [audienceVisible, setAudienceVisibleState] = useState(false);
+  const [stageOutput, setStageOutput] = useState<StageOutputState>({ ...EMPTY_STAGE_OUTPUT_STATE });
+  const [screenVisibility, setScreenVisibility] = useState<Record<ScreenKind, boolean>>({
+    audience: false,
+    stage: false,
+  });
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -47,28 +55,41 @@ export function OperatorApp() {
   const selectedMedia = mediaById(selectedItem.resourceId);
 
   useEffect(() => {
-    window.kidsPresenter?.sendOutputState(output);
-  }, [output]);
+    const presenterOutput: PresenterOutputState = { audience: output, stage: stageOutput };
+    window.kidsPresenter?.sendPresenterOutput(presenterOutput);
+  }, [output, stageOutput]);
 
   useEffect(() => {
     let unsubscribe: () => void = () => {};
     if (window.kidsPresenter) {
-      window.kidsPresenter.getAudienceVisible().then(setAudienceVisibleState).catch(() => undefined);
-      unsubscribe = window.kidsPresenter.onAudienceVisibility(setAudienceVisibleState);
+      Promise.all([
+        window.kidsPresenter.getScreenVisible('audience'),
+        window.kidsPresenter.getScreenVisible('stage'),
+      ])
+        .then(([audience, stage]) => setScreenVisibility({ audience, stage }))
+        .catch(() => undefined);
+
+      unsubscribe = window.kidsPresenter.onScreenVisibility((kind, visible) => {
+        setScreenVisibility((current) => ({ ...current, [kind]: visible }));
+      });
     }
     return unsubscribe;
   }, []);
 
-  const setAudienceVisible = useCallback(async (visible: boolean) => {
+  const setScreenVisible = useCallback(async (kind: ScreenKind, visible: boolean) => {
     if (window.kidsPresenter) {
-      const actual = await window.kidsPresenter.setAudienceVisible(visible);
-      setAudienceVisibleState(actual);
+      const actual = await window.kidsPresenter.setScreenVisible(kind, visible);
+      setScreenVisibility((current) => ({ ...current, [kind]: actual }));
     } else {
-      setAudienceVisibleState(visible);
+      setScreenVisibility((current) => ({ ...current, [kind]: visible }));
     }
   }, []);
 
   const triggerSlide = useCallback((presentation: Presentation, slide: Slide) => {
+    const slides = allSlides(presentation);
+    const currentIndex = slides.findIndex((candidate) => candidate.id === slide.id);
+    const nextSlide = currentIndex >= 0 ? slides[currentIndex + 1] ?? null : null;
+
     setOutput((current) => ({
       ...current,
       slide: {
@@ -80,6 +101,16 @@ export function OperatorApp() {
       black: false,
       logo: false,
     }));
+
+    setStageOutput({
+      presentationId: presentation.id,
+      presentationTitle: presentation.title,
+      currentSlideId: slide.id,
+      currentText: slide.text,
+      nextSlideId: nextSlide?.id ?? null,
+      nextText: nextSlide?.text ?? null,
+      notes: slide.notes ?? null,
+    });
   }, []);
 
   const triggerMedia = useCallback((asset: MediaAsset) => {
@@ -218,17 +249,21 @@ export function OperatorApp() {
             Looks
           </button>
           <button
-            className={`screen screenButton ${audienceVisible ? 'screenOn' : ''}`}
+            className={`screen screenButton ${screenVisibility.audience ? 'screenOn' : ''}`}
             type="button"
-            onClick={() => setAudienceVisible(!audienceVisible)}
+            onClick={() => setScreenVisible('audience', !screenVisibility.audience)}
           >
-            <span className={`dot ${audienceVisible ? 'on' : ''}`} />
+            <span className={`dot ${screenVisibility.audience ? 'on' : ''}`} />
             Audience
           </button>
-          <div className="screen">
-            <span className="dot" />
+          <button
+            className={`screen screenButton ${screenVisibility.stage ? 'screenOn' : ''}`}
+            type="button"
+            onClick={() => setScreenVisible('stage', !screenVisibility.stage)}
+          >
+            <span className={`dot ${screenVisibility.stage ? 'on' : ''}`} />
             Stage
-          </div>
+          </button>
         </div>
       </header>
 
@@ -436,9 +471,13 @@ export function OperatorApp() {
       </section>
 
       <footer className="status">
-        <span>KidsChurch Presenter v0.2 alpha</span>
-        <span>Sunday Kids • Desktop Foundation</span>
-        <span><i className={`dot ${audienceVisible ? 'on' : ''}`} /> Audience</span>
+        <span>KidsChurch Presenter v0.2.1 alpha</span>
+        <span>Sunday Kids • Multi-output Foundation</span>
+        <span>
+          <i className={`dot ${screenVisibility.audience ? 'on' : ''}`} /> Audience
+          &nbsp;&nbsp;
+          <i className={`dot ${screenVisibility.stage ? 'on' : ''}`} /> Stage
+        </span>
       </footer>
 
       <div className={`overlay ${searchOpen ? 'open' : ''}`} onMouseDown={(event: MouseEvent<HTMLDivElement>) => {

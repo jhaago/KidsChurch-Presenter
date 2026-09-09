@@ -1,18 +1,33 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+const validScreenKinds = new Set(['audience', 'stage']);
+
+function assertScreenKind(kind) {
+  if (!validScreenKinds.has(kind)) {
+    throw new Error('Unsupported screen kind: ' + kind);
+  }
+  return kind;
+}
+
 contextBridge.exposeInMainWorld('kidsPresenter', {
   isElectron: true,
-  setAudienceVisible: (visible) => ipcRenderer.invoke('audience:set-visible', Boolean(visible)),
-  getAudienceVisible: () => ipcRenderer.invoke('audience:get-visible'),
-  sendOutputState: (state) => ipcRenderer.send('output:update', state),
-  onOutputState: (callback) => {
-    const listener = (_event, state) => callback(state);
-    ipcRenderer.on('output:state', listener);
-    return () => ipcRenderer.removeListener('output:state', listener);
+  setScreenVisible: (kind, visible) =>
+    ipcRenderer.invoke('screen:set-visible', assertScreenKind(kind), Boolean(visible)),
+  getScreenVisible: (kind) =>
+    ipcRenderer.invoke('screen:get-visible', assertScreenKind(kind)),
+  getScreenAssignments: () => ipcRenderer.invoke('screen:get-assignments'),
+  sendPresenterOutput: (state) => ipcRenderer.send('presenter:output-update', state),
+  onScreenState: (kind, callback) => {
+    const safeKind = assertScreenKind(kind);
+    const listener = (_event, eventKind, state) => {
+      if (eventKind === safeKind) callback(state);
+    };
+    ipcRenderer.on('screen:state', listener);
+    return () => ipcRenderer.removeListener('screen:state', listener);
   },
-  onAudienceVisibility: (callback) => {
-    const listener = (_event, visible) => callback(Boolean(visible));
-    ipcRenderer.on('audience:visibility', listener);
-    return () => ipcRenderer.removeListener('audience:visibility', listener);
+  onScreenVisibility: (callback) => {
+    const listener = (_event, kind, visible) => callback(kind, Boolean(visible));
+    ipcRenderer.on('screen:visibility', listener);
+    return () => ipcRenderer.removeListener('screen:visibility', listener);
   },
 });

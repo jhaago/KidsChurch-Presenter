@@ -36,6 +36,27 @@ Status: in development.
 - clear commands affect intended layers only
 - closing/showing Audience output does not reset operator state
 
+## v0.2.1 — Multi-output foundation
+
+Status: implemented in source.
+
+- generic logical screen model
+- separate Audience and Stage state
+- generic screen IPC instead of Audience-only IPC
+- local Audience and Stage renderer windows
+- automatic first/second external-display routing
+- `local-display` and reserved `network` transports
+- Stage current/next slide renderer
+- output-window focus protection retained
+
+### Deferred from v0.2.1
+
+- network web server
+- QR pairing
+- tablet authentication
+- explicit Screens configuration UI
+- remote control
+
 ## v0.3 — Real service/library persistence
 
 - create/edit presentations
@@ -87,7 +108,7 @@ Status: in development.
 
 ## Later
 
-- Stage display
+- network Stage display / Android browser client
 - Props / Messages / Announcements
 - audio workflows
 - external media-provider integration (video downloader)

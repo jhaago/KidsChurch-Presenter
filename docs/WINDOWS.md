@@ -29,9 +29,16 @@ Before launching KidsChurch Presenter:
 5. Launch KidsChurch Presenter.
 6. Press **Audience** in the operator toolbar.
 
-The app currently selects the first non-primary display as Audience output and makes it fullscreen.
+The app currently routes local screens automatically:
 
-A future milestone will add a ProPresenter-style Screens configuration panel so the operator can explicitly choose which physical display is Audience and which is Stage.
+- Audience -> first non-primary display
+- Stage -> second non-primary display
+
+With the present Kids Church duplicated-TV/tablet setup, Windows still exposes that duplicated pair as one external display, so Audience continues to work as before. Stage can simply remain hidden.
+
+If the Android tablet is later changed to a separate extended Windows display, it can already act as the second local Stage display. The preferred longer-term design is still a network Stage browser client.
+
+A future ProPresenter-style Screens configuration panel will let the operator explicitly choose physical displays and switch Stage between `local-display` and `network`.
 
 ## Run from source
 
@@ -96,6 +103,4 @@ Code signing is not configured yet, so Windows may show an unknown-publisher war
 
 ## Current limitation
 
-v0.2 chooses the first display that is not Windows' primary display. This is adequate for a two-display laptop/projector setup but is not sufficient for a future three-screen configuration.
-
-The planned Screens configuration will store explicit output mappings rather than guessing from primary/non-primary status.
+v0.2.1 can automatically use the first external display for Audience and the second for Stage. Explicit screen mappings are not yet persisted, and the network Stage transport is reserved but not implemented. The planned Screens configuration will store output mappings rather than relying on automatic ordering.

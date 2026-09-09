@@ -8,6 +8,37 @@ export type PlaylistItemType =
 
 export type SlideGroupType = 'verse' | 'chorus' | 'bridge' | 'scripture' | 'generic';
 
+export type ScreenKind = 'audience' | 'stage';
+export type ScreenTransport = 'local-display' | 'network';
+
+export interface ScreenAssignment {
+  id: string;
+  kind: ScreenKind;
+  label: string;
+  transport: ScreenTransport;
+  enabled: boolean;
+  displayId?: string | null;
+}
+
+export const DEFAULT_SCREEN_ASSIGNMENTS: Record<ScreenKind, ScreenAssignment> = {
+  audience: {
+    id: 'audience-main',
+    kind: 'audience',
+    label: 'Audience',
+    transport: 'local-display',
+    enabled: true,
+    displayId: null,
+  },
+  stage: {
+    id: 'stage-main',
+    kind: 'stage',
+    label: 'Stage',
+    transport: 'local-display',
+    enabled: true,
+    displayId: null,
+  },
+};
+
 export interface Slide {
   id: string;
   text: string;
@@ -84,4 +115,34 @@ export const EMPTY_OUTPUT_STATE: OutputState = {
   liveVideo: null,
   logo: false,
   black: false,
+};
+
+export interface StageOutputState {
+  presentationId: string | null;
+  presentationTitle: string | null;
+  currentSlideId: string | null;
+  currentText: string | null;
+  nextSlideId: string | null;
+  nextText: string | null;
+  notes: string | null;
+}
+
+export const EMPTY_STAGE_OUTPUT_STATE: StageOutputState = {
+  presentationId: null,
+  presentationTitle: null,
+  currentSlideId: null,
+  currentText: null,
+  nextSlideId: null,
+  nextText: null,
+  notes: null,
+};
+
+export interface PresenterOutputState {
+  audience: OutputState;
+  stage: StageOutputState;
+}
+
+export const EMPTY_PRESENTER_OUTPUT_STATE: PresenterOutputState = {
+  audience: { ...EMPTY_OUTPUT_STATE },
+  stage: { ...EMPTY_STAGE_OUTPUT_STATE },
 };

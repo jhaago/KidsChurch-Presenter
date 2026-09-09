@@ -17,15 +17,31 @@ The operator window owns user interaction and local UI state:
 - panel visibility
 - slide thumbnail selection context
 
-It also owns the authoritative live-output state for the current single-machine prototype.
+It also owns the authoritative presenter output bundle for the current single-machine prototype.
+
+### Logical screens
+
+The presentation engine now models logical screens separately from physical delivery:
+
+- `audience`
+- `stage`
+
+Each logical screen has a `ScreenAssignment` with a transport:
+
+- `local-display`
+- `network` (reserved in v0.2.1; not implemented yet)
+
+Physical display assignment is therefore a routing decision rather than part of presentation state.
 
 ### Audience window
 
-The Audience window is intentionally dumb. It renders only the live state sent to it and does not read operator selection state.
+The Audience window is intentionally dumb. It renders only Audience live state and does not read operator selection state.
 
-This is an important reliability boundary: browsing in the operator interface must not leak onto the projector.
+### Stage window
 
-Future Stage output will use the same principle with its own renderer contract.
+Stage has independent state from Audience. Its current foundation carries the current presentation/slide, next slide, and notes slot. Black/Clear operations on Audience do not inherently destroy Stage cue state.
+
+This is an important reliability boundary: browsing in the operator interface must not leak onto either output, and future Wi-Fi Stage delivery can subscribe to Stage state without changing the presentation engine.
 
 ## Output layers
 
@@ -110,3 +126,26 @@ Persistence is intentionally not implemented yet. When introduced, service/libra
 ## Future process split
 
 As reliability requirements increase, media playback and external integrations may move behind dedicated processes/services. A crash or stalled download must not take down live projection.
+
+
+## Multi-output routing (v0.2.1)
+
+`PresenterOutputState` contains separate Audience and Stage state.
+
+Electron exposes generic screen IPC:
+
+```text
+Operator
+  -> presenter:output-update
+       -> Audience state -> local Audience window
+       -> Stage state    -> local Stage window
+                          -> future network transport
+```
+
+Current automatic local-display routing is:
+
+- Audience -> first non-primary display
+- Stage -> second non-primary display
+- when the requested physical display is unavailable, that output opens as a normal development window
+
+A future Screens UI will persist explicit physical display IDs and allow Stage to switch from `local-display` to `network`.
