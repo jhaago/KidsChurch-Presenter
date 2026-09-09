@@ -8,6 +8,10 @@ let isQuitting = false;
 
 const devUrl = process.env.VITE_DEV_SERVER_URL || null;
 
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.kidschurch.presenter');
+}
+
 function rendererTarget(mode) {
   if (devUrl) {
     return { type: 'url', value: `${devUrl}?mode=${mode}` };
@@ -61,6 +65,7 @@ function placeAudienceWindow() {
 
   if (external) {
     const { x, y, width, height } = external.bounds;
+    audienceWindow.setFullScreen(false);
     audienceWindow.setBounds({ x, y, width, height });
     audienceWindow.setFullScreen(true);
   } else {
@@ -113,8 +118,14 @@ function setAudienceVisible(visible) {
 
   if (visible) {
     placeAudienceWindow();
-    audienceWindow.show();
-    audienceWindow.focus();
+
+    // Do not steal keyboard focus from the operator when the projector output is shown.
+    if (typeof audienceWindow.showInactive === 'function') {
+      audienceWindow.showInactive();
+    } else {
+      audienceWindow.show();
+      operatorWindow?.focus();
+    }
   } else {
     audienceWindow.hide();
   }
