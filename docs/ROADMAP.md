@@ -108,7 +108,9 @@ Still to build in the broader v0.3 family:
 - managed application data folder
 - basic autosave / recovery
 
-## v0.4 — Real Audience media
+## v0.3.2 — Audience media foundation
+
+Status: foundation implemented.
 
 - still-image media
 - video playback
@@ -131,15 +133,31 @@ Status: implemented in source.
 - legacy lyrics-video trigger with embedded audio
 - background vs full-video playback semantics
 
-### Next audio-engine pass
+## v0.4 — Song Playback Engine
 
-- master song transport
-- play / pause / stop / seek
-- synchronized single-track transport
-- synchronized stem playback from one transport clock
-- Auto Lyrics cue execution from transport position
-- Assisted Lyrics timing/countdown cue
-- persistent song configuration and stem presets
+Status: implemented in source.
+
+- master Web Audio transport
+- Play / Pause / Resume / Stop / Seek
+- secure indexed-resource audio loading through Electron IPC
+- synchronized single backing-track playback
+- synchronized multistem scheduling from one AudioContext clock
+- live stem mute/unmute with stems remaining time-aligned
+- master gain foundation
+- stem-duration mismatch warning
+- Auto Lyrics execution from transport time
+- Assisted Lyrics next-cue countdown
+- Audio Bin control remains available while browsing elsewhere
+- Clear Audio stops the active transport
+
+### Still to build around the transport
+
+- persistent song configuration
+- persistent stem presets (Full Backing / Live Piano / Live Drums etc.)
+- cue-map editor / tap-to-time workflow
+- richer metering and output-device selection
+- optional multichannel audio-interface routing
+- dedicated Lyrics Video transport controls
 
 ## v0.5 — Song editing workflow
 

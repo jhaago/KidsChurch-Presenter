@@ -1,10 +1,12 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import type { SongTransportSnapshot } from '../audio/useSongTransport';
 import type {
   MediaAsset,
   NetworkStageInfo,
   OutputState,
   ResourceSource,
   StageOutputState,
+  Song,
 } from '../domain/types';
 import { Icon } from './ui/Icon';
 
@@ -18,6 +20,14 @@ interface MediaBinProps {
   output: OutputState;
   stageOutput: StageOutputState;
   networkStage: NetworkStageInfo;
+  activeSong?: Song;
+  songTransport: SongTransportSnapshot;
+  onPlaySong: (song: Song) => void;
+  onPauseSong: () => void;
+  onResumeSong: () => void;
+  onStopSong: () => void;
+  onSeekSong: (positionMs: number) => void;
+  onToggleStem: (stemId: string, enabled: boolean) => void;
   onRescanResources: () => void;
   onTriggerMedia: (asset: MediaAsset) => void;
 }
@@ -35,6 +45,91 @@ function PlaceholderTab({ tab, detail }: { tab: Exclude<MediaBinTab, 'Media'>; d
     <div className="binPlaceholder">
       <Icon name={icon} />
       <div><strong>{tab}</strong><span>{detail}</span></div>
+    </div>
+  );
+}
+
+function formatTransportTime(ms: number) {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
+}
+
+function AudioTransportTab({
+  audioCount,
+  activeSong,
+  transport,
+  onPlaySong,
+  onPauseSong,
+  onResumeSong,
+  onStopSong,
+  onSeekSong,
+  onToggleStem,
+}: {
+  audioCount: number;
+  activeSong?: Song;
+  transport: SongTransportSnapshot;
+  onPlaySong: (song: Song) => void;
+  onPauseSong: () => void;
+  onResumeSong: () => void;
+  onStopSong: () => void;
+  onSeekSong: (positionMs: number) => void;
+  onToggleStem: (stemId: string, enabled: boolean) => void;
+}) {
+  if (!activeSong) {
+    return <PlaceholderTab tab="Audio" detail={`${audioCount} indexed audio asset${audioCount === 1 ? '' : 's'} · start playback from a Song item.`} />;
+  }
+
+  const playing = transport.status === 'playing';
+  const paused = transport.status === 'paused';
+  return (
+    <div className="audioTransportTab">
+      <div className="audioTransportIdentity">
+        <Icon name="audio" />
+        <div>
+          <strong>{activeSong.title}</strong>
+          <span>{transport.status.toUpperCase()} · {transport.loadedTrackCount} track{transport.loadedTrackCount === 1 ? '' : 's'}</span>
+        </div>
+      </div>
+      <div className="audioTransportButtons">
+        {playing ? (
+          <button type="button" onClick={onPauseSong}>Ⅱ Pause</button>
+        ) : paused ? (
+          <button className="isPrimary" type="button" onClick={onResumeSong}>▶ Resume</button>
+        ) : (
+          <button className="isPrimary" type="button" onClick={() => onPlaySong(activeSong)}>▶ Play</button>
+        )}
+        <button type="button" onClick={onStopSong}>■ Stop</button>
+      </div>
+      <div className="audioTransportSeek">
+        <span>{formatTransportTime(transport.positionMs)}</span>
+        <input
+          aria-label="Active song position"
+          max={Math.max(transport.durationMs, 1)}
+          min={0}
+          onChange={(event) => onSeekSong(Number(event.target.value))}
+          step={100}
+          type="range"
+          value={Math.min(transport.positionMs, Math.max(transport.durationMs, 1))}
+          disabled={transport.durationMs <= 0}
+        />
+        <span>{transport.durationMs ? formatTransportTime(transport.durationMs) : '--:--'}</span>
+      </div>
+      {activeSong.playbackMode === 'slides-stems' ? (
+        <div className="audioStemQuickControls">
+          {activeSong.audio.stems.filter((stem) => stem.assetId).map((stem) => (
+            <button
+              className={stem.enabled ? 'isEnabled' : ''}
+              key={stem.id}
+              type="button"
+              onClick={() => onToggleStem(stem.id, !stem.enabled)}
+            >
+              {stem.name} <b>{stem.enabled ? 'ON' : 'OFF'}</b>
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {transport.warning ? <span className="audioTransportNotice">{transport.warning}</span> : null}
+      {transport.error ? <span className="audioTransportNotice isError">{transport.error}</span> : null}
     </div>
   );
 }
@@ -63,6 +158,14 @@ export function MediaBin({
   output,
   stageOutput,
   networkStage,
+  activeSong,
+  songTransport,
+  onPlaySong,
+  onPauseSong,
+  onResumeSong,
+  onStopSong,
+  onSeekSong,
+  onToggleStem,
   onRescanResources,
   onTriggerMedia,
 }: MediaBinProps) {
@@ -134,7 +237,17 @@ export function MediaBin({
             </div>
           </>
         ) : activeTab === 'Audio' ? (
-          <PlaceholderTab tab="Audio" detail={`${audioCount} indexed audio asset${audioCount === 1 ? '' : 's'} · playback controls are the next Audio-layer step.`} />
+          <AudioTransportTab
+            activeSong={activeSong}
+            audioCount={audioCount}
+            onPauseSong={onPauseSong}
+            onPlaySong={onPlaySong}
+            onResumeSong={onResumeSong}
+            onSeekSong={onSeekSong}
+            onStopSong={onStopSong}
+            onToggleStem={onToggleStem}
+            transport={songTransport}
+          />
         ) : activeTab === 'Stage' ? (
           <PlaceholderTab tab="Stage" detail={`${networkStage.clientCount} tablet${networkStage.clientCount === 1 ? '' : 's'} connected · ${stageOutput.presentationTitle || 'No live presentation'}`} />
         ) : (

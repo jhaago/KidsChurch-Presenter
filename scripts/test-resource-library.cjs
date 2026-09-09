@@ -22,6 +22,10 @@ async function main() {
   assert.ok(snapshot.assets.some((asset) => asset.kind === 'motion' && asset.title === 'Blue Motion'));
   assert.ok(snapshot.assets.some((asset) => asset.kind === 'still' && asset.title === 'Welcome'));
   assert.ok(snapshot.assets.every((asset) => asset.fileUrl.startsWith('file:')));
+  const motion = snapshot.assets.find((asset) => asset.title === 'Blue Motion');
+  assert.ok(motion);
+  assert.equal(library.assetById(motion.id)?.managedPath, motion.managedPath);
+  assert.equal(library.assetById('missing-asset'), null);
 
   const reloaded = new ResourceLibrary(userData);
   snapshot = await reloaded.load();

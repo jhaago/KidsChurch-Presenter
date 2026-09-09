@@ -810,3 +810,44 @@ kbd {
 .songFallbackBanner{min-height:27px;margin-bottom:7px;padding:5px 7px;border:1px solid #4a4031;background:#272116;display:flex;align-items:center;gap:6px;color:#b8a27f;font-size:7px}
 .songFallbackBanner svg{width:12px;height:12px}
 @media(max-width:1180px){.songSetupGrid{grid-template-columns:1fr}.songStemSection{grid-column:auto}}
+
+
+/* v0.4 song transport */
+.songTransportPanel{margin:6px 11px 3px;border:1px solid #35404a;background:#161b1f}
+.songTransportPanel>header{height:35px;padding:0 9px;border-bottom:1px solid #2d363e;background:#1b2227;display:flex;align-items:center;justify-content:space-between}
+.songTransportPanel>header>div:first-child{display:flex;align-items:center;gap:7px}
+.songTransportPanel>header svg{width:15px;height:15px;color:#6aa0ca}
+.songTransportPanel>header strong{display:block;color:#d9dde0;font-size:9px;letter-spacing:.08em}
+.songTransportPanel>header span{display:block;margin-top:1px;color:#697580;font-size:7px}
+.songTransportClock{display:flex;align-items:baseline;gap:4px}
+.songTransportClock b{color:#e8ebed;font-size:15px;font-variant-numeric:tabular-nums}
+.songTransportClock span{color:#68737c!important;font-size:8px!important}
+.songTransportBody{padding:7px 8px;display:grid;grid-template-columns:auto minmax(150px,1fr);align-items:center;gap:10px}
+.songTransportControls{display:flex;gap:4px}
+.songTransportControls button,.audioTransportButtons button{height:28px;padding:0 9px;border:1px solid #3b444b;border-radius:2px;background:#242b30;color:#aeb5ba;cursor:pointer;font-size:8px}
+.songTransportControls button:hover,.audioTransportButtons button:hover{background:#30383e}
+.songTransportControls button:disabled,.audioTransportButtons button:disabled{opacity:.35;cursor:not-allowed}
+.songTransportControls .transportPrimary,.audioTransportButtons .isPrimary{border-color:#3d769f;background:#22577d;color:#fff}
+.songTransportTimeline{min-width:0}
+.songTransportTimeline input,.audioTransportSeek input{width:100%;accent-color:#4d91c4}
+.songCueReadout{height:18px;display:flex;align-items:center;justify-content:space-between;color:#77838c;font-size:7px}
+.songCueReadout b{color:#c7d9e6;font-size:8px;font-variant-numeric:tabular-nums}
+.songTransportWarning,.songTransportError{margin:0;padding:4px 8px;border-top:1px solid #423b2c;background:#251f15;color:#bea873;font-size:7px}
+.songTransportError{border-color:#533235;background:#2a191b;color:#d18c92}
+
+/* Audio Bin live transport */
+.audioTransportTab{width:100%;min-width:0;padding:7px 10px;display:grid;grid-template-columns:180px auto minmax(180px,1fr);gap:10px;align-items:center}
+.audioTransportIdentity{min-width:0;display:flex;align-items:center;gap:7px}
+.audioTransportIdentity svg{width:20px;height:20px;color:#6e9fc4}
+.audioTransportIdentity>div{min-width:0}
+.audioTransportIdentity strong{display:block;overflow:hidden;color:#d4d8db;font-size:9px;white-space:nowrap;text-overflow:ellipsis}
+.audioTransportIdentity span{display:block;margin-top:2px;color:#68747d;font-size:7px}
+.audioTransportButtons{display:flex;gap:4px}
+.audioTransportSeek{min-width:0;display:grid;grid-template-columns:31px minmax(80px,1fr) 31px;align-items:center;gap:5px;color:#7f8991;font-size:7px;font-variant-numeric:tabular-nums}
+.audioStemQuickControls{grid-column:1/-1;display:flex;gap:4px;overflow-x:auto}
+.audioStemQuickControls button{height:22px;padding:0 6px;border:1px solid #49383b;border-radius:2px;background:#291e20;color:#987278;cursor:pointer;font-size:7px;white-space:nowrap}
+.audioStemQuickControls button.isEnabled{border-color:#346f48;background:#1a3123;color:#8acb9d}
+.audioStemQuickControls b{margin-left:3px;font-size:6px}
+.audioTransportNotice{grid-column:1/-1;color:#b9a36f;font-size:7px}
+.audioTransportNotice.isError{color:#d48e95}
+@media(max-width:1180px){.songTransportBody{grid-template-columns:1fr}.audioTransportTab{grid-template-columns:1fr auto}.audioTransportSeek{grid-column:1/-1}}

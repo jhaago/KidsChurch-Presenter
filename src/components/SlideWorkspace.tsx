@@ -1,5 +1,7 @@
 import type { MediaAsset, OutputState, PlaylistItem, Presentation, Slide, Song } from '../domain/types';
+import type { SongTransportSnapshot } from '../audio/useSongTransport';
 import { SongSetupPanel } from './SongSetupPanel';
+import { SongTransportPanel } from './SongTransportPanel';
 import { Icon } from './ui/Icon';
 
 interface SlideWorkspaceProps {
@@ -10,7 +12,13 @@ interface SlideWorkspaceProps {
   availableAssets: MediaAsset[];
   selectedSlideId: string | null;
   output: OutputState;
+  songTransport: SongTransportSnapshot;
   onChangeSong: (song: Song) => void;
+  onPlaySong: (song: Song) => void;
+  onPauseSong: () => void;
+  onResumeSong: () => void;
+  onStopSong: () => void;
+  onSeekSong: (positionMs: number) => void;
   onSelectSlide: (slideId: string) => void;
   onTriggerSlide: (presentation: Presentation, slide: Slide) => void;
   onTriggerMedia: (asset: MediaAsset) => void;
@@ -36,7 +44,13 @@ export function SlideWorkspace({
   availableAssets,
   selectedSlideId,
   output,
+  songTransport,
   onChangeSong,
+  onPlaySong,
+  onPauseSong,
+  onResumeSong,
+  onStopSong,
+  onSeekSong,
   onSelectSlide,
   onTriggerSlide,
   onTriggerMedia,
@@ -60,12 +74,23 @@ export function SlideWorkspace({
 
       <div className="workspaceScroll">
         {song ? (
-          <SongSetupPanel
-            assets={availableAssets}
-            onChange={onChangeSong}
-            onTriggerLyricsVideo={onTriggerLyricsVideo}
-            song={song}
-          />
+          <>
+            <SongSetupPanel
+              assets={availableAssets}
+              onChange={onChangeSong}
+              onTriggerLyricsVideo={onTriggerLyricsVideo}
+              song={song}
+            />
+            <SongTransportPanel
+              onPause={onPauseSong}
+              onPlay={() => onPlaySong(song)}
+              onResume={onResumeSong}
+              onSeek={onSeekSong}
+              onStop={onStopSong}
+              song={song}
+              transport={songTransport}
+            />
+          </>
         ) : null}
 
         {presentation ? (

@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('kidsPresenter', {
   addResourceFolder: () => ipcRenderer.invoke('resource-library:add-folder'),
   removeResourceFolder: (sourceId) => ipcRenderer.invoke('resource-library:remove-folder', sourceId),
   rescanResourceLibrary: () => ipcRenderer.invoke('resource-library:rescan'),
+  readAudioAsset: (assetId) => ipcRenderer.invoke('audio:read-asset', assetId),
   sendPresenterOutput: (state) => ipcRenderer.send('presenter:output-update', state),
   onScreenState: (kind, callback) => {
     const safeKind = assertScreenKind(kind);

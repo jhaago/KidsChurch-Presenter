@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
+import { useSongTransport } from '../audio/useSongTransport';
 import { mediaAssets as demoMediaAssets, mediaById, presentationById, presentations, songs as demoSongs, sundayKidsPlaylist } from '../data/demo';
 import {
   EMPTY_OUTPUT_STATE,
@@ -98,6 +99,15 @@ export function OperatorApp() {
     }, {}),
     [resourceLibrary.assets],
   );
+  const songTransport = useSongTransport(allMediaAssets);
+  const activeSong = useMemo(
+    () => songs.find((song) => song.id === songTransport.state.songId),
+    [songs, songTransport.state.songId],
+  );
+  const lastAutoCueRef = useRef<{ songId: string | null; cueId: string | null }>({
+    songId: null,
+    cueId: null,
+  });
 
   useEffect(() => {
     const firstSlide = selectedPresentation ? allSlides(selectedPresentation)[0] : null;
@@ -197,24 +207,113 @@ export function OperatorApp() {
     }));
   }, []);
 
-  const updateSong = useCallback((updatedSong: Song) => {
-    setSongs((current) => current.map((song) => song.id === updatedSong.id ? updatedSong : song));
-  }, []);
+  const playSong = useCallback(async (song: Song) => {
+    const started = await songTransport.play(song);
+    if (!started) return;
 
-  const clearAll = useCallback(() => setOutput({ ...EMPTY_OUTPUT_STATE }), []);
+    const background = song.backgroundAssetId
+      ? allMediaAssets.find((asset) => asset.id === song.backgroundAssetId)
+      : undefined;
+
+    setOutput((current) => ({
+      ...current,
+      audio: { id: song.id, title: song.title },
+      media: background && song.playbackMode !== 'lyrics-video'
+        ? liveMediaFromAsset(background, 'background')
+        : current.media,
+      black: false,
+      logo: false,
+    }));
+  }, [allMediaAssets, songTransport.play]);
+
+  const pauseSong = useCallback(() => songTransport.pause(), [songTransport.pause]);
+  const resumeSong = useCallback(() => {
+    void songTransport.resume();
+  }, [songTransport.resume]);
+  const seekSong = useCallback((positionMs: number) => {
+    void songTransport.seek(positionMs);
+  }, [songTransport.seek]);
+
+  const stopSong = useCallback(() => {
+    songTransport.stop();
+    setOutput((current) => ({ ...current, audio: null }));
+  }, [songTransport.stop]);
+
+  const updateSong = useCallback((updatedSong: Song) => {
+    const previous = songs.find((song) => song.id === updatedSong.id);
+    if (songTransport.state.songId === updatedSong.id && previous) {
+      for (const stem of updatedSong.audio.stems) {
+        const oldStem = previous.audio.stems.find((candidate) => candidate.id === stem.id);
+        if (oldStem && oldStem.enabled !== stem.enabled) {
+          songTransport.setStemEnabled(stem.id, stem.enabled);
+        }
+      }
+    }
+    setSongs((current) => current.map((song) => song.id === updatedSong.id ? updatedSong : song));
+  }, [songs, songTransport.setStemEnabled, songTransport.state.songId]);
+
+  const clearAll = useCallback(() => {
+    songTransport.stop();
+    setOutput({ ...EMPTY_OUTPUT_STATE });
+  }, [songTransport.stop]);
   const clearSlide = useCallback(() => setOutput((current) => ({ ...current, slide: null })), []);
   const clearMedia = useCallback(() => setOutput((current) => ({ ...current, media: null })), []);
   const clearProps = useCallback(() => setOutput((current) => ({ ...current, prop: null })), []);
-  const clearAudio = useCallback(() => setOutput((current) => ({ ...current, audio: null })), []);
+  const clearAudio = useCallback(() => stopSong(), [stopSong]);
   const clearMessage = useCallback(
     () => setOutput((current) => ({ ...current, message: null, announcement: null })),
     [],
   );
-  const clearToLogo = useCallback(() => setOutput({ ...EMPTY_OUTPUT_STATE, logo: true }), []);
+  const clearToLogo = useCallback(() => {
+    songTransport.stop();
+    setOutput({ ...EMPTY_OUTPUT_STATE, logo: true });
+  }, [songTransport.stop]);
   const toggleBlack = useCallback(
     () => setOutput((current) => ({ ...current, black: !current.black })),
     [],
   );
+
+  useEffect(() => {
+    const transport = songTransport.state;
+    if (!transport.songId || transport.status !== 'playing') return;
+
+    const song = songs.find((candidate) => candidate.id === transport.songId);
+    if (!song || song.lyricControlMode !== 'auto' || !song.presentationId) return;
+
+    if (lastAutoCueRef.current.songId !== song.id) {
+      lastAutoCueRef.current = { songId: song.id, cueId: null };
+    }
+
+    const cue = [...song.lyricCues]
+      .sort((a, b) => a.timeMs - b.timeMs)
+      .filter((candidate) => candidate.timeMs <= transport.positionMs + 50)
+      .at(-1);
+    if (!cue || cue.id === lastAutoCueRef.current.cueId) return;
+
+    const presentation = presentationById(song.presentationId);
+    const slide = presentation
+      ? allSlides(presentation).find((candidate) => candidate.id === cue.slideId)
+      : undefined;
+    if (!presentation || !slide) return;
+
+    lastAutoCueRef.current = { songId: song.id, cueId: cue.id };
+    setSelectedSlideId(slide.id);
+    triggerSlide(presentation, slide);
+  }, [
+    songTransport.state.positionMs,
+    songTransport.state.songId,
+    songTransport.state.status,
+    songs,
+    triggerSlide,
+  ]);
+
+  useEffect(() => {
+    if (songTransport.state.status !== 'ended' && songTransport.state.status !== 'error') return;
+    const songId = songTransport.state.songId;
+    setOutput((current) =>
+      current.audio?.id === songId ? { ...current, audio: null } : current,
+    );
+  }, [songTransport.state.songId, songTransport.state.status]);
 
   const navigate = useCallback(
     (direction: -1 | 1) => {
@@ -342,6 +441,12 @@ export function OperatorApp() {
           selectedItem={selectedItem}
           selectedSlideId={selectedSlideId}
           song={selectedSong}
+          songTransport={songTransport.state}
+          onPauseSong={pauseSong}
+          onPlaySong={(song) => void playSong(song)}
+          onResumeSong={resumeSong}
+          onSeekSong={seekSong}
+          onStopSong={stopSong}
         />
         <LivePanel
           networkStage={networkStage}
@@ -360,14 +465,33 @@ export function OperatorApp() {
       </main>
 
       <MediaBin
+        activeSong={activeSong}
         activeTab={activeMediaTab}
         assets={allMediaAssets}
         networkStage={networkStage}
+        onPauseSong={pauseSong}
+        onPlaySong={(song) => void playSong(song)}
+        onResumeSong={resumeSong}
+        onSeekSong={seekSong}
+        onStopSong={stopSong}
+        onToggleStem={(stemId, enabled) => {
+          if (!activeSong) return;
+          updateSong({
+            ...activeSong,
+            audio: {
+              ...activeSong.audio,
+              stems: activeSong.audio.stems.map((stem) =>
+                stem.id === stemId ? { ...stem, enabled } : stem,
+              ),
+            },
+          });
+        }}
         onRescanResources={() => {
           void window.kidsPresenter?.rescanResourceLibrary().then(setResourceLibrary);
         }}
         onTriggerMedia={triggerMedia}
         output={output}
+        songTransport={songTransport.state}
         resourceSources={resourceLibrary.sources}
         setActiveTab={setActiveMediaTab}
         stageOutput={stageOutput}
@@ -375,7 +499,9 @@ export function OperatorApp() {
 
       <footer className="operatorStatusBar">
         <span>KidsChurch Presenter <b>v{APP_VERSION}</b></span>
-        <span>Sunday Kids</span>
+        <span>{songTransport.state.songTitle
+          ? `${songTransport.state.songTitle} · ${songTransport.state.status.toUpperCase()}`
+          : 'Sunday Kids'}</span>
         <span><i className={screenVisibility.audience ? 'isOn' : ''}/>Audience <i className={screenVisibility.stage ? 'isOn' : ''}/>Stage</span>
       </footer>
 

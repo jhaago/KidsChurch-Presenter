@@ -22,6 +22,7 @@ declare global {
       addResourceFolder: () => Promise<ResourceLibrarySnapshot>;
       removeResourceFolder: (sourceId: string) => Promise<ResourceLibrarySnapshot>;
       rescanResourceLibrary: () => Promise<ResourceLibrarySnapshot>;
+      readAudioAsset: (assetId: string) => Promise<ArrayBuffer>;
       sendPresenterOutput: (state: PresenterOutputState) => void;
       onScreenState(kind: 'audience', callback: (state: OutputState) => void): () => void;
       onScreenState(kind: 'stage', callback: (state: StageOutputState) => void): () => void;

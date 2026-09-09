@@ -135,6 +135,11 @@ class ResourceLibrary {
     return this.snapshot();
   }
 
+  assetById(assetId) {
+    const asset = this.assets.find((candidate) => candidate.id === assetId);
+    return asset ? { ...asset } : null;
+  }
+
   snapshot() {
     return {
       sources: this.sources.map((source) => ({ ...source })),

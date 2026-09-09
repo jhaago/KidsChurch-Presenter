@@ -1,6 +1,6 @@
 {
   "name": "kidschurch-presenter",
-  "version": "0.3.1-alpha.1",
+  "version": "0.4.0-alpha.1",
   "type": "module",
   "private": true,
   "description": "A ProPresenter-familiar presentation application for Kids Church.",

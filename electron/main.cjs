@@ -1,4 +1,5 @@
 const { app, BrowserWindow, dialog, ipcMain, screen } = require('electron');
+const fs = require('node:fs/promises');
 const path = require('node:path');
 const { NetworkStageServer } = require('./stage-server.cjs');
 const { ResourceLibrary } = require('./resource-library.cjs');
@@ -292,6 +293,16 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('resource-library:rescan', async () => {
     return publishResourceLibrary(await resourceLibrary.rescan());
+  });
+
+  ipcMain.handle('audio:read-asset', async (_event, assetId) => {
+    const asset = resourceLibrary?.assetById(String(assetId));
+    if (!asset || asset.kind !== 'audio' || !asset.managedPath) {
+      throw new Error('Audio asset is not available in an approved resource folder.');
+    }
+
+    const data = await fs.readFile(asset.managedPath);
+    return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
   });
 
   networkStageServer.onInfo((info) => {

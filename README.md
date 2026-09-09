@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.3.1-alpha.1 — first-class Song system foundation**
+**v0.4.0-alpha.1 — Song Playback Engine**
 
 Implemented in source:
 
@@ -46,6 +46,15 @@ Implemented in source:
 - timestamp cue maps for Assisted/Auto lyrics
 - legacy lyrics-video triggering with embedded audio
 - video/background playback semantics separated: full videos are audible/non-looping; motion backgrounds are muted/looping
+- Web Audio master Song transport with Play / Pause / Resume / Stop / Seek
+- backing tracks loaded from approved resource-library audio assets
+- multistem playback scheduled from one shared AudioContext clock
+- live stem mute/unmute without restarting or losing synchronization
+- stem-duration mismatch warning
+- Audio Bin transport that remains available while browsing other service items
+- Auto Lyrics cue execution from the same transport position
+- Assisted Lyrics next-cue countdown from the same timing map
+- F5 / Clear Audio now stops the real song transport
 
 ## Run on macOS or Windows
 
@@ -115,7 +124,24 @@ A Song is now a first-class resource rather than just a presentation with song-s
 
 Lyrics can independently be configured as **Manual**, **Assisted**, or **Auto**. The cue map is part of the Song model now; synchronized audio transport and automatic cue execution are the next audio-engine pass.
 
-The stem UI intentionally configures files and enabled/disabled parts now, but does not yet start multiple files with approximate HTML-audio timing. The upcoming multitrack engine will use one master transport so stems and Auto Lyrics share the same clock.
+The Song transport now uses the Web Audio API. Assigned stems are decoded and scheduled against one shared AudioContext start time, rather than starting independent HTML audio elements. Muted stems remain on the shared timeline at zero gain, so a stem can be switched on during playback without restarting it.
+
+**Auto Lyrics** uses the exact same transport position as the backing track/stems. **Assisted** mode leaves slide control with the operator but displays the next stored cue and countdown. Song settings are still in-memory in this alpha; persistent Song/service storage is the next major phase.
+
+## Song Playback Engine test
+
+For a real test, add a OneDrive/local folder containing a backing track or WAV stems, then configure **Light of Hope**:
+
+1. choose **Slides + Track** and assign an audio resource
+2. press **Play**, then Pause / Resume / Seek / Stop
+3. switch lyrics to **Assisted** and confirm the next-cue countdown moves with the track
+4. switch lyrics to **Auto** and confirm lyric slides follow the stored cue map
+5. choose **Slides + Stems**, assign multiple stems exported from the same zero point, and start playback
+6. mute/unmute a stem while playing and confirm the other stems do not restart
+7. browse another service item, open the **Audio** tab, and confirm the active song remains controllable
+8. use **Clear Audio / F5** and confirm playback stops
+
+For production stem files, export every stem from the same start and end points. Presenter warns when decoded stem durations differ by more than 250 ms.
 
 ## First desktop test checklist
 
