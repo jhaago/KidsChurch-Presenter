@@ -161,12 +161,20 @@ Status: first editor/persistence pass implemented in source.
 - add/delete/reorder slides
 - editable Song names synchronized to linked presentation/service item
 
-### Next v0.5 passes
+## v0.5.1 — Library + service management
+
+Status: implemented in source.
 
 - create new Presentation
-- create new Song
-- duplicate Presentation / Song
-- playlist item add/remove/reorder
+- create new Song with linked lyrics presentation
+- duplicate Presentation / Song with independent IDs
+- delete library resources safely
+- add saved Presentations/Songs to current service
+- remove service references without deleting resources
+- reorder current service items
+
+### Next v0.5 passes
+
 - multiple saved service playlists
 - arrangements / repeat Verse-Chorus sections without duplicating source lyrics
 - undo/redo

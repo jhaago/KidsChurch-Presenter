@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.5.0-alpha.1 — Editing + Persistence Foundation**
+**v0.5.1-alpha.1 — Library + Service Management**
 
 Implemented in source:
 
@@ -64,6 +64,15 @@ Implemented in source:
 - add/delete/reorder slides within groups
 - editable Song names with linked lyrics-presentation/service-title synchronization
 - live Audience/Stage text updates when the currently-live slide is edited
+- create new Presentations and Songs from the Library pane
+- saved Song resources automatically create linked lyric presentations
+- duplicate Presentations with fresh group/slide IDs
+- duplicate Songs with fresh presentation/stem/cue IDs while preserving assigned media/audio
+- delete Presentation/Song resources with service-reference cleanup
+- add any saved Presentation/Song back into the current service
+- remove an item from the service without deleting its library resource
+- move service items up/down while preserving live output
+- Library pane now lists saved Presentation/Song resources independently from the current service
 
 ## Run on macOS or Windows
 
@@ -136,6 +145,20 @@ Lyrics can independently be configured as **Manual**, **Assisted**, or **Auto**.
 The Song transport now uses the Web Audio API. Assigned stems are decoded and scheduled against one shared AudioContext start time, rather than starting independent HTML audio elements. Muted stems remain on the shared timeline at zero gain, so a stem can be switched on during playback without restarting it.
 
 **Auto Lyrics** uses the exact same transport position as the backing track/stems. **Assisted** mode leaves slide control with the operator but displays the next stored cue and countdown. Song and presentation configuration is now persisted automatically in the desktop app data folder.
+
+## Library and service management
+
+The left side now distinguishes **saved library resources** from **items in the current service**.
+
+- **New Slides** creates a saved Presentation and adds it to the current service.
+- **New Song** creates a Song plus its linked lyrics presentation and adds the Song to the service.
+- The **+** beside any library resource adds another service reference to it.
+- **Duplicate** makes a genuinely independent copy of the selected Presentation or Song.
+- **Delete** removes the underlying resource and cleans up its service references; external audio/video files are never deleted.
+- The arrows beside a service item reorder that service.
+- **×** beside a service item removes only that service reference, leaving the library resource available to add again later.
+
+Removing/reordering service items does not clear whatever is already live on Audience or Stage.
 
 ## Editing and persistence
 

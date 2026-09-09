@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { useSongTransport } from '../audio/useSongTransport';
 import {
+  createBlankPresentation,
+  createBlankSong,
+  duplicatePresentationResource,
+  duplicateSongResource,
+  playlistItemForPresentation,
+  playlistItemForSong,
+} from '../domain/libraryActions';
+import {
   mediaAssets as demoMediaAssets,
   mediaById,
   presentations as demoPresentations,
@@ -372,6 +380,172 @@ export function OperatorApp() {
     }));
   }, [songs, songTransport.setStemEnabled, songTransport.state.songId]);
 
+  const appendAndSelectServiceItem = useCallback((item: Playlist['items'][number]) => {
+    setPlaylist((current) => ({ ...current, items: [...current.items, item] }));
+    setSelectedItemId(item.id);
+  }, []);
+
+  const createPresentation = useCallback(() => {
+    const created = createBlankPresentation();
+    setPresentations((current) => [...current, created.presentation]);
+    appendAndSelectServiceItem(created.item);
+  }, [appendAndSelectServiceItem]);
+
+  const createSong = useCallback(() => {
+    const created = createBlankSong();
+    setPresentations((current) => [...current, created.presentation]);
+    setSongs((current) => [...current, created.song]);
+    appendAndSelectServiceItem(created.item);
+  }, [appendAndSelectServiceItem]);
+
+  const addPresentationToService = useCallback((presentationId: string) => {
+    const presentation = presentations.find((candidate) => candidate.id === presentationId);
+    if (!presentation) return;
+    appendAndSelectServiceItem(playlistItemForPresentation(presentation));
+  }, [appendAndSelectServiceItem, presentations]);
+
+  const addSongToService = useCallback((songId: string) => {
+    const song = songs.find((candidate) => candidate.id === songId);
+    if (!song) return;
+    appendAndSelectServiceItem(playlistItemForSong(song));
+  }, [appendAndSelectServiceItem, songs]);
+
+  const duplicateSelected = useCallback(() => {
+    if (!selectedItem) return;
+
+    if (selectedItem.type === 'song') {
+      const song = songs.find((candidate) => candidate.id === selectedItem.resourceId);
+      const presentation = song?.presentationId
+        ? presentations.find((candidate) => candidate.id === song.presentationId)
+        : undefined;
+      if (!song || !presentation) return;
+
+      const duplicated = duplicateSongResource(song, presentation);
+      setPresentations((current) => [...current, duplicated.presentation]);
+      setSongs((current) => [...current, duplicated.song]);
+      setPlaylist((current) => {
+        const selectedIndex = current.items.findIndex((item) => item.id === selectedItem.id);
+        const nextItems = [...current.items];
+        nextItems.splice(selectedIndex >= 0 ? selectedIndex + 1 : nextItems.length, 0, duplicated.item);
+        return { ...current, items: nextItems };
+      });
+      setSelectedItemId(duplicated.item.id);
+      return;
+    }
+
+    if (['presentation', 'bible', 'timer'].includes(selectedItem.type)) {
+      const presentation = presentations.find((candidate) => candidate.id === selectedItem.resourceId);
+      if (!presentation) return;
+
+      const duplicated = duplicatePresentationResource(presentation);
+      setPresentations((current) => [...current, duplicated.presentation]);
+      setPlaylist((current) => {
+        const selectedIndex = current.items.findIndex((item) => item.id === selectedItem.id);
+        const nextItems = [...current.items];
+        nextItems.splice(selectedIndex >= 0 ? selectedIndex + 1 : nextItems.length, 0, duplicated.item);
+        return { ...current, items: nextItems };
+      });
+      setSelectedItemId(duplicated.item.id);
+    }
+  }, [presentations, selectedItem, songs]);
+
+  const removeServiceItem = useCallback((itemId: string) => {
+    if (playlist.items.length <= 1) return;
+    const index = playlist.items.findIndex((item) => item.id === itemId);
+    if (index < 0) return;
+    const nextItems = playlist.items.filter((item) => item.id !== itemId);
+
+    setPlaylist((current) => ({ ...current, items: current.items.filter((item) => item.id !== itemId) }));
+    if (selectedItemId === itemId) {
+      const replacement = nextItems[Math.min(index, nextItems.length - 1)];
+      if (replacement) setSelectedItemId(replacement.id);
+    }
+  }, [playlist.items, selectedItemId]);
+
+  const moveServiceItem = useCallback((itemId: string, direction: -1 | 1) => {
+    setPlaylist((current) => {
+      const from = current.items.findIndex((item) => item.id === itemId);
+      const to = from + direction;
+      if (from < 0 || to < 0 || to >= current.items.length) return current;
+      const nextItems = [...current.items];
+      const [item] = nextItems.splice(from, 1);
+      nextItems.splice(to, 0, item);
+      return { ...current, items: nextItems };
+    });
+  }, []);
+
+  const deleteSelected = useCallback(() => {
+    if (!selectedItem) return;
+
+    if (selectedItem.type === 'song') {
+      const song = songs.find((candidate) => candidate.id === selectedItem.resourceId);
+      if (!song) return;
+      const affectedItems = playlist.items.filter((item) => item.type === 'song' && item.resourceId === song.id);
+      if (playlist.items.length - affectedItems.length < 1) {
+        window.alert('Add another item to the service before deleting this Song.');
+        return;
+      }
+      if (!window.confirm(`Delete “${song.title}” from the library? This removes every service reference to it but does not delete media/audio files.`)) return;
+
+      if (songTransport.state.songId === song.id) stopSong();
+      const linkedPresentationId = song.presentationId;
+      setSongs((current) => current.filter((candidate) => candidate.id !== song.id));
+      if (linkedPresentationId) {
+        setPresentations((current) => current.filter((candidate) => candidate.id !== linkedPresentationId));
+      }
+
+      const remainingItems = playlist.items.filter((item) => !(item.type === 'song' && item.resourceId === song.id));
+      setPlaylist((current) => ({
+        ...current,
+        items: current.items.filter((item) => !(item.type === 'song' && item.resourceId === song.id)),
+      }));
+      setSelectedItemId(remainingItems[0]?.id ?? selectedItemId);
+
+      if (linkedPresentationId && output.slide?.presentationId === linkedPresentationId) {
+        setOutput((current) => ({ ...current, slide: null }));
+        setStageOutput({ ...EMPTY_STAGE_OUTPUT_STATE });
+      }
+      if (song.lyricsVideoAssetId && output.media?.id === song.lyricsVideoAssetId) {
+        setOutput((current) => ({ ...current, media: null }));
+      }
+      return;
+    }
+
+    if (['presentation', 'bible', 'timer'].includes(selectedItem.type)) {
+      const presentation = presentations.find((candidate) => candidate.id === selectedItem.resourceId);
+      if (!presentation) return;
+      const affectedItems = playlist.items.filter((item) => item.resourceId === presentation.id);
+      if (playlist.items.length - affectedItems.length < 1) {
+        window.alert('Add another item to the service before deleting this Presentation.');
+        return;
+      }
+      if (!window.confirm(`Delete “${presentation.title}” from the library? This removes every service reference to it.`)) return;
+
+      setPresentations((current) => current.filter((candidate) => candidate.id !== presentation.id));
+      const remainingItems = playlist.items.filter((item) => item.resourceId !== presentation.id);
+      setPlaylist((current) => ({
+        ...current,
+        items: current.items.filter((item) => item.resourceId !== presentation.id),
+      }));
+      setSelectedItemId(remainingItems[0]?.id ?? selectedItemId);
+
+      if (output.slide?.presentationId === presentation.id) {
+        setOutput((current) => ({ ...current, slide: null }));
+        setStageOutput({ ...EMPTY_STAGE_OUTPUT_STATE });
+      }
+    }
+  }, [
+    output.media?.id,
+    output.slide?.presentationId,
+    playlist.items,
+    presentations,
+    selectedItem,
+    selectedItemId,
+    songTransport.state.songId,
+    songs,
+    stopSong,
+  ]);
+
   const clearAll = useCallback(() => {
     songTransport.stop();
     setOutput({ ...EMPTY_OUTPUT_STATE });
@@ -540,6 +714,14 @@ export function OperatorApp() {
           playlist={playlist}
           presentations={presentations}
           songs={songs}
+          onCreatePresentation={createPresentation}
+          onCreateSong={createSong}
+          onAddPresentationToService={addPresentationToService}
+          onAddSongToService={addSongToService}
+          onDuplicateSelected={duplicateSelected}
+          onDeleteSelected={deleteSelected}
+          onMoveServiceItem={moveServiceItem}
+          onRemoveServiceItem={removeServiceItem}
           onAddResourceFolder={() => {
             void window.kidsPresenter?.addResourceFolder().then(setResourceLibrary);
           }}
