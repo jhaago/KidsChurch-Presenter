@@ -26,6 +26,20 @@ function allSlides(presentation: Presentation) {
   return presentation.groups.flatMap((group) => group.slides);
 }
 
+function liveMediaFromAsset(asset: MediaAsset, playbackRole: 'background' | 'video' = 'background') {
+  return {
+    id: asset.id,
+    title: asset.title,
+    kind: asset.kind,
+    fileUrl: asset.fileUrl,
+    sourceId: asset.sourceId,
+    sourceLabel: asset.sourceLabel,
+    playbackRole,
+    muted: playbackRole === 'background',
+    loop: playbackRole === 'background' && asset.kind === 'motion',
+  } as const;
+}
+
 export function OperatorApp() {
   const [selectedItemId, setSelectedItemId] = useState('pi-song');
   const [selectedSlideId, setSelectedSlideId] = useState<string | null>('loh-v1-1');
@@ -161,19 +175,7 @@ export function OperatorApp() {
       nextText: nextSlide?.text ?? null,
       notes: slide.notes ?? null,
     });
-  }, [allMediaAssets, liveMediaFromAsset, songs]);
-
-  const liveMediaFromAsset = useCallback((asset: MediaAsset, playbackRole: 'background' | 'video' = 'background') => ({
-    id: asset.id,
-    title: asset.title,
-    kind: asset.kind,
-    fileUrl: asset.fileUrl,
-    sourceId: asset.sourceId,
-    sourceLabel: asset.sourceLabel,
-    playbackRole,
-    muted: playbackRole === 'background',
-    loop: playbackRole === 'background' && asset.kind === 'motion',
-  }), []);
+  }, [allMediaAssets, songs]);
 
   const triggerMedia = useCallback((asset: MediaAsset) => {
     const playbackRole = asset.kind === 'video' ? 'video' : 'background';
@@ -183,7 +185,7 @@ export function OperatorApp() {
       black: false,
       logo: false,
     }));
-  }, [liveMediaFromAsset]);
+  }, []);
 
   const triggerLyricsVideo = useCallback((asset: MediaAsset) => {
     setOutput((current) => ({
@@ -193,7 +195,7 @@ export function OperatorApp() {
       black: false,
       logo: false,
     }));
-  }, [liveMediaFromAsset]);
+  }, []);
 
   const updateSong = useCallback((updatedSong: Song) => {
     setSongs((current) => current.map((song) => song.id === updatedSong.id ? updatedSong : song));
