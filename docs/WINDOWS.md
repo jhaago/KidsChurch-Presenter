@@ -104,3 +104,16 @@ Code signing is not configured yet, so Windows may show an unknown-publisher war
 ## Current limitation
 
 v0.2.1 can automatically use the first external display for Audience and the second for Stage. Explicit screen mappings are not yet persisted, and the network Stage transport is reserved but not implemented. The planned Screens configuration will store output mappings rather than relying on automatic ordering.
+
+
+## Network Stage on Android
+
+v0.2.2 can expose Stage directly over the local network without making the tablet a Windows display.
+
+1. Connect the Windows laptop and Android tablet to the same reachable local network.
+2. Launch KidsChurch Presenter.
+3. Find **Network Stage** in the operator inspector.
+4. Open the displayed Stage URL in Chrome on the tablet.
+5. Trigger a slide. The tablet should update CURRENT and NEXT independently from Audience.
+
+Windows may request firewall permission the first time the presenter listens on the LAN. Allow access on the appropriate trusted/private church network. If the church Wi-Fi uses client isolation or a guest network, devices may be prevented from reaching each other even when they share the same Wi-Fi name.

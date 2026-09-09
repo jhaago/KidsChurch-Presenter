@@ -57,6 +57,27 @@ Status: implemented in source.
 - explicit Screens configuration UI
 - remote control
 
+## v0.2.2 — Network Stage foundation
+
+Status: implemented in source.
+
+- built-in LAN HTTP server
+- Android/browser Stage page
+- SSE current/next Stage updates
+- automatic reconnect
+- random per-launch read-only Stage token
+- operator Stage URL display
+- connected client count
+- no extra server dependency
+
+### Still later
+
+- QR code pairing
+- persistent trusted devices
+- explicit network interface selection
+- remote-control permissions
+- polished Stage themes / clocks / timers
+
 ## v0.3 — Real service/library persistence
 
 - create/edit presentations

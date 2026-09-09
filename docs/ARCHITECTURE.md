@@ -149,3 +149,20 @@ Current automatic local-display routing is:
 - when the requested physical display is unavailable, that output opens as a normal development window
 
 A future Screens UI will persist explicit physical display IDs and allow Stage to switch from `local-display` to `network`.
+
+
+## Network Stage server (v0.2.2)
+
+The Android/tablet Stage surface is deliberately decoupled from the operator renderer.
+
+Electron starts a small read-only LAN HTTP server using Node built-ins. It serves:
+
+- `/stage?token=...` — the browser Stage UI
+- `/stage/events?token=...` — Server-Sent Events carrying only `StageOutputState`
+- `/health` — minimal service health response
+
+The server binds to the local machine and advertises reachable IPv4 LAN addresses. A random per-launch session token is required for the Stage page and event stream. The Stage client has no endpoint for triggering slides, clearing output, or otherwise controlling the presenter.
+
+This means a future operator-interface redesign does not alter the tablet protocol: the operator can be rebuilt while `StageOutputState` and its network delivery contract remain stable.
+
+The first implementation uses SSE rather than WebSockets because Stage is one-way state delivery. Reconnection is automatic in modern browsers and no additional runtime dependency is required.

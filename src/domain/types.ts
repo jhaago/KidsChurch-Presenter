@@ -11,6 +11,15 @@ export type SlideGroupType = 'verse' | 'chorus' | 'bridge' | 'scripture' | 'gene
 export type ScreenKind = 'audience' | 'stage';
 export type ScreenTransport = 'local-display' | 'network';
 
+
+export interface NetworkStageInfo {
+  running: boolean;
+  port: number | null;
+  urls: string[];
+  clientCount: number;
+  error: string | null;
+}
+
 export interface ScreenAssignment {
   id: string;
   kind: ScreenKind;

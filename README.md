@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.2.1-alpha.1 — multi-output foundation**
+**v0.2.2-alpha.1 — network Stage foundation**
 
 Implemented in source:
 
@@ -16,7 +16,10 @@ Implemented in source:
 - React + TypeScript operator renderer
 - separate Operator, Audience and Stage windows
 - separate Audience and Stage live state
-- generic screen assignment model with `local-display` and reserved `network` transports
+- generic screen assignment model with `local-display` and `network` transports
+- built-in LAN Stage web server for Android/tablet browsers
+- read-only Server-Sent Events Stage updates with per-launch session token
+- operator display of Stage URL and connected tablet count
 - automatic local routing: Audience to the first external display and Stage to the second when available
 - explicit Windows x64 installer target
 - operator selection kept separate from live output
@@ -47,7 +50,7 @@ npm run dev
 
 The app should open the Operator window. Use the **Audience** and **Stage** controls in the toolbar to show/hide those logical outputs.
 
-With one external display, Audience uses it and Stage falls back to a normal development window. With two external displays, Audience uses the first and Stage uses the second. The `network` transport is now part of the model but the Android browser Stage server is intentionally deferred.
+With one external display, Audience uses it and local Stage falls back to a normal development window. With two external displays, Audience uses the first and local Stage uses the second. In addition, the app starts a LAN Stage server and shows its tablet URL in the operator inspector. A tablet on the same reachable local network can open that URL in a browser and receive the separate Stage CURRENT/NEXT view.
 
 ### Production-style build
 

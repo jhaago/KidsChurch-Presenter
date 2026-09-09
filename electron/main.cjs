@@ -1,9 +1,11 @@
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('node:path');
+const { NetworkStageServer } = require('./stage-server.cjs');
 
 let operatorWindow = null;
 const screenWindows = new Map();
 let isQuitting = false;
+const networkStageServer = new NetworkStageServer({ port: 4310 });
 
 const devUrl = process.env.VITE_DEV_SERVER_URL || null;
 const screenKinds = new Set(['audience', 'stage']);
@@ -200,7 +202,7 @@ function setScreenVisible(kind, visible) {
   return visible;
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createOperatorWindow();
   createScreenWindow('audience');
   createScreenWindow('stage');
@@ -212,6 +214,13 @@ app.whenReady().then(() => {
     Boolean(screenWindows.get(assertScreenKind(kind))?.isVisible()),
   );
   ipcMain.handle('screen:get-assignments', () => structuredClone(screenAssignments));
+  ipcMain.handle('network-stage:get-info', () => networkStageServer.info());
+
+  networkStageServer.onInfo((info) => {
+    if (operatorWindow && !operatorWindow.isDestroyed()) {
+      operatorWindow.webContents.send('network-stage:info', info);
+    }
+  });
 
   ipcMain.on('presenter:output-update', (_event, presenterOutput) => {
     if (!presenterOutput || typeof presenterOutput !== 'object') return;
@@ -221,7 +230,10 @@ app.whenReady().then(() => {
     };
     sendScreenState('audience');
     sendScreenState('stage');
+    networkStageServer.publish(latestPresenterOutput.stage);
   });
+
+  await networkStageServer.start();
 
   screen.on('display-added', () => {
     for (const kind of screenKinds) {
@@ -248,6 +260,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   isQuitting = true;
+  networkStageServer.stop().catch(() => undefined);
 });
 
 app.on('window-all-closed', () => {

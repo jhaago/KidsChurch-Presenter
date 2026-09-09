@@ -5,6 +5,7 @@ import {
   EMPTY_OUTPUT_STATE,
   EMPTY_STAGE_OUTPUT_STATE,
   type MediaAsset,
+  type NetworkStageInfo,
   type OutputState,
   type PresenterOutputState,
   type PlaylistItem,
@@ -43,6 +44,13 @@ export function OperatorApp() {
     audience: false,
     stage: false,
   });
+  const [networkStage, setNetworkStage] = useState<NetworkStageInfo>({
+    running: false,
+    port: null,
+    urls: [],
+    clientCount: 0,
+    error: null,
+  });
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -69,9 +77,15 @@ export function OperatorApp() {
         .then(([audience, stage]) => setScreenVisibility({ audience, stage }))
         .catch(() => undefined);
 
-      unsubscribe = window.kidsPresenter.onScreenVisibility((kind, visible) => {
+      const unsubscribeVisibility = window.kidsPresenter.onScreenVisibility((kind, visible) => {
         setScreenVisibility((current) => ({ ...current, [kind]: visible }));
       });
+      window.kidsPresenter.getNetworkStageInfo().then(setNetworkStage).catch(() => undefined);
+      const unsubscribeNetwork = window.kidsPresenter.onNetworkStageInfo(setNetworkStage);
+      unsubscribe = () => {
+        unsubscribeVisibility();
+        unsubscribeNetwork();
+      };
     }
     return unsubscribe;
   }, []);
@@ -410,6 +424,36 @@ export function OperatorApp() {
               <button type="button" onClick={clearMessage}><kbd>F6</kbd> Message</button>
               <button className={output.logo ? 'active' : ''} type="button" onClick={clearToLogo}><kbd>F12</kbd> Logo</button>
               <button className={output.black ? 'active' : ''} type="button" onClick={toggleBlack}>■ Black</button>
+            </div>
+          </section>
+
+          <section className="insSec">
+            <div className="panelTitle">NETWORK STAGE</div>
+            <div className="networkStageBox">
+              <div className="networkStageRow">
+                <span>Status</span>
+                <strong>{networkStage.running ? 'Ready' : 'Offline'}</strong>
+              </div>
+              <div className="networkStageRow">
+                <span>Tablet clients</span>
+                <strong>{networkStage.clientCount}</strong>
+              </div>
+              {networkStage.urls[0] ? (
+                <>
+                  <div className="networkStageUrl" title={networkStage.urls[0]}>{networkStage.urls[0]}</div>
+                  <button
+                    className="networkStageCopy"
+                    type="button"
+                    onClick={() => navigator.clipboard?.writeText(networkStage.urls[0]).catch(() => undefined)}
+                  >
+                    Copy Stage Link
+                  </button>
+                </>
+              ) : (
+                <div className="networkStageHint">
+                  {networkStage.error || 'Connect the laptop to a local network to expose a tablet Stage address.'}
+                </div>
+              )}
             </div>
           </section>
 

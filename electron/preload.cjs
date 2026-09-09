@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('kidsPresenter', {
   getScreenVisible: (kind) =>
     ipcRenderer.invoke('screen:get-visible', assertScreenKind(kind)),
   getScreenAssignments: () => ipcRenderer.invoke('screen:get-assignments'),
+  getNetworkStageInfo: () => ipcRenderer.invoke('network-stage:get-info'),
   sendPresenterOutput: (state) => ipcRenderer.send('presenter:output-update', state),
   onScreenState: (kind, callback) => {
     const safeKind = assertScreenKind(kind);
@@ -29,5 +30,10 @@ contextBridge.exposeInMainWorld('kidsPresenter', {
     const listener = (_event, kind, visible) => callback(kind, Boolean(visible));
     ipcRenderer.on('screen:visibility', listener);
     return () => ipcRenderer.removeListener('screen:visibility', listener);
+  },
+  onNetworkStageInfo: (callback) => {
+    const listener = (_event, info) => callback(info);
+    ipcRenderer.on('network-stage:info', listener);
+    return () => ipcRenderer.removeListener('network-stage:info', listener);
   },
 });
