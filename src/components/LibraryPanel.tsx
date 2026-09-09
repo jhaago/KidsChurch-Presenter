@@ -1,10 +1,19 @@
-import { presentationById, songById, sundayKidsPlaylist } from '../data/demo';
-import type { OutputState, PlaylistItem, ResourceSource } from '../domain/types';
+import type {
+  OutputState,
+  Playlist,
+  PlaylistItem,
+  Presentation,
+  ResourceSource,
+  Song,
+} from '../domain/types';
 import { Icon, type IconName } from './ui/Icon';
 
 interface LibraryPanelProps {
   selectedItemId: string;
   output: OutputState;
+  playlist: Playlist;
+  presentations: Presentation[];
+  songs: Song[];
   resourceSources: ResourceSource[];
   resourceAssetCountBySource: Record<string, number>;
   onAddResourceFolder: () => void;
@@ -22,10 +31,10 @@ const itemIcons: Record<PlaylistItem['type'], IconName> = {
   'web-tool': 'web',
 };
 
-function itemTone(item: PlaylistItem) {
+function itemTone(item: PlaylistItem, presentations: Presentation[]) {
   if (item.type === 'song') return 'song';
   if (item.type === 'presentation') {
-    const presentation = presentationById(item.resourceId);
+    const presentation = presentations.find((candidate) => candidate.id === item.resourceId);
     if (presentation?.category === 'song') return 'song';
     if (item.id.includes('message')) return 'message';
     if (item.id.includes('announcements')) return 'announcement';
@@ -33,9 +42,9 @@ function itemTone(item: PlaylistItem) {
   return item.type;
 }
 
-function isLiveItem(item: PlaylistItem, output: OutputState) {
+function isLiveItem(item: PlaylistItem, output: OutputState, songs: Song[]) {
   if (item.type === 'song') {
-    const song = songById(item.resourceId);
+    const song = songs.find((candidate) => candidate.id === item.resourceId);
     return output.slide?.presentationId === song?.presentationId || output.media?.id === song?.lyricsVideoAssetId;
   }
   return output.slide?.presentationId === item.resourceId || output.media?.id === item.resourceId;
@@ -44,12 +53,17 @@ function isLiveItem(item: PlaylistItem, output: OutputState) {
 export function LibraryPanel({
   selectedItemId,
   output,
+  playlist,
+  presentations,
+  songs,
   resourceSources,
   resourceAssetCountBySource,
   onAddResourceFolder,
   onRemoveResourceFolder,
   onSelectItem,
 }: LibraryPanelProps) {
+  const scriptureCount = presentations.filter((presentation) => presentation.category === 'scripture').length;
+
   return (
     <aside className="libraryPanel" aria-label="Library and playlist">
       <section className="libraryTree">
@@ -62,19 +76,19 @@ export function LibraryPanel({
           <Icon className="disclosure isOpen" name="chevron" />
           <Icon className="rowIcon" name="folder" />
           <span>Kids Church</span>
-          <small>8</small>
+          <small>{presentations.length}</small>
         </button>
         <button className="treeRow treeChild" type="button">
           <span className="treeSpacer" />
           <Icon className="rowIcon" name="presentation" />
           <span>Presentations</span>
-          <small>7</small>
+          <small>{presentations.length}</small>
         </button>
         <button className="treeRow treeChild" type="button">
           <span className="treeSpacer" />
           <Icon className="rowIcon" name="bible" />
           <span>Bible</span>
-          <small>1</small>
+          <small>{scriptureCount}</small>
         </button>
 
         <div className="treeSectionLabel resourceTreeLabel">
@@ -106,32 +120,26 @@ export function LibraryPanel({
         <button className="treeRow isSelected" type="button">
           <Icon className="disclosure isOpen" name="chevron" />
           <Icon className="rowIcon" name="playlist" />
-          <span>Sunday Kids</span>
-          <small>{sundayKidsPlaylist.items.length}</small>
-        </button>
-        <button className="treeRow" type="button">
-          <Icon className="disclosure" name="chevron" />
-          <Icon className="rowIcon" name="playlist" />
-          <span>Christmas</span>
-          <small>0</small>
+          <span>{playlist.title}</span>
+          <small>{playlist.items.length}</small>
         </button>
       </section>
 
       <section className="serviceOrder">
         <div className="serviceHeader">
           <div>
-            <strong>SUNDAY KIDS</strong>
+            <strong>{playlist.title.toUpperCase()}</strong>
             <small>CURRENT SERVICE</small>
           </div>
-          <span>{sundayKidsPlaylist.items.length} items</span>
+          <span>{playlist.items.length} items</span>
         </div>
         <div className="serviceItems">
-          {sundayKidsPlaylist.items.map((item, index) => {
-            const live = isLiveItem(item, output);
+          {playlist.items.map((item, index) => {
+            const live = isLiveItem(item, output, songs);
             const selected = selectedItemId === item.id;
             return (
               <button
-                className={`serviceItem tone-${itemTone(item)} ${selected ? 'isSelected' : ''} ${live ? 'isLive' : ''}`}
+                className={`serviceItem tone-${itemTone(item, presentations)} ${selected ? 'isSelected' : ''} ${live ? 'isLive' : ''}`}
                 key={item.id}
                 onClick={() => onSelectItem(item.id)}
                 type="button"

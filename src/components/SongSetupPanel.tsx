@@ -54,10 +54,20 @@ export function SongSetupPanel({ song, assets, onChange, onTriggerLyricsVideo }:
             <span>{song.title}</span>
           </div>
         </div>
-        <span className="songEngineBadge">SONG ENGINE FOUNDATION</span>
+        <span className="songEngineBadge">EDITABLE SONG</span>
       </header>
 
       <div className="songSetupGrid">
+        <section className="songSetupSection">
+          <small>SONG NAME</small>
+          <input
+            className="songNameInput"
+            value={song.title}
+            onChange={(event) => onChange({ ...song, title: event.target.value })}
+          />
+          <p className="songModeHint">The linked lyrics presentation and service item follow this title.</p>
+        </section>
+
         <section className="songSetupSection">
           <small>PLAYBACK MODE</small>
           <div className="songModeGrid">
@@ -186,7 +196,7 @@ export function SongSetupPanel({ song, assets, onChange, onTriggerLyricsVideo }:
               ))}
             </div>
             <p className="songModeHint">
-              All enabled stems will share one master transport clock; the synchronized playback engine is the next audio pass.
+              All stems share one master transport clock. Muted stems stay synchronized at zero gain.
             </p>
           </section>
         ) : null}

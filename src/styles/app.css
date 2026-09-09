@@ -851,3 +851,51 @@ kbd {
 .audioTransportNotice{grid-column:1/-1;color:#b9a36f;font-size:7px}
 .audioTransportNotice.isError{color:#d48e95}
 @media(max-width:1180px){.songTransportBody{grid-template-columns:1fr}.audioTransportTab{grid-template-columns:1fr auto}.audioTransportSeek{grid-column:1/-1}}
+
+
+/* v0.5 editing and persistence */
+.workspaceHeaderActions{display:flex;align-items:center;gap:8px}
+.workspaceHeaderActions>button{height:27px;padding:0 8px;border:1px solid #3b4349;border-radius:2px;background:#242a2f;color:#9ea6ad;display:flex;align-items:center;gap:5px;cursor:pointer;font-size:8px}
+.workspaceHeaderActions>button:hover{background:#30373d;color:#d8dcdf}
+.workspaceHeaderActions>button.isActive{border-color:#4e82aa;background:#1f4968;color:#fff}
+.workspaceHeaderActions>button svg{width:12px;height:12px}
+.presentationEditor{margin:8px 11px 14px;border:1px solid #384048;background:#15191d}
+.presentationEditorHeader{height:36px;padding:0 9px;border-bottom:1px solid #31383e;background:#1c2227;display:flex;align-items:center;justify-content:space-between}
+.presentationEditorHeader>div{display:flex;align-items:center;gap:7px}
+.presentationEditorHeader svg{width:15px;height:15px;color:#6d9fc4}
+.presentationEditorHeader strong{display:block;color:#d9dde0;font-size:9px;letter-spacing:.08em}
+.presentationEditorHeader span{display:block;margin-top:1px;color:#6e7880;font-size:7px}
+.presentationEditorHeader>button,.addSlideButton{height:25px;padding:0 8px;border:1px solid #416f91;border-radius:2px;background:#203f56;color:#c9dceb;cursor:pointer;font-size:8px}
+.presentationEditorMeta{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:8px;padding:8px;border-bottom:1px solid #2b3136}
+.presentationEditorMeta label,.editSlideText,.editSlideNotes{display:flex;flex-direction:column;gap:4px}
+.presentationEditorMeta label>span,.editSlideText>span,.editSlideNotes>span{color:#707a82;font-size:6.5px;font-weight:800;letter-spacing:.1em}
+.presentationEditorMeta input,.presentationEditorMeta select,.presentationEditGroup header input,.presentationEditGroup header select,.songNameInput{height:28px;padding:0 7px;border:1px solid #3a4248;border-radius:2px;background:#101316;color:#c5cbd0;font-size:8px;outline:none}
+.presentationEditorMeta input:focus,.presentationEditorMeta select:focus,.presentationEditGroup header input:focus,.presentationEditGroup header select:focus,.songNameInput:focus,.presentationEditSlide textarea:focus{border-color:#4d83ad}
+.presentationEditorMeta input:disabled,.presentationEditorMeta select:disabled{opacity:.55}
+.presentationEditorMeta small{color:#626b72;font-size:6.5px}
+.songNameInput{width:100%;box-sizing:border-box}
+.presentationEditorGroups{padding:8px;display:grid;gap:8px}
+.presentationEditGroup{border:1px solid #31383e;background:#191e22}
+.presentationEditGroup>header{min-height:34px;padding:4px 6px;display:grid;grid-template-columns:5px minmax(120px,1fr) 100px 25px 25px 28px;gap:5px;align-items:center;border-bottom:1px solid #2c3338;background:#1e2429}
+.groupEditAccent{height:24px;border-radius:2px;background:#68727a}
+.groupEditAccent.group-verse{background:#4e84b3}
+.groupEditAccent.group-chorus{background:#8c5fb1}
+.groupEditAccent.group-bridge{background:#bd7a42}
+.groupEditAccent.group-scripture{background:#5e9670}
+.presentationEditGroup>header button,.editSlideActions button{height:25px;border:1px solid #394148;border-radius:2px;background:#262c31;color:#969fa6;cursor:pointer;font-size:8px}
+.presentationEditGroup>header button:disabled,.editSlideActions button:disabled{opacity:.3;cursor:not-allowed}
+.presentationEditGroup>header button.danger,.editSlideActions button.danger{border-color:#56363a;background:#2a1e20;color:#c5898f}
+.presentationEditSlides{display:grid;gap:5px;padding:6px}
+.presentationEditSlide{display:grid;grid-template-columns:26px minmax(180px,1.4fr) minmax(140px,.8fr) 50px;gap:6px;align-items:stretch;padding:5px;border:1px solid #2d343a;background:#14181b}
+.editSlideOrdinal{display:grid;place-items:center;border-right:1px solid #30373c;color:#66717a;font-size:8px;font-weight:800}
+.presentationEditSlide textarea{min-height:68px;resize:vertical;padding:6px;border:1px solid #384047;border-radius:2px;background:#0f1215;color:#d2d6d9;font:inherit;font-size:9px;line-height:1.4;outline:none}
+.editSlideNotes textarea{color:#9ca5ac;font-size:8px}
+.editSlideActions{display:flex;flex-direction:column;gap:4px}
+.editSlideActions button{width:100%}
+.addSlideButton{margin:0 6px 6px}
+@media(max-width:1180px){
+  .presentationEditorMeta{grid-template-columns:1fr}
+  .presentationEditSlide{grid-template-columns:24px 1fr}
+  .editSlideNotes{grid-column:2}
+  .editSlideActions{grid-column:2;flex-direction:row}
+}

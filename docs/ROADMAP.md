@@ -90,23 +90,10 @@ Status: foundation implemented.
 - looping motion background rendering
 - media remains an independent layer behind slides
 
-Still to build in the broader v0.3 family:
+Still to build around the resource library:
 
-- editable presentation/library persistence
-- playlist creation and reordering
-- service save/open
-- autosave/recovery
 - richer media metadata and thumbnails
 - background assignment to individual slides/presentations
-
-## v0.3 — Real service/library persistence
-
-- create/edit presentations
-- create/edit playlists
-- reorder playlist items
-- save and reopen library data
-- managed application data folder
-- basic autosave / recovery
 
 ## v0.3.2 — Audience media foundation
 
@@ -159,12 +146,31 @@ Status: implemented in source.
 - optional multichannel audio-interface routing
 - dedicated Lyrics Video transport controls
 
-## v0.5 — Song editing workflow
+## v0.5 — Editing + persistence
 
-- Verse / Chorus / Bridge groups
-- presentation editor
-- arrangements
-- duplicate/reorder sections
+Status: first editor/persistence pass implemented in source.
+
+- versioned persistent presenter-library data
+- first-run seed from demo content
+- debounced autosave
+- previous-save backup and recovery
+- editable presentation names/categories
+- Verse / Chorus / Bridge / Scripture / Generic group editing
+- add/delete/reorder groups
+- slide text and Stage-note editing
+- add/delete/reorder slides
+- editable Song names synchronized to linked presentation/service item
+
+### Next v0.5 passes
+
+- create new Presentation
+- create new Song
+- duplicate Presentation / Song
+- playlist item add/remove/reorder
+- multiple saved service playlists
+- arrangements / repeat Verse-Chorus sections without duplicating source lyrics
+- undo/redo
+- cue-map editor / tap-to-time Auto Lyrics workflow
 - themes / text formatting baseline
 - more ProPresenter-like thumbnail behaviour
 

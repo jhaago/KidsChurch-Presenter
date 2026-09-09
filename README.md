@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.4.0-alpha.1 — Song Playback Engine**
+**v0.5.0-alpha.1 — Editing + Persistence Foundation**
 
 Implemented in source:
 
@@ -55,6 +55,15 @@ Implemented in source:
 - Auto Lyrics cue execution from the same transport position
 - Assisted Lyrics next-cue countdown from the same timing map
 - F5 / Clear Audio now stops the real song transport
+- versioned persistent presenter library stored in the desktop app data folder
+- atomic/debounced autosave with previous-save backup recovery
+- editable presentation names/categories
+- editable Verse / Chorus / Bridge / Scripture / Generic slide groups
+- add/delete/reorder slide groups
+- edit slide text and Stage notes
+- add/delete/reorder slides within groups
+- editable Song names with linked lyrics-presentation/service-title synchronization
+- live Audience/Stage text updates when the currently-live slide is edited
 
 ## Run on macOS or Windows
 
@@ -126,7 +135,25 @@ Lyrics can independently be configured as **Manual**, **Assisted**, or **Auto**.
 
 The Song transport now uses the Web Audio API. Assigned stems are decoded and scheduled against one shared AudioContext start time, rather than starting independent HTML audio elements. Muted stems remain on the shared timeline at zero gain, so a stem can be switched on during playback without restarting it.
 
-**Auto Lyrics** uses the exact same transport position as the backing track/stems. **Assisted** mode leaves slide control with the operator but displays the next stored cue and countdown. Song settings are still in-memory in this alpha; persistent Song/service storage is the next major phase.
+**Auto Lyrics** uses the exact same transport position as the backing track/stems. **Assisted** mode leaves slide control with the operator but displays the next stored cue and countdown. Song and presentation configuration is now persisted automatically in the desktop app data folder.
+
+## Editing and persistence
+
+Select a presentation or Song and use **Edit** in the central workspace.
+
+The current editor supports:
+
+- presentation/category rename for ordinary presentations
+- Song rename from Song Setup
+- Verse / Chorus / Bridge / Scripture / Generic group types
+- group rename, add, delete and reorder
+- slide text editing
+- Stage notes per slide
+- slide add, delete and reorder
+
+Changes autosave after a short debounce. The desktop process owns the saved JSON file and keeps the previous successful save as a backup. If the primary library file is unreadable on launch, Presenter attempts to recover the backup.
+
+The built-in demo service is now only the first-run seed. After the first successful save, the editable saved library becomes the source of truth.
 
 ## Song Playback Engine test
 

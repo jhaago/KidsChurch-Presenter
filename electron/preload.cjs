@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('kidsPresenter', {
     ipcRenderer.invoke('screen:get-visible', assertScreenKind(kind)),
   getScreenAssignments: () => ipcRenderer.invoke('screen:get-assignments'),
   getNetworkStageInfo: () => ipcRenderer.invoke('network-stage:get-info'),
+  getPresenterLibrary: () => ipcRenderer.invoke('presenter-library:get'),
+  savePresenterLibrary: (data) => ipcRenderer.invoke('presenter-library:save', data),
   getResourceLibrary: () => ipcRenderer.invoke('resource-library:get'),
   addResourceFolder: () => ipcRenderer.invoke('resource-library:add-folder'),
   removeResourceFolder: (sourceId) => ipcRenderer.invoke('resource-library:remove-folder', sourceId),

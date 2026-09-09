@@ -3,12 +3,14 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { NetworkStageServer } = require('./stage-server.cjs');
 const { ResourceLibrary } = require('./resource-library.cjs');
+const { PresenterLibraryStore } = require('./presenter-library.cjs');
 
 let operatorWindow = null;
 const screenWindows = new Map();
 let isQuitting = false;
 const networkStageServer = new NetworkStageServer({ port: 4310 });
 let resourceLibrary = null;
+let presenterLibraryStore = null;
 
 const devUrl = process.env.VITE_DEV_SERVER_URL || null;
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -245,6 +247,7 @@ function setScreenVisible(kind, visible) {
 
 app.whenReady().then(async () => {
   resourceLibrary = new ResourceLibrary(app.getPath('userData'));
+  presenterLibraryStore = new PresenterLibraryStore(app.getPath('userData'));
   await resourceLibrary.load();
 
   createOperatorWindow();
@@ -259,6 +262,14 @@ app.whenReady().then(async () => {
   );
   ipcMain.handle('screen:get-assignments', () => structuredClone(screenAssignments));
   ipcMain.handle('network-stage:get-info', () => networkStageServer.info());
+
+  ipcMain.handle('presenter-library:get', async () => {
+    return presenterLibraryStore.load();
+  });
+
+  ipcMain.handle('presenter-library:save', async (_event, data) => {
+    return presenterLibraryStore.save(data);
+  });
 
   const publishResourceLibrary = (snapshot) => {
     if (operatorWindow && !operatorWindow.isDestroyed()) {

@@ -139,6 +139,20 @@ export interface Playlist {
   items: PlaylistItem[];
 }
 
+export interface PresenterLibraryData {
+  schemaVersion: 1;
+  presentations: Presentation[];
+  songs: Song[];
+  playlists: Playlist[];
+  savedAt?: string;
+}
+
+export interface PresenterLibraryStatus {
+  loaded: boolean;
+  path?: string;
+  error?: string | null;
+}
+
 export interface MediaAsset {
   id: string;
   title: string;

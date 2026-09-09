@@ -1,6 +1,7 @@
 import type {
   NetworkStageInfo,
   OutputState,
+  PresenterLibraryData,
   ResourceLibrarySnapshot,
   PresenterOutputState,
   ScreenAssignment,
@@ -18,6 +19,17 @@ declare global {
       getScreenVisible: (kind: ScreenKind) => Promise<boolean>;
       getScreenAssignments: () => Promise<Record<ScreenKind, ScreenAssignment>>;
       getNetworkStageInfo: () => Promise<NetworkStageInfo>;
+      getPresenterLibrary: () => Promise<{
+        data: PresenterLibraryData | null;
+        recoveredFromBackup: boolean;
+        error: string | null;
+        path: string;
+      }>;
+      savePresenterLibrary: (data: PresenterLibraryData) => Promise<{
+        saved: boolean;
+        path: string;
+        savedAt: string;
+      }>;
       getResourceLibrary: () => Promise<ResourceLibrarySnapshot>;
       addResourceFolder: () => Promise<ResourceLibrarySnapshot>;
       removeResourceFolder: (sourceId: string) => Promise<ResourceLibrarySnapshot>;

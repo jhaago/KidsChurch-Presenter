@@ -1,5 +1,7 @@
-import type { MediaAsset, OutputState, PlaylistItem, Presentation, Slide, Song } from '../domain/types';
+import { useEffect, useState } from 'react';
 import type { SongTransportSnapshot } from '../audio/useSongTransport';
+import type { MediaAsset, OutputState, PlaylistItem, Presentation, Slide, Song } from '../domain/types';
+import { PresentationEditorPanel } from './PresentationEditorPanel';
 import { SongSetupPanel } from './SongSetupPanel';
 import { SongTransportPanel } from './SongTransportPanel';
 import { Icon } from './ui/Icon';
@@ -13,6 +15,7 @@ interface SlideWorkspaceProps {
   selectedSlideId: string | null;
   output: OutputState;
   songTransport: SongTransportSnapshot;
+  onChangePresentation: (presentation: Presentation) => void;
   onChangeSong: (song: Song) => void;
   onPlaySong: (song: Song) => void;
   onPauseSong: () => void;
@@ -45,6 +48,7 @@ export function SlideWorkspace({
   selectedSlideId,
   output,
   songTransport,
+  onChangePresentation,
   onChangeSong,
   onPlaySong,
   onPauseSong,
@@ -56,6 +60,12 @@ export function SlideWorkspace({
   onTriggerMedia,
   onTriggerLyricsVideo,
 }: SlideWorkspaceProps) {
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    setEditing(false);
+  }, [selectedItem.id]);
+
   return (
     <section className="slideWorkspace" aria-label="Slide workspace">
       <header className="workspaceHeader">
@@ -66,9 +76,21 @@ export function SlideWorkspace({
             <span>{selectedItem.type.replace('-', ' ').toUpperCase()}</span>
           </div>
         </div>
-        <div className="workspaceView">
-          <Icon name="grid" />
-          <span>{song ? 'Song + Slide View' : 'Slide View'}</span>
+        <div className="workspaceHeaderActions">
+          {presentation ? (
+            <button
+              className={editing ? 'isActive' : ''}
+              type="button"
+              onClick={() => setEditing((current) => !current)}
+            >
+              <Icon name="presentation" />
+              {editing ? 'Done Editing' : 'Edit'}
+            </button>
+          ) : null}
+          <div className="workspaceView">
+            <Icon name="grid" />
+            <span>{editing ? 'Editor' : song ? 'Song + Slide View' : 'Slide View'}</span>
+          </div>
         </div>
       </header>
 
@@ -93,7 +115,13 @@ export function SlideWorkspace({
           </>
         ) : null}
 
-        {presentation ? (
+        {editing && presentation ? (
+          <PresentationEditorPanel
+            isSongPresentation={Boolean(song)}
+            onChange={onChangePresentation}
+            presentation={presentation}
+          />
+        ) : presentation ? (
           <div className="slideGroups">
             {song?.playbackMode === 'lyrics-video' ? (
               <div className="songFallbackBanner">

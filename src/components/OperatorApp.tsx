@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { useSongTransport } from '../audio/useSongTransport';
-import { mediaAssets as demoMediaAssets, mediaById, presentationById, presentations, songs as demoSongs, sundayKidsPlaylist } from '../data/demo';
+import {
+  mediaAssets as demoMediaAssets,
+  mediaById,
+  presentations as demoPresentations,
+  songs as demoSongs,
+  sundayKidsPlaylist as demoPlaylist,
+} from '../data/demo';
 import {
   EMPTY_OUTPUT_STATE,
   EMPTY_STAGE_OUTPUT_STATE,
   type MediaAsset,
   type NetworkStageInfo,
   type OutputState,
+  type Playlist,
+  type PresenterLibraryData,
   type PresenterOutputState,
   type ResourceLibrarySnapshot,
   type ScreenKind,
@@ -63,30 +71,25 @@ export function OperatorApp() {
     assets: [],
     lastError: null,
   });
-  const [songs, setSongs] = useState<Song[]>(() =>
-    demoSongs.map((song) => ({
-      ...song,
-      audio: {
-        ...song.audio,
-        stems: song.audio.stems.map((stem) => ({ ...stem })),
-      },
-      lyricCues: song.lyricCues.map((cue) => ({ ...cue })),
-    })),
-  );
+  const [presentations, setPresentations] = useState<Presentation[]>(() => structuredClone(demoPresentations));
+  const [songs, setSongs] = useState<Song[]>(() => structuredClone(demoSongs));
+  const [playlist, setPlaylist] = useState<Playlist>(() => structuredClone(demoPlaylist));
+  const [libraryReady, setLibraryReady] = useState(false);
+  const [libraryStatus, setLibraryStatus] = useState<'loading' | 'saved' | 'saving' | 'error' | 'recovered'>('loading');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectedItem = useMemo(
-    () => sundayKidsPlaylist.items.find((item) => item.id === selectedItemId) ?? sundayKidsPlaylist.items[0],
-    [selectedItemId],
+    () => playlist.items.find((item) => item.id === selectedItemId) ?? playlist.items[0],
+    [playlist, selectedItemId],
   );
   const selectedSong = selectedItem.type === 'song'
     ? songs.find((song) => song.id === selectedItem.resourceId)
     : undefined;
   const selectedPresentation = selectedSong
-    ? presentationById(selectedSong.presentationId)
-    : presentationById(selectedItem.resourceId);
+    ? presentations.find((presentation) => presentation.id === selectedSong.presentationId)
+    : presentations.find((presentation) => presentation.id === selectedItem.resourceId);
   const selectedMedia = selectedItem.type === 'media' ? mediaById(selectedItem.resourceId) : undefined;
   const allMediaAssets = useMemo(
     () => [...demoMediaAssets, ...resourceLibrary.assets],
@@ -108,6 +111,58 @@ export function OperatorApp() {
     songId: null,
     cueId: null,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    const seed: PresenterLibraryData = {
+      schemaVersion: 1,
+      presentations: structuredClone(demoPresentations),
+      songs: structuredClone(demoSongs),
+      playlists: [structuredClone(demoPlaylist)],
+    };
+
+    if (!window.kidsPresenter?.getPresenterLibrary) {
+      setLibraryReady(true);
+      setLibraryStatus('saved');
+      return () => { cancelled = true; };
+    }
+
+    window.kidsPresenter.getPresenterLibrary()
+      .then(async (result) => {
+        if (cancelled) return;
+        const data = result.data ?? seed;
+        setPresentations(structuredClone(data.presentations));
+        setSongs(structuredClone(data.songs));
+        setPlaylist(structuredClone(data.playlists[0] ?? demoPlaylist));
+        setLibraryStatus(result.recoveredFromBackup ? 'recovered' : 'saved');
+        setLibraryReady(true);
+        if (!result.data) await window.kidsPresenter?.savePresenterLibrary(seed);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLibraryReady(true);
+        setLibraryStatus('error');
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!libraryReady || !window.kidsPresenter?.savePresenterLibrary) return;
+    setLibraryStatus('saving');
+    const timer = window.setTimeout(() => {
+      const data: PresenterLibraryData = {
+        schemaVersion: 1,
+        presentations,
+        songs,
+        playlists: [playlist],
+      };
+      window.kidsPresenter?.savePresenterLibrary(data)
+        .then(() => setLibraryStatus('saved'))
+        .catch(() => setLibraryStatus('error'));
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [libraryReady, playlist, presentations, songs]);
 
   useEffect(() => {
     const firstSlide = selectedPresentation ? allSlides(selectedPresentation)[0] : null;
@@ -239,6 +294,48 @@ export function OperatorApp() {
     setOutput((current) => ({ ...current, audio: null }));
   }, [songTransport.stop]);
 
+  const updatePresentation = useCallback((updatedPresentation: Presentation) => {
+    setPresentations((current) => current.map((presentation) =>
+      presentation.id === updatedPresentation.id ? updatedPresentation : presentation,
+    ));
+    setPlaylist((current) => ({
+      ...current,
+      items: current.items.map((item) =>
+        item.type !== 'song' && item.resourceId === updatedPresentation.id
+          ? { ...item, title: updatedPresentation.title }
+          : item,
+      ),
+    }));
+
+    const liveSlide = output.slide?.presentationId === updatedPresentation.id
+      ? allSlides(updatedPresentation).find((slide) => slide.id === output.slide?.slideId)
+      : undefined;
+    if (liveSlide) {
+      setOutput((current) => ({
+        ...current,
+        slide: current.slide ? {
+          ...current.slide,
+          presentationTitle: updatedPresentation.title,
+          text: liveSlide.text,
+        } : null,
+      }));
+    }
+
+    setStageOutput((current) => {
+      if (current.presentationId !== updatedPresentation.id) return current;
+      const slides = allSlides(updatedPresentation);
+      const currentSlide = slides.find((slide) => slide.id === current.currentSlideId);
+      const nextSlide = slides.find((slide) => slide.id === current.nextSlideId);
+      return {
+        ...current,
+        presentationTitle: updatedPresentation.title,
+        currentText: currentSlide?.text ?? current.currentText,
+        nextText: nextSlide?.text ?? current.nextText,
+        notes: currentSlide?.notes ?? null,
+      };
+    });
+  }, [output.slide]);
+
   const updateSong = useCallback((updatedSong: Song) => {
     const previous = songs.find((song) => song.id === updatedSong.id);
     if (songTransport.state.songId === updatedSong.id && previous) {
@@ -249,7 +346,30 @@ export function OperatorApp() {
         }
       }
     }
+
     setSongs((current) => current.map((song) => song.id === updatedSong.id ? updatedSong : song));
+
+    if (updatedSong.presentationId && previous?.title !== updatedSong.title) {
+      setPresentations((current) => current.map((presentation) =>
+        presentation.id === updatedSong.presentationId
+          ? { ...presentation, title: updatedSong.title }
+          : presentation,
+      ));
+    }
+
+    setPlaylist((current) => ({
+      ...current,
+      items: current.items.map((item) =>
+        item.type === 'song' && item.resourceId === updatedSong.id
+          ? { ...item, title: updatedSong.title }
+          : item,
+      ),
+    }));
+
+    setOutput((current) => ({
+      ...current,
+      audio: current.audio?.id === updatedSong.id ? { ...current.audio, title: updatedSong.title } : current.audio,
+    }));
   }, [songs, songTransport.setStemEnabled, songTransport.state.songId]);
 
   const clearAll = useCallback(() => {
@@ -290,7 +410,7 @@ export function OperatorApp() {
       .at(-1);
     if (!cue || cue.id === lastAutoCueRef.current.cueId) return;
 
-    const presentation = presentationById(song.presentationId);
+    const presentation = presentations.find((candidate) => candidate.id === song.presentationId);
     const slide = presentation
       ? allSlides(presentation).find((candidate) => candidate.id === cue.slideId)
       : undefined;
@@ -303,6 +423,7 @@ export function OperatorApp() {
     songTransport.state.positionMs,
     songTransport.state.songId,
     songTransport.state.status,
+    presentations,
     songs,
     triggerSlide,
   ]);
@@ -392,13 +513,13 @@ export function OperatorApp() {
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return presentations.filter((presentation) => presentation.title.toLowerCase().includes(query));
-  }, [searchQuery]);
+  }, [presentations, searchQuery]);
 
   const selectPresentationFromSearch = (presentationId: string) => {
-    const directItem = sundayKidsPlaylist.items.find((candidate) => candidate.resourceId === presentationId);
+    const directItem = playlist.items.find((candidate) => candidate.resourceId === presentationId);
     const matchingSong = songs.find((song) => song.presentationId === presentationId);
     const songItem = matchingSong
-      ? sundayKidsPlaylist.items.find((candidate) => candidate.type === 'song' && candidate.resourceId === matchingSong.id)
+      ? playlist.items.find((candidate) => candidate.type === 'song' && candidate.resourceId === matchingSong.id)
       : undefined;
     const item = directItem ?? songItem;
     if (item) setSelectedItemId(item.id);
@@ -416,6 +537,9 @@ export function OperatorApp() {
 
       <main className="operatorMain">
         <LibraryPanel
+          playlist={playlist}
+          presentations={presentations}
+          songs={songs}
           onAddResourceFolder={() => {
             void window.kidsPresenter?.addResourceFolder().then(setResourceLibrary);
           }}
@@ -431,6 +555,7 @@ export function OperatorApp() {
         <SlideWorkspace
           availableAssets={allMediaAssets}
           media={selectedMedia}
+          onChangePresentation={updatePresentation}
           onChangeSong={updateSong}
           onSelectSlide={setSelectedSlideId}
           onTriggerLyricsVideo={triggerLyricsVideo}
@@ -498,7 +623,7 @@ export function OperatorApp() {
       />
 
       <footer className="operatorStatusBar">
-        <span>KidsChurch Presenter <b>v{APP_VERSION}</b></span>
+        <span>KidsChurch Presenter <b>v{APP_VERSION}</b> · {libraryStatus === 'saving' ? 'Saving…' : libraryStatus === 'error' ? 'Save error' : libraryStatus === 'recovered' ? 'Recovered backup' : 'Saved'}</span>
         <span>{songTransport.state.songTitle
           ? `${songTransport.state.songTitle} · ${songTransport.state.status.toUpperCase()}`
           : 'Sunday Kids'}</span>
