@@ -2,29 +2,79 @@
 
 KidsChurch Presenter is a ProPresenter-familiar presentation application designed for Kids Church.
 
-The first goal is training compatibility: a young operator should learn the same core mental model they will later encounter in ProPresenter — library, playlist, presentation, slide groups, live output, clear layers, media, audience output, and eventually stage output.
+The first goal is **training compatibility**: a young operator should learn the same core mental model they will later encounter in ProPresenter — library, playlist, presentation, slide groups, live output, clear layers, media, Audience output, and eventually Stage output.
 
-The second goal is to extend that workflow where Kids Church benefits from it, especially interactive tools, local web apps, games, timers, quizzes, and optional external integrations such as a video-downloader/import service and CrowdLight.
+The second goal is to extend that workflow where Kids Church benefits from it, especially interactive tools, local web apps, games, timers, quizzes, and optional integrations such as a video-downloader/import service and CrowdLight.
 
 ## Current status
 
-**v0.2 desktop foundation (in development)**
+**v0.2.0-alpha.1 — desktop foundation**
 
-The project direction is now locked around:
+Implemented in source:
 
-- Electron desktop shell
+- Electron desktop application shell
 - React + TypeScript operator renderer
-- separate operator and Audience windows
-- explicit UI state vs live output state
-- ProPresenter-style output layers
-- playlist item types for presentations, media, Bible, timers, interactive tools and web tools
-- an integration boundary for future external media providers such as the separate video-downloader project
+- separate Operator and Audience windows
+- automatic fullscreen Audience placement on an external display when available
+- operator selection kept separate from live output
+- ProPresenter-style independent output layers
+- slide triggering and live-state indication
+- next / previous navigation
+- Clear All / Slide / Media / Props / Audio / Message / Logo / Black controls
+- keyboard shortcuts for the current clear/navigation set
+- Media Bin shell and media-layer triggering
+- typed playlist items for presentations, media, Bible, timers, interactive tools and web tools
+- demo Kids Church service
+- placeholder first-class playlist entries for **Spin the Wheel** and **Donuts Bingo**
+- an optional external-media-provider interface for future integration with the separate video downloader
+
+## Run on macOS or Windows
+
+Prerequisites:
+
+- Node.js
+- npm
+
+From a terminal in the repository:
+
+```bash
+npm install
+npm run dev
+```
+
+The app should open the Operator window. Use the **Audience** control in the toolbar to show/hide the Audience output.
+
+If a second display is connected, the current v0.2 shell attempts to place Audience fullscreen on that display. With only one display, it opens a normal 16:9 Audience window so development can still be tested.
+
+### Production-style build
+
+```bash
+npm run build
+npm start
+```
+
+Packaging as a signed/installable macOS or Windows application is intentionally a later milestone.
+
+## First desktop test checklist
+
+1. Launch the app.
+2. Select **Light of Hope**.
+3. Click a slide and confirm it becomes LIVE.
+4. Open **Audience** and confirm the same slide appears there.
+5. Browse another playlist item without triggering anything; Audience should not change.
+6. Return to the song and use Left/Right arrow navigation.
+7. Trigger a Media Bin item; it should coexist with the slide layer.
+8. Clear Slide; media should remain.
+9. Clear Media.
+10. Test F1/F2/F3 and F12.
+11. Toggle Black and confirm underlying state returns when Black is removed.
+12. If a second display is attached, verify Audience uses it.
 
 ## Core architectural rules
 
 1. **Operator selection is not live output.** Browsing a presentation must never implicitly change what the audience sees.
 2. **Output is layered.** Slide, media, prop, message, announcement, audio and live-video states are represented independently.
-3. **Audience output is a separate window/process surface.** It receives live state through a narrow IPC bridge.
+3. **Audience output is separate.** It receives live state through a narrow IPC bridge.
 4. **Playlist items are typed.** The playlist is not restricted to ordinary slide presentations.
 5. **Integrations remain optional and isolated.** Downloader, CrowdLight and future services must not be able to destabilise the core presentation engine.
 6. **ProPresenter familiarity wins over arbitrary simplification** where training value is involved.
@@ -38,6 +88,22 @@ The project direction is now locked around:
 - `interactive`
 - `web-tool`
 
+## Integration direction
+
+External media acquisition is deliberately behind a provider interface. The future presentation-side flow is:
+
+```text
+Add Media
+  -> choose provider
+  -> provider acquires the file
+  -> KidsChurch Presenter imports/manages the result
+  -> Media Library / playlist references the managed asset
+```
+
+The live presentation engine must continue to work if an external provider is unavailable or fails.
+
 ## Project philosophy
 
 KidsChurch Presenter is not intended to copy Renewed Vision branding or proprietary artwork. It intentionally mirrors familiar presentation concepts and operating workflow while using its own implementation and visual identity.
+
+See `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and `docs/PROPRESENTER-COMPATIBILITY.md` for the current design direction.
