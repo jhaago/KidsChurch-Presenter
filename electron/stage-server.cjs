@@ -19,7 +19,16 @@ function emptyStageState() {
 
 function localIPv4Addresses() {
   const addresses = [];
-  const interfaces = os.networkInterfaces();
+  let interfaces;
+
+  try {
+    interfaces = os.networkInterfaces();
+  } catch {
+    // Interface enumeration can briefly fail in restricted environments or
+    // while the host network is changing. The Stage server should remain
+    // available on localhost and publish LAN URLs when enumeration recovers.
+    return addresses;
+  }
 
   for (const entries of Object.values(interfaces)) {
     for (const entry of entries || []) {
