@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
-import { mediaAssets, mediaById, presentationById, presentations, sundayKidsPlaylist } from '../data/demo';
-import { AudienceOutput } from './AudienceOutput';
+import { mediaById, presentationById, presentations, sundayKidsPlaylist } from '../data/demo';
 import {
   EMPTY_OUTPUT_STATE,
   EMPTY_STAGE_OUTPUT_STATE,
@@ -8,38 +7,29 @@ import {
   type NetworkStageInfo,
   type OutputState,
   type PresenterOutputState,
-  type PlaylistItem,
   type ScreenKind,
+  type Slide,
   type StageOutputState,
   type Presentation,
-  type Slide,
 } from '../domain/types';
-
-const kindIcon: Record<PlaylistItem['type'], string> = {
-  presentation: '▧',
-  media: '▶',
-  bible: '▤',
-  timer: '◷',
-  interactive: '◆',
-  'web-tool': '⌘',
-};
+import { APP_VERSION } from '../version';
+import { LibraryPanel } from './LibraryPanel';
+import { LivePanel } from './LivePanel';
+import { MediaBin, type MediaBinTab } from './MediaBin';
+import { OperatorToolbar } from './OperatorToolbar';
+import { SlideWorkspace } from './SlideWorkspace';
+import { Icon } from './ui/Icon';
 
 function allSlides(presentation: Presentation) {
   return presentation.groups.flatMap((group) => group.slides);
 }
 
-function outputLabel(output: OutputState) {
-  if (output.black) return 'Black';
-  if (output.logo) return 'Logo';
-  if (output.slide) return output.slide.presentationTitle;
-  if (output.media) return output.media.title;
-  return 'Cleared';
-}
-
 export function OperatorApp() {
   const [selectedItemId, setSelectedItemId] = useState('pi-song');
+  const [selectedSlideId, setSelectedSlideId] = useState<string | null>('loh-v1-1');
   const [output, setOutput] = useState<OutputState>({ ...EMPTY_OUTPUT_STATE });
   const [stageOutput, setStageOutput] = useState<StageOutputState>({ ...EMPTY_STAGE_OUTPUT_STATE });
+  const [activeMediaTab, setActiveMediaTab] = useState<MediaBinTab>('Media');
   const [screenVisibility, setScreenVisibility] = useState<Record<ScreenKind, boolean>>({
     audience: false,
     stage: false,
@@ -63,12 +53,17 @@ export function OperatorApp() {
   const selectedMedia = mediaById(selectedItem.resourceId);
 
   useEffect(() => {
+    const firstSlide = selectedPresentation ? allSlides(selectedPresentation)[0] : null;
+    setSelectedSlideId(firstSlide?.id ?? null);
+  }, [selectedPresentation]);
+
+  useEffect(() => {
     const presenterOutput: PresenterOutputState = { audience: output, stage: stageOutput };
     window.kidsPresenter?.sendPresenterOutput(presenterOutput);
   }, [output, stageOutput]);
 
   useEffect(() => {
-    let unsubscribe: () => void = () => {};
+    let unsubscribe = () => {};
     if (window.kidsPresenter) {
       Promise.all([
         window.kidsPresenter.getScreenVisible('audience'),
@@ -141,7 +136,10 @@ export function OperatorApp() {
   const clearMedia = useCallback(() => setOutput((current) => ({ ...current, media: null })), []);
   const clearProps = useCallback(() => setOutput((current) => ({ ...current, prop: null })), []);
   const clearAudio = useCallback(() => setOutput((current) => ({ ...current, audio: null })), []);
-  const clearMessage = useCallback(() => setOutput((current) => ({ ...current, message: null })), []);
+  const clearMessage = useCallback(
+    () => setOutput((current) => ({ ...current, message: null, announcement: null })),
+    [],
+  );
   const clearToLogo = useCallback(() => setOutput({ ...EMPTY_OUTPUT_STATE, logo: true }), []);
   const toggleBlack = useCallback(
     () => setOutput((current) => ({ ...current, black: !current.black, logo: current.black ? current.logo : false })),
@@ -155,18 +153,14 @@ export function OperatorApp() {
       const slides = allSlides(presentation);
       if (!slides.length) return;
 
-      const liveIndex =
-        output.slide?.presentationId === presentation.id
-          ? slides.findIndex((slide) => slide.id === output.slide?.slideId)
-          : -1;
+      const liveIndex = output.slide?.presentationId === presentation.id
+        ? slides.findIndex((slide) => slide.id === output.slide?.slideId)
+        : -1;
+      const nextIndex = liveIndex < 0
+        ? direction > 0 ? 0 : slides.length - 1
+        : Math.max(0, Math.min(slides.length - 1, liveIndex + direction));
 
-      const nextIndex =
-        liveIndex < 0
-          ? direction > 0
-            ? 0
-            : slides.length - 1
-          : Math.max(0, Math.min(slides.length - 1, liveIndex + direction));
-
+      setSelectedSlideId(slides[nextIndex].id);
       triggerSlide(presentation, slides[nextIndex]);
     },
     [output.slide, selectedPresentation, triggerSlide],
@@ -186,11 +180,11 @@ export function OperatorApp() {
         openSearch();
         return;
       }
-
       if (searchOpen && event.key === 'Escape') {
         setSearchOpen(false);
         return;
       }
+      if (searchOpen) return;
 
       if (event.key === 'ArrowRight') {
         event.preventDefault();
@@ -238,312 +232,78 @@ export function OperatorApp() {
   };
 
   return (
-    <div className="app">
-      <header className="toolbar">
-        <div>
-          <button className="tool" onClick={openSearch} title="Search (Cmd/Ctrl+F)">
-            <span className="glyph">⌕</span>
-            Search
-          </button>
-          <span className="divider" />
-          {['Text', 'Theme', 'Show', 'Edit', 'Reflow', 'Bible'].map((name) => (
-            <button className={`tool ${name === 'Show' ? 'active' : ''}`} key={name} type="button">
-              <span className="glyph">{name.slice(0, 1)}</span>
-              {name}
-            </button>
-          ))}
-        </div>
-        <div>
-          <button className="tool" type="button">
-            <span className="glyph">M</span>
-            Media
-          </button>
-          <button className="tool" type="button">
-            <span className="glyph">L</span>
-            Looks
-          </button>
-          <button
-            className={`screen screenButton ${screenVisibility.audience ? 'screenOn' : ''}`}
-            type="button"
-            onClick={() => setScreenVisible('audience', !screenVisibility.audience)}
-          >
-            <span className={`dot ${screenVisibility.audience ? 'on' : ''}`} />
-            Audience
-          </button>
-          <button
-            className={`screen screenButton ${screenVisibility.stage ? 'screenOn' : ''}`}
-            type="button"
-            onClick={() => setScreenVisible('stage', !screenVisibility.stage)}
-          >
-            <span className={`dot ${screenVisibility.stage ? 'on' : ''}`} />
-            Stage
-          </button>
-        </div>
-      </header>
+    <div className="operatorApp">
+      <OperatorToolbar
+        onOpenSearch={openSearch}
+        onShowMedia={() => setActiveMediaTab('Media')}
+        onToggleScreen={(kind) => void setScreenVisible(kind, !screenVisibility[kind])}
+        screenVisibility={screenVisibility}
+      />
 
-      <main className="main">
-        <aside className="sidebar">
-          <div className="sideTop">
-            <div className="titleRow">
-              <span className="panelTitle">LIBRARY / PLAYLIST</span>
-              <button className="tiny" type="button">＋</button>
-            </div>
-            <div className="sect">LIBRARIES</div>
-            <button className="tree sel" type="button">
-              <span>▼</span><span>Kids Songs</span><span className="count">1</span>
-            </button>
-            <button className="tree" type="button">
-              <span>▼</span><span>Presentations</span><span className="count">7</span>
-            </button>
-            <div className="sect">PLAYLISTS</div>
-            <button className="tree sel" type="button">
-              <span>▼</span><span>Sunday Kids</span><span className="count">{sundayKidsPlaylist.items.length}</span>
-            </button>
-            <button className="tree" type="button">
-              <span>▸</span><span>Christmas</span><span className="count">0</span>
-            </button>
-          </div>
-
-          <div className="playlist">
-            <div className="playlistHead">
-              <div className="panelTitle">SUNDAY KIDS</div>
-              <div className="sub">Demo service • typed playlist items</div>
-            </div>
-            <div className="playlistItems">
-              {sundayKidsPlaylist.items.map((item, index) => (
-                <button
-                  className={`item ${selectedItemId === item.id ? 'sel' : ''}`}
-                  key={item.id}
-                  type="button"
-                  onClick={() => setSelectedItemId(item.id)}
-                >
-                  <span className="idx">{index + 1}</span>
-                  <span className="kind">{kindIcon[item.type]}</span>
-                  <span className="name">{item.title}</span>
-                  <span>{selectedItemId === item.id ? '‸' : ''}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </aside>
-
-        <section className="work">
-          <div className="presHead">
-            <div>
-              <h1>{selectedItem.title}</h1>
-              <span className="presKind">{selectedItem.type.toUpperCase()}</span>
-            </div>
-            <span className="view">Slide View</span>
-          </div>
-
-          {selectedPresentation ? (
-            <div className="groups">
-              {selectedPresentation.groups.map((group) => (
-                <section className="group" key={group.id}>
-                  <div className={`groupLabel ${group.type}`}>{group.name}</div>
-                  <div className="grid">
-                    {group.slides.map((slide, index) => {
-                      const live =
-                        output.slide?.presentationId === selectedPresentation.id && output.slide.slideId === slide.id;
-                      return (
-                        <button
-                          className={`slide ${live ? 'live' : ''}`}
-                          key={slide.id}
-                          type="button"
-                          onClick={() => triggerSlide(selectedPresentation, slide)}
-                        >
-                          <span className="num">{index + 1}</span>
-                          {live ? <span className="badge">LIVE</span> : null}
-                          <span className="canvas">
-                            <span className="slideText">
-                              {slide.text.split('\n').map((line, lineIndex) => (
-                                <span key={`${slide.id}-${lineIndex}`}>{line}</span>
-                              ))}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
-            </div>
-          ) : selectedMedia ? (
-            <div className="groups toolWorkspace">
-              <div className="futureCard">
-                <div className="futureEyebrow">MEDIA PLAYLIST ITEM</div>
-                <h2>{selectedMedia.title}</h2>
-                <p>Selecting an item only prepares it. Click the media tile below to send the media layer live.</p>
-                <button className="mediaLaunch" type="button" onClick={() => triggerMedia(selectedMedia)}>
-                  <span className="mediaThumb" />
-                  <strong>Trigger Media</strong>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="groups toolWorkspace">
-              <div className="futureCard">
-                <div className="futureEyebrow">
-                  {selectedItem.type === 'web-tool' ? 'WEB TOOL' : 'INTERACTIVE TOOL'}
-                </div>
-                <h2>{selectedItem.title}</h2>
-                <p>
-                  This playlist type is already part of the domain model, but its runtime is intentionally not implemented
-                  yet. Future tools will have separate operator controls and clean Audience output.
-                </p>
-                <div className="futureFlow">
-                  <span>Prepare</span><b>→</b><span>Show</span><b>→</b><span>Reset</span><b>→</b><span>Complete</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <aside className="inspector">
-          <section className="insSec">
-            <div className="panelTitle">AUDIENCE PREVIEW</div>
-            <AudienceOutput output={output} preview />
-            <div className="meta">
-              <span>{outputLabel(output)}</span>
-              <span>{output.slide?.slideId ?? '—'}</span>
-            </div>
-            <div className="transport">
-              <button type="button" onClick={() => navigate(-1)}>← Previous</button>
-              <button type="button" onClick={() => navigate(1)}>Next →</button>
-            </div>
-          </section>
-
-          <section className="insSec">
-            <div className="panelTitle">CLEAR</div>
-            <div className="clear">
-              <button className="danger" type="button" onClick={clearAll}><kbd>F1</kbd> All</button>
-              <button type="button" onClick={clearSlide}><kbd>F2</kbd> Slide</button>
-              <button type="button" onClick={clearMedia}><kbd>F3</kbd> Media</button>
-              <button type="button" onClick={clearProps}><kbd>F4</kbd> Props</button>
-              <button type="button" onClick={clearAudio}><kbd>F5</kbd> Audio</button>
-              <button type="button" onClick={clearMessage}><kbd>F6</kbd> Message</button>
-              <button className={output.logo ? 'active' : ''} type="button" onClick={clearToLogo}><kbd>F12</kbd> Logo</button>
-              <button className={output.black ? 'active' : ''} type="button" onClick={toggleBlack}>■ Black</button>
-            </div>
-          </section>
-
-          <section className="insSec">
-            <div className="panelTitle">NETWORK STAGE</div>
-            <div className="networkStageBox">
-              <div className="networkStageRow">
-                <span>Status</span>
-                <strong>{networkStage.running ? 'Ready' : 'Offline'}</strong>
-              </div>
-              <div className="networkStageRow">
-                <span>Tablet clients</span>
-                <strong>{networkStage.clientCount}</strong>
-              </div>
-              {networkStage.urls.length ? (
-                <div className="networkStageLinks">
-                  {networkStage.urls.map((url, index) => (
-                    <div className="networkStageLink" key={url}>
-                      <div className="networkStageUrl" title={url}>{url}</div>
-                      <button
-                        className="networkStageCopy"
-                        type="button"
-                        onClick={() => navigator.clipboard?.writeText(url).catch(() => undefined)}
-                      >
-                        Copy {networkStage.urls.length > 1 ? 'Link ' + (index + 1) : 'Stage Link'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="networkStageHint">
-                  {networkStage.error || 'Connect the laptop to a local network to expose a tablet Stage address.'}
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section className="insSec">
-            <div className="panelTitle">OUTPUT LAYERS</div>
-            <div className="layers">
-              {[
-                ['Slide', Boolean(output.slide)],
-                ['Media', Boolean(output.media)],
-                ['Props', Boolean(output.prop)],
-                ['Messages', Boolean(output.message)],
-                ['Announcements', Boolean(output.announcement)],
-                ['Audio', Boolean(output.audio)],
-                ['Live Video', Boolean(output.liveVideo)],
-              ].map(([name, on]) => (
-                <div className="layer" key={String(name)}>
-                  <span>{String(name)}</span>
-                  <span className={`led ${on ? 'on' : ''}`} />
-                </div>
-              ))}
-            </div>
-          </section>
-        </aside>
+      <main className="operatorMain">
+        <LibraryPanel onSelectItem={setSelectedItemId} output={output} selectedItemId={selectedItemId} />
+        <SlideWorkspace
+          media={selectedMedia}
+          onSelectSlide={setSelectedSlideId}
+          onTriggerMedia={triggerMedia}
+          onTriggerSlide={triggerSlide}
+          output={output}
+          presentation={selectedPresentation}
+          selectedItem={selectedItem}
+          selectedSlideId={selectedSlideId}
+        />
+        <LivePanel
+          networkStage={networkStage}
+          onClearAll={clearAll}
+          onClearAudio={clearAudio}
+          onClearMedia={clearMedia}
+          onClearMessage={clearMessage}
+          onClearProps={clearProps}
+          onClearSlide={clearSlide}
+          onClearToLogo={clearToLogo}
+          onNavigate={navigate}
+          onToggleBlack={toggleBlack}
+          output={output}
+          screenVisibility={screenVisibility}
+        />
       </main>
 
-      <section className="media">
-        <div className="mediaHead">
-          <div className="tabs">
-            <button className="tab active" type="button">Media</button>
-            <button className="tab" type="button">Audio</button>
-            <button className="tab" type="button">Stage</button>
-            <button className="tab" type="button">Timers</button>
-            <button className="tab" type="button">Messages</button>
-          </div>
-          <span className="mediaHint">Future: local files + downloader provider</span>
-        </div>
-        <div className="mediaContent">
-          <div className="mediaSide">
-            <div className="sourceTitle">MEDIA BIN</div>
-            <button className="source sel" type="button">All Media</button>
-            <button className="source" type="button">Backgrounds</button>
-            <button className="source" type="button">Kids Church</button>
-          </div>
-          <div className="mediaItems">
-            {mediaAssets.map((asset) => (
-              <button
-                className={`mediaItem ${output.media?.id === asset.id ? 'live' : ''}`}
-                key={asset.id}
-                type="button"
-                onClick={() => triggerMedia(asset)}
-              >
-                <div className="mediaThumb" />
-                <span>{asset.title}</span>
-                <small>{asset.kind}</small>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
+      <MediaBin
+        activeTab={activeMediaTab}
+        networkStage={networkStage}
+        onTriggerMedia={triggerMedia}
+        output={output}
+        setActiveTab={setActiveMediaTab}
+        stageOutput={stageOutput}
+      />
 
-      <footer className="status">
-        <span>KidsChurch Presenter v0.2.1 alpha</span>
-        <span>Sunday Kids • Multi-output Foundation</span>
-        <span>
-          <i className={`dot ${screenVisibility.audience ? 'on' : ''}`} /> Audience
-          &nbsp;&nbsp;
-          <i className={`dot ${screenVisibility.stage ? 'on' : ''}`} /> Stage
-        </span>
+      <footer className="operatorStatusBar">
+        <span>KidsChurch Presenter <b>v{APP_VERSION}</b></span>
+        <span>Sunday Kids</span>
+        <span><i className={screenVisibility.audience ? 'isOn' : ''}/>Audience <i className={screenVisibility.stage ? 'isOn' : ''}/>Stage</span>
       </footer>
 
-      <div className={`overlay ${searchOpen ? 'open' : ''}`} onMouseDown={(event: MouseEvent<HTMLDivElement>) => {
-        if (event.currentTarget === event.target) setSearchOpen(false);
-      }}>
-        <div className="searchBox">
-          <div className="searchInput">
-            <span>⌕</span>
+      <div
+        className={`searchOverlay ${searchOpen ? 'isOpen' : ''}`}
+        onMouseDown={(event: MouseEvent<HTMLDivElement>) => {
+          if (event.currentTarget === event.target) setSearchOpen(false);
+        }}
+      >
+        <div className="searchDialog" role="dialog" aria-label="Search library">
+          <div className="searchField">
+            <Icon name="search" />
             <input
-              ref={searchInputRef}
-              value={searchQuery}
               onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
               placeholder="Search library…"
+              ref={searchInputRef}
+              value={searchQuery}
             />
+            <kbd>ESC</kbd>
           </div>
-          <div className="results">
+          <div className="searchResults">
             {searchResults.map((presentation) => (
-              <button key={presentation.id} type="button" onClick={() => selectPresentationFromSearch(presentation.id)}>
+              <button key={presentation.id} onClick={() => selectPresentationFromSearch(presentation.id)} type="button">
+                <Icon name={presentation.category === 'scripture' ? 'bible' : presentation.category === 'timer' ? 'timer' : 'presentation'} />
                 <span>{presentation.title}</span>
                 <small>{presentation.category}</small>
               </button>
