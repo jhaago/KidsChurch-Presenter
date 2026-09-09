@@ -11,13 +11,25 @@ export type SlideGroupType = 'verse' | 'chorus' | 'bridge' | 'scripture' | 'gene
 export type ScreenKind = 'audience' | 'stage';
 export type ScreenTransport = 'local-display' | 'network';
 
-
 export interface NetworkStageInfo {
   running: boolean;
   port: number | null;
   urls: string[];
   clientCount: number;
   error: string | null;
+}
+
+export interface ResourceSource {
+  id: string;
+  label: string;
+  path: string;
+  type: 'folder';
+}
+
+export interface ResourceLibrarySnapshot {
+  sources: ResourceSource[];
+  assets: MediaAsset[];
+  lastError: string | null;
 }
 
 export interface ScreenAssignment {
@@ -86,7 +98,12 @@ export interface MediaAsset {
   title: string;
   kind: 'still' | 'motion' | 'video' | 'audio';
   managedPath?: string;
-  source?: 'local' | 'download-provider' | 'generated';
+  fileUrl?: string;
+  source?: 'local' | 'library-folder' | 'download-provider' | 'generated';
+  sourceId?: string;
+  sourceLabel?: string;
+  relativePath?: string;
+  extension?: string;
 }
 
 export interface LiveSlideState {
@@ -100,6 +117,9 @@ export interface LiveMediaState {
   id: string;
   title: string;
   kind: MediaAsset['kind'];
+  fileUrl?: string;
+  sourceId?: string;
+  sourceLabel?: string;
 }
 
 export interface OutputState {

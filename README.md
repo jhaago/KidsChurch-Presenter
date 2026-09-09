@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.2.2-alpha.1 — network Stage foundation**
+**v0.3.0-alpha.1 — resource library and motion background foundation**
 
 Implemented in source:
 
@@ -33,6 +33,10 @@ Implemented in source:
 - demo Kids Church service
 - placeholder first-class playlist entries for **Spin the Wheel** and **Donuts Bingo**
 - an optional external-media-provider interface for future integration with the separate video downloader
+- persistent local/OneDrive-synced resource folders
+- recursive media scanning and per-folder Media Bin filters
+- still-image and looping motion backgrounds behind live slide text
+- direct playback from library folders without copying the source files
 
 ## Run on macOS or Windows
 
@@ -76,6 +80,20 @@ npm run dist:mac
 ```
 
 See `docs/WINDOWS.md` for the Windows laptop + projector setup and test checklist.
+
+## Resource folders
+
+Use the **+** button in the Library panel to add any normal folder visible to Windows or macOS. A synced OneDrive folder works because Presenter reads the local synced filesystem path; no Microsoft sign-in is required inside Presenter.
+
+The current v0.3 scanner recognises:
+
+- stills: JPG, JPEG, PNG, WEBP, GIF, BMP
+- motion/video resources: MP4, WEBM, M4V, MOV
+- audio resources: MP3, WAV, M4A, AAC, OGG, FLAC
+
+For service reliability, OneDrive media that will be used live should be marked **Always keep on this device** so playback never depends on downloading a cloud placeholder during a service.
+
+Motion resources imported from resource folders are treated as looping backgrounds and can coexist with the Slide layer.
 
 ## First desktop test checklist
 

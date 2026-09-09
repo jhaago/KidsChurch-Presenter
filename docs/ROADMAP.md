@@ -78,6 +78,27 @@ Status: implemented in source.
 - remote-control permissions
 - polished Stage themes / clocks / timers
 
+## v0.3 — Resource library and motion backgrounds
+
+Status: foundation implemented.
+
+- add/remove persistent local or OneDrive-synced folders
+- recursive media discovery
+- folder-aware Media Bin filters
+- manual rescan
+- still background rendering
+- looping motion background rendering
+- media remains an independent layer behind slides
+
+Still to build in the broader v0.3 family:
+
+- editable presentation/library persistence
+- playlist creation and reordering
+- service save/open
+- autosave/recovery
+- richer media metadata and thumbnails
+- background assignment to individual slides/presentations
+
 ## v0.3 — Real service/library persistence
 
 - create/edit presentations

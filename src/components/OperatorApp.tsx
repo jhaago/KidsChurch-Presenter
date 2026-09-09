@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
-import { mediaById, presentationById, presentations, sundayKidsPlaylist } from '../data/demo';
+import { mediaAssets as demoMediaAssets, mediaById, presentationById, presentations, sundayKidsPlaylist } from '../data/demo';
 import {
   EMPTY_OUTPUT_STATE,
   EMPTY_STAGE_OUTPUT_STATE,
@@ -7,6 +7,7 @@ import {
   type NetworkStageInfo,
   type OutputState,
   type PresenterOutputState,
+  type ResourceLibrarySnapshot,
   type ScreenKind,
   type Slide,
   type StageOutputState,
@@ -41,6 +42,11 @@ export function OperatorApp() {
     clientCount: 0,
     error: null,
   });
+  const [resourceLibrary, setResourceLibrary] = useState<ResourceLibrarySnapshot>({
+    sources: [],
+    assets: [],
+    lastError: null,
+  });
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -51,6 +57,17 @@ export function OperatorApp() {
   );
   const selectedPresentation = presentationById(selectedItem.resourceId);
   const selectedMedia = mediaById(selectedItem.resourceId);
+  const allMediaAssets = useMemo(
+    () => [...demoMediaAssets, ...resourceLibrary.assets],
+    [resourceLibrary.assets],
+  );
+  const resourceAssetCountBySource = useMemo(
+    () => resourceLibrary.assets.reduce<Record<string, number>>((counts, asset) => {
+      if (asset.sourceId) counts[asset.sourceId] = (counts[asset.sourceId] ?? 0) + 1;
+      return counts;
+    }, {}),
+    [resourceLibrary.assets],
+  );
 
   useEffect(() => {
     const firstSlide = selectedPresentation ? allSlides(selectedPresentation)[0] : null;
@@ -77,9 +94,12 @@ export function OperatorApp() {
       });
       window.kidsPresenter.getNetworkStageInfo().then(setNetworkStage).catch(() => undefined);
       const unsubscribeNetwork = window.kidsPresenter.onNetworkStageInfo(setNetworkStage);
+      window.kidsPresenter.getResourceLibrary().then(setResourceLibrary).catch(() => undefined);
+      const unsubscribeResources = window.kidsPresenter.onResourceLibraryUpdated(setResourceLibrary);
       unsubscribe = () => {
         unsubscribeVisibility();
         unsubscribeNetwork();
+        unsubscribeResources();
       };
     }
     return unsubscribe;
@@ -125,7 +145,14 @@ export function OperatorApp() {
   const triggerMedia = useCallback((asset: MediaAsset) => {
     setOutput((current) => ({
       ...current,
-      media: { id: asset.id, title: asset.title, kind: asset.kind },
+      media: {
+        id: asset.id,
+        title: asset.title,
+        kind: asset.kind,
+        fileUrl: asset.fileUrl,
+        sourceId: asset.sourceId,
+        sourceLabel: asset.sourceLabel,
+      },
       black: false,
       logo: false,
     }));
@@ -241,7 +268,19 @@ export function OperatorApp() {
       />
 
       <main className="operatorMain">
-        <LibraryPanel onSelectItem={setSelectedItemId} output={output} selectedItemId={selectedItemId} />
+        <LibraryPanel
+          onAddResourceFolder={() => {
+            void window.kidsPresenter?.addResourceFolder().then(setResourceLibrary);
+          }}
+          onRemoveResourceFolder={(sourceId) => {
+            void window.kidsPresenter?.removeResourceFolder(sourceId).then(setResourceLibrary);
+          }}
+          onSelectItem={setSelectedItemId}
+          output={output}
+          resourceAssetCountBySource={resourceAssetCountBySource}
+          resourceSources={resourceLibrary.sources}
+          selectedItemId={selectedItemId}
+        />
         <SlideWorkspace
           media={selectedMedia}
           onSelectSlide={setSelectedSlideId}
@@ -270,9 +309,14 @@ export function OperatorApp() {
 
       <MediaBin
         activeTab={activeMediaTab}
+        assets={allMediaAssets}
         networkStage={networkStage}
+        onRescanResources={() => {
+          void window.kidsPresenter?.rescanResourceLibrary().then(setResourceLibrary);
+        }}
         onTriggerMedia={triggerMedia}
         output={output}
+        resourceSources={resourceLibrary.sources}
         setActiveTab={setActiveMediaTab}
         stageOutput={stageOutput}
       />

@@ -1,10 +1,14 @@
 import { presentationById, sundayKidsPlaylist } from '../data/demo';
-import type { OutputState, PlaylistItem } from '../domain/types';
+import type { OutputState, PlaylistItem, ResourceSource } from '../domain/types';
 import { Icon, type IconName } from './ui/Icon';
 
 interface LibraryPanelProps {
   selectedItemId: string;
   output: OutputState;
+  resourceSources: ResourceSource[];
+  resourceAssetCountBySource: Record<string, number>;
+  onAddResourceFolder: () => void;
+  onRemoveResourceFolder: (sourceId: string) => void;
   onSelectItem: (id: string) => void;
 }
 
@@ -31,13 +35,21 @@ function isLiveItem(item: PlaylistItem, output: OutputState) {
   return output.slide?.presentationId === item.resourceId || output.media?.id === item.resourceId;
 }
 
-export function LibraryPanel({ selectedItemId, output, onSelectItem }: LibraryPanelProps) {
+export function LibraryPanel({
+  selectedItemId,
+  output,
+  resourceSources,
+  resourceAssetCountBySource,
+  onAddResourceFolder,
+  onRemoveResourceFolder,
+  onSelectItem,
+}: LibraryPanelProps) {
   return (
     <aside className="libraryPanel" aria-label="Library and playlist">
       <section className="libraryTree">
         <div className="panelBar">
           <span>LIBRARY</span>
-          <button className="panelAction" title="Add library (planned feature)" type="button">＋</button>
+          <button className="panelAction" title="Add a local or OneDrive-synced resource folder" type="button" onClick={onAddResourceFolder}>＋</button>
         </div>
         <div className="treeSectionLabel">LIBRARIES</div>
         <button className="treeRow isSelected" type="button">
@@ -58,6 +70,31 @@ export function LibraryPanel({ selectedItemId, output, onSelectItem }: LibraryPa
           <span>Bible</span>
           <small>1</small>
         </button>
+
+        <div className="treeSectionLabel resourceTreeLabel">
+          <span>RESOURCE FOLDERS</span>
+          <small>{resourceSources.length}</small>
+        </div>
+        {resourceSources.length ? resourceSources.map((source) => (
+          <div className="resourceTreeRow" key={source.id} title={source.path}>
+            <Icon className="rowIcon" name="folder" />
+            <span>{source.label}</span>
+            <small>{resourceAssetCountBySource[source.id] ?? 0}</small>
+            <button
+              aria-label={'Remove ' + source.label}
+              title="Remove this folder from Presenter (does not delete files)"
+              type="button"
+              onClick={() => onRemoveResourceFolder(source.id)}
+            >
+              ×
+            </button>
+          </div>
+        )) : (
+          <button className="resourceEmptyRow" type="button" onClick={onAddResourceFolder}>
+            <Icon name="folder" />
+            <span>Add OneDrive or local folder…</span>
+          </button>
+        )}
 
         <div className="treeSectionLabel playlistTreeLabel">PLAYLISTS</div>
         <button className="treeRow isSelected" type="button">

@@ -17,6 +17,10 @@ contextBridge.exposeInMainWorld('kidsPresenter', {
     ipcRenderer.invoke('screen:get-visible', assertScreenKind(kind)),
   getScreenAssignments: () => ipcRenderer.invoke('screen:get-assignments'),
   getNetworkStageInfo: () => ipcRenderer.invoke('network-stage:get-info'),
+  getResourceLibrary: () => ipcRenderer.invoke('resource-library:get'),
+  addResourceFolder: () => ipcRenderer.invoke('resource-library:add-folder'),
+  removeResourceFolder: (sourceId) => ipcRenderer.invoke('resource-library:remove-folder', sourceId),
+  rescanResourceLibrary: () => ipcRenderer.invoke('resource-library:rescan'),
   sendPresenterOutput: (state) => ipcRenderer.send('presenter:output-update', state),
   onScreenState: (kind, callback) => {
     const safeKind = assertScreenKind(kind);
@@ -35,5 +39,10 @@ contextBridge.exposeInMainWorld('kidsPresenter', {
     const listener = (_event, info) => callback(info);
     ipcRenderer.on('network-stage:info', listener);
     return () => ipcRenderer.removeListener('network-stage:info', listener);
+  },
+  onResourceLibraryUpdated: (callback) => {
+    const listener = (_event, snapshot) => callback(snapshot);
+    ipcRenderer.on('resource-library:updated', listener);
+    return () => ipcRenderer.removeListener('resource-library:updated', listener);
   },
 });

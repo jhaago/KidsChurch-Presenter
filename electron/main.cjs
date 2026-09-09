@@ -1,11 +1,13 @@
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, screen } = require('electron');
 const path = require('node:path');
 const { NetworkStageServer } = require('./stage-server.cjs');
+const { ResourceLibrary } = require('./resource-library.cjs');
 
 let operatorWindow = null;
 const screenWindows = new Map();
 let isQuitting = false;
 const networkStageServer = new NetworkStageServer({ port: 4310 });
+let resourceLibrary = null;
 
 const devUrl = process.env.VITE_DEV_SERVER_URL || null;
 const screenKinds = new Set(['audience', 'stage']);
@@ -235,6 +237,9 @@ function setScreenVisible(kind, visible) {
 }
 
 app.whenReady().then(async () => {
+  resourceLibrary = new ResourceLibrary(app.getPath('userData'));
+  await resourceLibrary.load();
+
   createOperatorWindow();
   createScreenWindow('audience');
   createScreenWindow('stage');
@@ -247,6 +252,44 @@ app.whenReady().then(async () => {
   );
   ipcMain.handle('screen:get-assignments', () => structuredClone(screenAssignments));
   ipcMain.handle('network-stage:get-info', () => networkStageServer.info());
+
+  const publishResourceLibrary = (snapshot) => {
+    if (operatorWindow && !operatorWindow.isDestroyed()) {
+      operatorWindow.webContents.send('resource-library:updated', snapshot);
+    }
+    return snapshot;
+  };
+
+  ipcMain.handle('resource-library:get', () => resourceLibrary?.snapshot() ?? {
+    sources: [],
+    assets: [],
+    lastError: 'Resource library is not ready.',
+  });
+
+  ipcMain.handle('resource-library:add-folder', async () => {
+    const options = {
+      title: 'Add Resource Library Folder',
+      buttonLabel: 'Add Folder',
+      properties: ['openDirectory'],
+    };
+    const result = operatorWindow && !operatorWindow.isDestroyed()
+      ? await dialog.showOpenDialog(operatorWindow, options)
+      : await dialog.showOpenDialog(options);
+
+    if (result.canceled || !result.filePaths[0]) {
+      return resourceLibrary?.snapshot() ?? { sources: [], assets: [], lastError: null };
+    }
+
+    return publishResourceLibrary(await resourceLibrary.addFolder(result.filePaths[0]));
+  });
+
+  ipcMain.handle('resource-library:remove-folder', async (_event, sourceId) => {
+    return publishResourceLibrary(await resourceLibrary.removeFolder(String(sourceId)));
+  });
+
+  ipcMain.handle('resource-library:rescan', async () => {
+    return publishResourceLibrary(await resourceLibrary.rescan());
+  });
 
   networkStageServer.onInfo((info) => {
     if (operatorWindow && !operatorWindow.isDestroyed()) {
