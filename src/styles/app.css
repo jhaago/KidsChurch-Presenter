@@ -993,3 +993,84 @@ kbd {
   .servicesList{max-height:58px}
   .serviceHeaderEditable{min-height:70px}
 }
+
+
+/* v0.5.3 song timing editor */
+.songTimingEditor{margin:8px 11px 14px;border:1px solid #394149;background:#14191d}
+.songTimingHeader{height:36px;padding:0 9px;border-bottom:1px solid #30383e;background:#1b2227;display:flex;align-items:center;justify-content:space-between}
+.songTimingHeader>div{display:flex;align-items:center;gap:7px}
+.songTimingHeader svg{width:15px;height:15px;color:#6ba3cd}
+.songTimingHeader strong{display:block;color:#d9dde0;font-size:9px;letter-spacing:.08em}
+.songTimingHeader span{display:block;margin-top:1px;color:#6e7981;font-size:7px}
+.songTimingHeader>span{margin:0;padding:4px 6px;border:1px solid #3b454d;border-radius:2px;background:#20262b;color:#75818a;font-size:7px;font-weight:800;letter-spacing:.08em}
+.songTimingHeader>span.isArmed{border-color:#856a27;background:#392f14;color:#f0d16f}
+.timingSafetyNote{display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid #263038;background:#15222a;color:#7e99ab;font-size:7px}
+.timingSafetyNote svg{width:12px;height:12px;color:#6993ad}
+.timingBlocked{margin:8px;padding:14px;border:1px dashed #47515a;background:#171c20;display:flex;flex-direction:column;gap:5px;color:#747f87;text-align:center}
+.timingBlocked strong{color:#c2c7cb;font-size:9px}
+.timingBlocked span{font-size:7px}
+.timingTransport{padding:8px;border-bottom:1px solid #2a3136;display:grid;grid-template-columns:auto auto;gap:7px 12px;align-items:center}
+.timingTransportButtons{display:flex;flex-wrap:wrap;gap:4px}
+.timingTransportButtons button,.timingCueActions button,.timingFineAdjust button,.timingFooter button{height:25px;padding:0 7px;border:1px solid #3a434a;border-radius:2px;background:#252c31;color:#9fa8af;cursor:pointer;font-size:7px}
+.timingTransportButtons button:hover:not(:disabled),.timingCueActions button:hover:not(:disabled),.timingFineAdjust button:hover:not(:disabled),.timingFooter button:hover:not(:disabled){background:#323a40;color:#fff}
+.timingTransportButtons button:disabled,.timingCueActions button:disabled,.timingFineAdjust button:disabled,.timingFooter button:disabled{opacity:.3;cursor:not-allowed}
+.timingTransportButtons .timingStartButton{border-color:#5f7733;background:#26351b;color:#b8d88a}
+.timingTransportButtons .timingStartButton:hover{background:#334922;color:#d9efb8}
+.timingClock{display:flex;justify-content:flex-end;align-items:baseline;gap:4px;font-variant-numeric:tabular-nums}
+.timingClock b{color:#e1e5e8;font-size:15px}
+.timingClock span{color:#69747c;font-size:8px}
+.timingTransport>input[type=range]{grid-column:1/-1;width:100%;accent-color:#5d9aca}
+.timingTapArea{padding:8px;border-bottom:1px solid #2b3238;background:#171c20}
+.timingTapArea>button{width:100%;min-height:78px;padding:9px 12px;border:1px solid #3c4851;border-radius:3px;background:#20262b;color:#87939c;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer}
+.timingTapArea>button.isArmed{border-color:#a37d28;background:#352b11;box-shadow:inset 0 0 0 1px #5f4d1d;color:#f0d06a}
+.timingTapArea>button:disabled{opacity:.48;cursor:not-allowed}
+.timingTapArea>button span{font-size:7px;font-weight:900;letter-spacing:.12em}
+.timingTapArea>button strong{font-size:13px}
+.timingTapArea>button small{max-width:90%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#8f999f;font-size:7px}
+.timingTapArea>button.isArmed small{color:#c2ad70}
+.timingTapMessage{padding-top:5px;color:#7c878f;font-size:7px;text-align:center}
+.timingTimeline{padding:8px 10px 4px}
+.timingTimelineTrack{position:relative;height:10px;border:1px solid #30383e;border-radius:5px;background:#0e1113}
+.timingTimelineTrack:before{content:"";position:absolute;inset:3px 4px;border-radius:2px;background:#26333d}
+.timingTimelineTrack button{position:absolute;top:-3px;width:5px;height:14px;margin-left:-2px;padding:0;border:0;border-radius:1px;background:#d5aa46;cursor:pointer}
+.timingTimelineTrack button:hover{width:7px;margin-left:-3px;background:#f0ca6e}
+.timingCueTable{padding:6px 8px 8px}
+.timingCueHeader,.timingCueRow{display:grid;grid-template-columns:28px minmax(180px,1.35fr) 105px 190px 125px;gap:6px;align-items:center}
+.timingCueHeader{height:22px;padding:0 5px;color:#68737b;font-size:6.5px;font-weight:900;letter-spacing:.08em}
+.timingCueRow{min-height:52px;padding:5px;border:1px solid #2c3338;border-bottom:0;background:#171b1f}
+.timingCueRow:last-child{border-bottom:1px solid #2c3338}
+.timingCueRow.isTimed{background:#182019}
+.timingCueRow.isNext{border-color:#7c6425;background:#28230f;box-shadow:inset 3px 0 #d0a43e}
+.timingCueNumber{color:#647079;font-size:8px;text-align:center}
+.timingCueText{min-width:0}
+.timingCueText strong{display:block;color:#b6bdc2;font-size:8px}
+.timingCueText span{display:block;margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#768089;font-size:7px}
+.timingCueTime{display:flex;flex-direction:column;gap:3px}
+.timingCueTime input{width:94px;height:24px;box-sizing:border-box;padding:0 5px;border:1px solid #394148;border-radius:2px;background:#0f1214;color:#cdd2d6;font-size:8px;font-variant-numeric:tabular-nums;outline:none}
+.timingCueTime input:focus{border-color:#4d84ad}
+.timingCueTime small{color:#626d75;font-size:6.5px;font-variant-numeric:tabular-nums}
+.timingFineAdjust{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+.timingFineAdjust button{height:22px;padding:0 3px;font-size:6.5px}
+.timingFineAdjust small{grid-column:1/-1;color:#59636a;font-size:6px;text-align:center}
+.timingCueActions{display:flex;gap:3px}
+.timingCueActions button{height:22px;padding:0 5px}
+.timingCueActions button.danger,.timingFooter button.danger{border-color:#50363a;color:#b57d83}
+.timingCueActions button.danger:hover:not(:disabled),.timingFooter button.danger:hover:not(:disabled){background:#362124;color:#e6a2a8}
+.timingFooter{min-height:45px;padding:6px 8px;border-top:1px solid #31383e;background:#1a2024;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.timingFooter>div:first-child strong{display:block;color:#b9c0c5;font-size:8px}
+.timingFooter>div:first-child span{display:block;margin-top:2px;color:#68737b;font-size:6.5px}
+.timingFooter>div:last-child{display:flex;gap:4px}
+.timingFooter .timingAutoButton{border-color:#416e92;background:#203f58;color:#c6dcec}
+.timingFooter .timingAutoButton:hover:not(:disabled){background:#2b5575}
+@media(max-width:1250px){
+  .timingCueHeader,.timingCueRow{grid-template-columns:24px minmax(150px,1fr) 95px 150px 100px}
+  .timingFineAdjust button{font-size:6px}
+}
+@media(max-width:1050px){
+  .timingCueHeader{display:none}
+  .timingCueRow{grid-template-columns:24px 1fr 100px}
+  .timingFineAdjust{grid-column:2/4}
+  .timingCueActions{grid-column:2/4}
+  .timingTransport{grid-template-columns:1fr}
+  .timingClock{justify-content:flex-start}
+}

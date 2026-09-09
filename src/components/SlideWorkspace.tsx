@@ -3,6 +3,7 @@ import type { SongTransportSnapshot } from '../audio/useSongTransport';
 import type { MediaAsset, OutputState, PlaylistItem, Presentation, Slide, Song } from '../domain/types';
 import { PresentationEditorPanel } from './PresentationEditorPanel';
 import { SongSetupPanel } from './SongSetupPanel';
+import { SongTimingEditor } from './SongTimingEditor';
 import { SongTransportPanel } from './SongTransportPanel';
 import { Icon } from './ui/Icon';
 
@@ -15,6 +16,8 @@ interface SlideWorkspaceProps {
   selectedSlideId: string | null;
   output: OutputState;
   songTransport: SongTransportSnapshot;
+  timingTransport: SongTransportSnapshot;
+  getTimingPositionMs: () => number;
   onChangePresentation: (presentation: Presentation) => void;
   onChangeSong: (song: Song) => void;
   onPlaySong: (song: Song) => void;
@@ -22,6 +25,11 @@ interface SlideWorkspaceProps {
   onResumeSong: () => void;
   onStopSong: () => void;
   onSeekSong: (positionMs: number) => void;
+  onPlayTimingSong: (song: Song) => Promise<boolean>;
+  onPauseTimingSong: () => void;
+  onResumeTimingSong: () => Promise<boolean>;
+  onStopTimingSong: () => void;
+  onSeekTimingSong: (positionMs: number) => Promise<void>;
   onSelectSlide: (slideId: string) => void;
   onTriggerSlide: (presentation: Presentation, slide: Slide) => void;
   onTriggerMedia: (asset: MediaAsset) => void;
@@ -48,6 +56,8 @@ export function SlideWorkspace({
   selectedSlideId,
   output,
   songTransport,
+  timingTransport,
+  getTimingPositionMs,
   onChangePresentation,
   onChangeSong,
   onPlaySong,
@@ -55,16 +65,22 @@ export function SlideWorkspace({
   onResumeSong,
   onStopSong,
   onSeekSong,
+  onPlayTimingSong,
+  onPauseTimingSong,
+  onResumeTimingSong,
+  onStopTimingSong,
+  onSeekTimingSong,
   onSelectSlide,
   onTriggerSlide,
   onTriggerMedia,
   onTriggerLyricsVideo,
 }: SlideWorkspaceProps) {
-  const [editing, setEditing] = useState(false);
+  const [viewMode, setViewMode] = useState<'slides' | 'edit' | 'timing'>('slides');
 
   useEffect(() => {
-    setEditing(false);
-  }, [selectedItem.id]);
+    setViewMode('slides');
+    onStopTimingSong();
+  }, [selectedItem.id, onStopTimingSong]);
 
   return (
     <section className="slideWorkspace" aria-label="Slide workspace">
@@ -79,17 +95,27 @@ export function SlideWorkspace({
         <div className="workspaceHeaderActions">
           {presentation ? (
             <button
-              className={editing ? 'isActive' : ''}
+              className={viewMode === 'edit' ? 'isActive' : ''}
               type="button"
-              onClick={() => setEditing((current) => !current)}
+              onClick={() => setViewMode((current) => current === 'edit' ? 'slides' : 'edit')}
             >
               <Icon name="presentation" />
-              {editing ? 'Done Editing' : 'Edit'}
+              {viewMode === 'edit' ? 'Done Editing' : 'Edit'}
+            </button>
+          ) : null}
+          {song && presentation ? (
+            <button
+              className={viewMode === 'timing' ? 'isActive' : ''}
+              type="button"
+              onClick={() => setViewMode((current) => current === 'timing' ? 'slides' : 'timing')}
+            >
+              <Icon name="timer" />
+              {viewMode === 'timing' ? 'Done Timing' : 'Timing'}
             </button>
           ) : null}
           <div className="workspaceView">
             <Icon name="grid" />
-            <span>{editing ? 'Editor' : song ? 'Song + Slide View' : 'Slide View'}</span>
+            <span>{viewMode === 'edit' ? 'Editor' : viewMode === 'timing' ? 'Timing Editor' : song ? 'Song + Slide View' : 'Slide View'}</span>
           </div>
         </div>
       </header>
@@ -103,19 +129,34 @@ export function SlideWorkspace({
               onTriggerLyricsVideo={onTriggerLyricsVideo}
               song={song}
             />
-            <SongTransportPanel
-              onPause={onPauseSong}
-              onPlay={() => onPlaySong(song)}
-              onResume={onResumeSong}
-              onSeek={onSeekSong}
-              onStop={onStopSong}
-              song={song}
-              transport={songTransport}
-            />
+            {viewMode !== 'timing' ? (
+              <SongTransportPanel
+                onPause={onPauseSong}
+                onPlay={() => onPlaySong(song)}
+                onResume={onResumeSong}
+                onSeek={onSeekSong}
+                onStop={onStopSong}
+                song={song}
+                transport={songTransport}
+              />
+            ) : null}
           </>
         ) : null}
 
-        {editing && presentation ? (
+        {viewMode === 'timing' && song && presentation ? (
+          <SongTimingEditor
+            getPositionMs={getTimingPositionMs}
+            onChangeSong={onChangeSong}
+            onPausePreview={onPauseTimingSong}
+            onPlayPreview={onPlayTimingSong}
+            onResumePreview={onResumeTimingSong}
+            onSeekPreview={onSeekTimingSong}
+            onStopPreview={onStopTimingSong}
+            presentation={presentation}
+            song={song}
+            transport={timingTransport}
+          />
+        ) : viewMode === 'edit' && presentation ? (
           <PresentationEditorPanel
             isSongPresentation={Boolean(song)}
             onChange={onChangePresentation}

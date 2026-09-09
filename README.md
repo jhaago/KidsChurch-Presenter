@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.5.2-alpha.1 — Multiple Saved Services**
+**v0.5.3-alpha.1 — Song Timing Editor**
 
 Implemented in source:
 
@@ -80,6 +80,17 @@ Implemented in source:
 - active service selection persists across app restarts
 - switching or deleting a service does not clear already-live Audience/Stage output
 - resource renames and deletes propagate safely across every saved service
+- dedicated Song Timing Editor using an isolated preview transport
+- tap-to-time workflow: Space/Tap records the next lyric slide at the exact Web Audio playhead
+- Backspace undo and Escape disarm during tap mode
+- new timing pass can replace an existing cue map in one guided workflow
+- per-cue Set Now, seek, delete and direct time entry
+- ±10 ms and ±100 ms cue fine adjustment
+- visual cue markers across the preview timeline
+- incomplete cue count / timing-complete status
+- one-click switch to Auto Lyrics when every lyric slide has a cue
+- timing preview never sends slides/backgrounds to Audience or Stage
+- live-song guard prevents a timing preview from mixing over an actively playing service track
 
 ## Run on macOS or Windows
 
@@ -147,7 +158,7 @@ A Song is now a first-class resource rather than just a presentation with song-s
 - **Lyrics Video** — retain an existing MP4/video with its own kid-friendly graphics and embedded audio
 - **Live Band** — lyrics only, no backing audio
 
-Lyrics can independently be configured as **Manual**, **Assisted**, or **Auto**. The cue map is part of the Song model now; synchronized audio transport and automatic cue execution are the next audio-engine pass.
+Lyrics can independently be configured as **Manual**, **Assisted**, or **Auto**. The cue map is persisted with the Song, follows the same transport clock as the audio engine, and can now be created with the built-in tap-to-time editor.
 
 The Song transport now uses the Web Audio API. Assigned stems are decoded and scheduled against one shared AudioContext start time, rather than starting independent HTML audio elements. Muted stems remain on the shared timeline at zero gain, so a stem can be switched on during playback without restarting it.
 
@@ -200,6 +211,28 @@ The current editor supports:
 Changes autosave after a short debounce. The desktop process owns the saved JSON file and keeps the previous successful save as a backup. If the primary library file is unreadable on launch, Presenter attempts to recover the backup.
 
 The built-in demo service is now only the first-run seed. After the first successful save, the editable saved library becomes the source of truth.
+
+## Song Timing Editor
+
+For Songs using **Slides + Track** or **Slides + Stems**, choose **Timing** in the central workspace.
+
+The timing editor uses a separate preview transport from the live service transport. Preview audio is heard locally, but opening/timing slides does not alter Audience or Stage output.
+
+A normal timing pass is:
+
+1. assign the real backing track or stems in Song Setup
+2. open **Timing**
+3. choose **Start New Tap Pass**
+4. listen to the song
+5. press **Space** (or the large Tap button) whenever the next lyric slide should appear
+6. use **Backspace** to undo the previous tap if you were early/late
+7. Presenter pauses the preview when the last slide is captured
+8. review/nudge individual cue times
+9. choose **Use Auto Lyrics** once the timing map is complete
+
+Individual cues support direct seconds entry, **Set Now**, seek-to-cue, deletion, and ±10/±100 ms adjustments. Cues autosave as part of the Song.
+
+The timing editor currently follows the presentation's flat lyric-slide order. A later Song Arrangements pass will allow repeated Verse/Chorus sections to define the timing sequence without duplicating source lyric slides.
 
 ## Song Playback Engine test
 

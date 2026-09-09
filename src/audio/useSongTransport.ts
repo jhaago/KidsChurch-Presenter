@@ -279,6 +279,16 @@ export function useSongTransport(assets: MediaAsset[]) {
     }
   }, [assets, ensureContext, loadBuffersForPlan, scheduleFrom, stopSources, updateState]);
 
+  const restart = useCallback(async (song: Song) => {
+    stopSources();
+    stateRef.current = {
+      ...stateRef.current,
+      status: 'stopped',
+      positionMs: 0,
+    };
+    return play(song);
+  }, [play, stopSources]);
+
   const pause = useCallback(() => {
     if (stateRef.current.status !== 'playing') return;
     const positionMs = currentPositionMs();
@@ -359,6 +369,7 @@ export function useSongTransport(assets: MediaAsset[]) {
   return {
     state,
     play,
+    restart,
     pause,
     resume,
     stop,

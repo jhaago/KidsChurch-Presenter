@@ -131,6 +131,7 @@ export function OperatorApp() {
     [resourceLibrary.assets],
   );
   const songTransport = useSongTransport(allMediaAssets);
+  const timingTransport = useSongTransport(allMediaAssets);
   const activeSong = useMemo(
     () => songs.find((song) => song.id === songTransport.state.songId),
     [songs, songTransport.state.songId],
@@ -305,6 +306,7 @@ export function OperatorApp() {
   }, []);
 
   const playSong = useCallback(async (song: Song) => {
+    timingTransport.stop();
     const started = await songTransport.play(song);
     if (!started) return;
 
@@ -321,15 +323,24 @@ export function OperatorApp() {
       black: false,
       logo: false,
     }));
-  }, [allMediaAssets, songTransport.play]);
+  }, [allMediaAssets, songTransport.play, timingTransport.stop]);
 
   const pauseSong = useCallback(() => songTransport.pause(), [songTransport.pause]);
   const resumeSong = useCallback(() => {
+    timingTransport.stop();
     void songTransport.resume();
-  }, [songTransport.resume]);
+  }, [songTransport.resume, timingTransport.stop]);
   const seekSong = useCallback((positionMs: number) => {
     void songTransport.seek(positionMs);
   }, [songTransport.seek]);
+
+  const playTimingSong = useCallback(async (song: Song) => {
+    if (songTransport.state.status === 'playing') {
+      window.alert('Stop or pause the live Song transport before starting a timing preview.');
+      return false;
+    }
+    return timingTransport.restart(song);
+  }, [songTransport.state.status, timingTransport.restart]);
 
   const stopSong = useCallback(() => {
     songTransport.stop();
@@ -838,11 +849,18 @@ export function OperatorApp() {
             selectedSlideId={selectedSlideId}
             song={selectedSong}
             songTransport={songTransport.state}
+            timingTransport={timingTransport.state}
+            getTimingPositionMs={timingTransport.getPositionMs}
             onPauseSong={pauseSong}
             onPlaySong={(song) => void playSong(song)}
             onResumeSong={resumeSong}
             onSeekSong={seekSong}
             onStopSong={stopSong}
+            onPlayTimingSong={playTimingSong}
+            onPauseTimingSong={timingTransport.pause}
+            onResumeTimingSong={timingTransport.resume}
+            onStopTimingSong={timingTransport.stop}
+            onSeekTimingSong={timingTransport.seek}
           />
         ) : (
           <section className="slideWorkspace emptyServiceWorkspace">

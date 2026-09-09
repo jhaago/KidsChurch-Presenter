@@ -187,11 +187,28 @@ Status: implemented in source.
 - library resource rename/delete propagation across all services
 - empty-service operator state
 
+## v0.5.3 — Song Timing Editor
+
+Status: implemented in source.
+
+- isolated local preview transport separate from live Song output
+- Start New Tap Pass workflow
+- Space/Tap records the next lyric slide from the high-resolution Web Audio playhead
+- Backspace undo / Escape disarm shortcuts
+- cue replacement and incomplete-cue continuation
+- per-cue Set Now / seek / delete controls
+- direct cue-time entry
+- ±10 ms / ±100 ms fine adjustment
+- cue-marker timeline
+- timing completeness summary
+- one-click Auto Lyrics enable when all current lyric slides are timed
+- no Audience/Stage changes while timing
+- guard against preview/live backing-track overlap
+
 ### Next v0.5 passes
 
 - arrangements / repeat Verse-Chorus sections without duplicating source lyrics
 - undo/redo
-- cue-map editor / tap-to-time Auto Lyrics workflow
 - themes / text formatting baseline
 - more ProPresenter-like thumbnail behaviour
 
