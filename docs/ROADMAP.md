@@ -117,7 +117,31 @@ Still to build in the broader v0.3 family:
 - transitions kept intentionally simple initially
 - correct aspect-ratio handling
 
-## v0.5 — Song workflow
+## v0.3.1 — Song system foundation
+
+Status: implemented in source.
+
+- first-class Song entity and playlist item
+- Slides + Track / Slides + Stems / Lyrics Video / Live Band modes
+- Manual / Assisted / Auto lyric-control model
+- timestamp lyric cue map
+- per-song motion/still background assignment
+- backing-track assignment from resource folders
+- per-stem file assignment and enable/disable controls
+- legacy lyrics-video trigger with embedded audio
+- background vs full-video playback semantics
+
+### Next audio-engine pass
+
+- master song transport
+- play / pause / stop / seek
+- synchronized single-track transport
+- synchronized stem playback from one transport clock
+- Auto Lyrics cue execution from transport position
+- Assisted Lyrics timing/countdown cue
+- persistent song configuration and stem presets
+
+## v0.5 — Song editing workflow
 
 - Verse / Chorus / Bridge groups
 - presentation editor
@@ -152,7 +176,6 @@ Still to build in the broader v0.3 family:
 
 - network Stage display / Android browser client
 - Props / Messages / Announcements
-- audio workflows
 - external media-provider integration (video downloader)
 - CrowdLight integration
 - MIDI / OSC

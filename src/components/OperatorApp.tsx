@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
-import { mediaAssets as demoMediaAssets, mediaById, presentationById, presentations, sundayKidsPlaylist } from '../data/demo';
+import { mediaAssets as demoMediaAssets, mediaById, presentationById, presentations, songs as demoSongs, sundayKidsPlaylist } from '../data/demo';
 import {
   EMPTY_OUTPUT_STATE,
   EMPTY_STAGE_OUTPUT_STATE,
@@ -10,6 +10,7 @@ import {
   type ResourceLibrarySnapshot,
   type ScreenKind,
   type Slide,
+  type Song,
   type StageOutputState,
   type Presentation,
 } from '../domain/types';
@@ -47,6 +48,16 @@ export function OperatorApp() {
     assets: [],
     lastError: null,
   });
+  const [songs, setSongs] = useState<Song[]>(() =>
+    demoSongs.map((song) => ({
+      ...song,
+      audio: {
+        ...song.audio,
+        stems: song.audio.stems.map((stem) => ({ ...stem })),
+      },
+      lyricCues: song.lyricCues.map((cue) => ({ ...cue })),
+    })),
+  );
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -55,8 +66,13 @@ export function OperatorApp() {
     () => sundayKidsPlaylist.items.find((item) => item.id === selectedItemId) ?? sundayKidsPlaylist.items[0],
     [selectedItemId],
   );
-  const selectedPresentation = presentationById(selectedItem.resourceId);
-  const selectedMedia = mediaById(selectedItem.resourceId);
+  const selectedSong = selectedItem.type === 'song'
+    ? songs.find((song) => song.id === selectedItem.resourceId)
+    : undefined;
+  const selectedPresentation = selectedSong
+    ? presentationById(selectedSong.presentationId)
+    : presentationById(selectedItem.resourceId);
+  const selectedMedia = selectedItem.type === 'media' ? mediaById(selectedItem.resourceId) : undefined;
   const allMediaAssets = useMemo(
     () => [...demoMediaAssets, ...resourceLibrary.assets],
     [resourceLibrary.assets],
@@ -118,6 +134,10 @@ export function OperatorApp() {
     const slides = allSlides(presentation);
     const currentIndex = slides.findIndex((candidate) => candidate.id === slide.id);
     const nextSlide = currentIndex >= 0 ? slides[currentIndex + 1] ?? null : null;
+    const song = songs.find((candidate) => candidate.presentationId === presentation.id);
+    const background = song?.playbackMode !== 'lyrics-video' && song?.backgroundAssetId
+      ? allMediaAssets.find((asset) => asset.id === song.backgroundAssetId)
+      : undefined;
 
     setOutput((current) => ({
       ...current,
@@ -127,6 +147,7 @@ export function OperatorApp() {
         slideId: slide.id,
         text: slide.text,
       },
+      media: background ? liveMediaFromAsset(background, 'background') : current.media,
       black: false,
       logo: false,
     }));
@@ -140,22 +161,42 @@ export function OperatorApp() {
       nextText: nextSlide?.text ?? null,
       notes: slide.notes ?? null,
     });
-  }, []);
+  }, [allMediaAssets, liveMediaFromAsset, songs]);
+
+  const liveMediaFromAsset = useCallback((asset: MediaAsset, playbackRole: 'background' | 'video' = 'background') => ({
+    id: asset.id,
+    title: asset.title,
+    kind: asset.kind,
+    fileUrl: asset.fileUrl,
+    sourceId: asset.sourceId,
+    sourceLabel: asset.sourceLabel,
+    playbackRole,
+    muted: playbackRole === 'background',
+    loop: playbackRole === 'background' && asset.kind === 'motion',
+  }), []);
 
   const triggerMedia = useCallback((asset: MediaAsset) => {
+    const playbackRole = asset.kind === 'video' ? 'video' : 'background';
     setOutput((current) => ({
       ...current,
-      media: {
-        id: asset.id,
-        title: asset.title,
-        kind: asset.kind,
-        fileUrl: asset.fileUrl,
-        sourceId: asset.sourceId,
-        sourceLabel: asset.sourceLabel,
-      },
+      media: liveMediaFromAsset(asset, playbackRole),
       black: false,
       logo: false,
     }));
+  }, [liveMediaFromAsset]);
+
+  const triggerLyricsVideo = useCallback((asset: MediaAsset) => {
+    setOutput((current) => ({
+      ...current,
+      slide: null,
+      media: liveMediaFromAsset(asset, 'video'),
+      black: false,
+      logo: false,
+    }));
+  }, [liveMediaFromAsset]);
+
+  const updateSong = useCallback((updatedSong: Song) => {
+    setSongs((current) => current.map((song) => song.id === updatedSong.id ? updatedSong : song));
   }, []);
 
   const clearAll = useCallback(() => setOutput({ ...EMPTY_OUTPUT_STATE }), []);
@@ -253,7 +294,12 @@ export function OperatorApp() {
   }, [searchQuery]);
 
   const selectPresentationFromSearch = (presentationId: string) => {
-    const item = sundayKidsPlaylist.items.find((candidate) => candidate.resourceId === presentationId);
+    const directItem = sundayKidsPlaylist.items.find((candidate) => candidate.resourceId === presentationId);
+    const matchingSong = songs.find((song) => song.presentationId === presentationId);
+    const songItem = matchingSong
+      ? sundayKidsPlaylist.items.find((candidate) => candidate.type === 'song' && candidate.resourceId === matchingSong.id)
+      : undefined;
+    const item = directItem ?? songItem;
     if (item) setSelectedItemId(item.id);
     setSearchOpen(false);
   };
@@ -282,14 +328,18 @@ export function OperatorApp() {
           selectedItemId={selectedItemId}
         />
         <SlideWorkspace
+          availableAssets={allMediaAssets}
           media={selectedMedia}
+          onChangeSong={updateSong}
           onSelectSlide={setSelectedSlideId}
+          onTriggerLyricsVideo={triggerLyricsVideo}
           onTriggerMedia={triggerMedia}
           onTriggerSlide={triggerSlide}
           output={output}
           presentation={selectedPresentation}
           selectedItem={selectedItem}
           selectedSlideId={selectedSlideId}
+          song={selectedSong}
         />
         <LivePanel
           networkStage={networkStage}

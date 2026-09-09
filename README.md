@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.3.0-alpha.1 — resource library and motion background foundation**
+**v0.3.1-alpha.1 — first-class Song system foundation**
 
 Implemented in source:
 
@@ -37,6 +37,15 @@ Implemented in source:
 - recursive media scanning and per-folder Media Bin filters
 - still-image and looping motion backgrounds behind live slide text
 - direct playback from library folders without copying the source files
+- first-class `song` playlist items
+- song playback modes: Slides + Track, Slides + Stems, Lyrics Video, Live Band
+- lyric-control modes: Manual, Assisted, Auto
+- per-song background assignment
+- backing-track and per-stem resource assignment
+- per-stem enable/disable state for future live-musician substitutions
+- timestamp cue maps for Assisted/Auto lyrics
+- legacy lyrics-video triggering with embedded audio
+- video/background playback semantics separated: full videos are audible/non-looping; motion backgrounds are muted/looping
 
 ## Run on macOS or Windows
 
@@ -95,6 +104,19 @@ For service reliability, OneDrive media that will be used live should be marked 
 
 Motion resources imported from resource folders are treated as looping backgrounds and can coexist with the Slide layer.
 
+## Song system
+
+A Song is now a first-class resource rather than just a presentation with song-shaped slides. Each song can select one of four operating modes:
+
+- **Slides + Track** — operator-controlled lyrics, optional motion background, one backing track
+- **Slides + Stems** — operator-controlled lyrics with independently selectable stems
+- **Lyrics Video** — retain an existing MP4/video with its own kid-friendly graphics and embedded audio
+- **Live Band** — lyrics only, no backing audio
+
+Lyrics can independently be configured as **Manual**, **Assisted**, or **Auto**. The cue map is part of the Song model now; synchronized audio transport and automatic cue execution are the next audio-engine pass.
+
+The stem UI intentionally configures files and enabled/disabled parts now, but does not yet start multiple files with approximate HTML-audio timing. The upcoming multitrack engine will use one master transport so stems and Auto Lyrics share the same clock.
+
 ## First desktop test checklist
 
 1. Launch the app.
@@ -122,6 +144,7 @@ Motion resources imported from resource folders are treated as looping backgroun
 ## Planned playlist item types
 
 - `presentation`
+- `song`
 - `media`
 - `bible`
 - `timer`

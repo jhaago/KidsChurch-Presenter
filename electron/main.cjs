@@ -10,6 +10,7 @@ const networkStageServer = new NetworkStageServer({ port: 4310 });
 let resourceLibrary = null;
 
 const devUrl = process.env.VITE_DEV_SERVER_URL || null;
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 const screenKinds = new Set(['audience', 'stage']);
 
 const screenAssignments = {
@@ -81,6 +82,7 @@ function createOperatorWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
+      backgroundThrottling: false,
     },
   });
 
@@ -160,6 +162,7 @@ function createScreenWindow(kind) {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
+      backgroundThrottling: false,
     },
   });
 

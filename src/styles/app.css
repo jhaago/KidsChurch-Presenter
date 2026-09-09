@@ -767,3 +767,46 @@ kbd {
 .audienceText,.previewText{z-index:2}
 .audienceMessage{z-index:3}
 .audienceBlackout{position:absolute;inset:0;z-index:20;background:#000}
+
+
+/* v0.3.1 first-class song setup */
+.workspaceScroll{flex:1;min-height:0;overflow:auto}
+.workspaceScroll>.slideGroups{overflow:visible;min-height:auto}
+.songSetupPanel{margin:9px 11px 2px;border:1px solid #343a40;background:#15191d}
+.songSetupHeader{height:34px;padding:0 9px;border-bottom:1px solid #30363b;background:#1c2125;display:flex;align-items:center;justify-content:space-between}
+.songSetupHeader>div{display:flex;align-items:center;gap:7px}
+.songSetupHeader svg{width:15px;height:15px;color:#a772d1}
+.songSetupHeader strong{display:block;color:#d9dde0;font-size:9px;letter-spacing:.09em}
+.songSetupHeader span{display:block;margin-top:1px;color:#767f87;font-size:8px}
+.songEngineBadge{padding:3px 5px;border:1px solid #4a3b56;border-radius:2px;background:#241d2a;color:#b495ca!important;font-size:6px!important;font-weight:750;letter-spacing:.09em}
+.songSetupGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px}
+.songSetupSection{min-width:0;padding:8px;border:1px solid #2c3237;background:#181c20}
+.songSetupSection>small{display:block;margin-bottom:6px;color:#707982;font-size:7px;font-weight:800;letter-spacing:.11em}
+.songModeGrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.songModeGrid button{min-height:42px;padding:5px 6px;border:1px solid #343b41;border-radius:2px;background:#20252a;color:#9ca4ab;cursor:pointer;text-align:left}
+.songModeGrid button:hover{background:#282e34}
+.songModeGrid button.isActive{border-color:#765294;background:#2a2032;color:#fff}
+.songModeGrid strong{display:block;font-size:8px;font-weight:700}
+.songModeGrid span{display:block;margin-top:2px;color:#6f7880;font-size:6.5px;line-height:1.25}
+.songModeGrid button.isActive span{color:#bda9cc}
+.lyricModeRow{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.lyricModeRow button{height:27px;border:1px solid #363d43;border-radius:2px;background:#22272b;color:#929aa1;cursor:pointer;font-size:8px}
+.lyricModeRow button.isActive{border-color:#4a7fa8;background:#1e425e;color:#fff}
+.lyricModeRow button:disabled{opacity:.35;cursor:not-allowed}
+.songModeHint{margin:6px 0 0;color:#6d767e;font-size:7px;line-height:1.35}
+.songSetupSection select{width:100%;height:28px;padding:0 6px;border:1px solid #3a4147;border-radius:2px;background:#111417;color:#bbc1c6;font-size:8px;outline:none}
+.songStemSection{grid-column:1/-1}
+.stemRows{display:grid;gap:3px}
+.stemRow{display:grid;grid-template-columns:42px 105px minmax(0,1fr);gap:5px;align-items:center}
+.stemRow>button{height:25px;border:1px solid #48363a;border-radius:2px;background:#2a1e20;color:#a97b80;cursor:pointer;font-size:7px;font-weight:800}
+.stemRow>button.isEnabled{border-color:#326c45;background:#193022;color:#79c48f}
+.stemRow>strong{color:#aeb5ba;font-size:8px;font-weight:600}
+.stemRow select{height:25px}
+.songVideoTrigger{height:29px;margin-top:6px;padding:0 9px;border:1px solid #477da9;border-radius:2px;background:#245b87;display:inline-flex;align-items:center;gap:6px;color:#fff;cursor:pointer;font-size:8px}
+.songVideoTrigger:disabled{opacity:.35;cursor:not-allowed}
+.songVideoTrigger svg{width:12px;height:12px}
+.songLiveMode{height:42px;display:flex;align-items:center;gap:8px;color:#8e979e;font-size:8px}
+.songLiveMode svg{width:18px;height:18px;color:#70a985}
+.songFallbackBanner{min-height:27px;margin-bottom:7px;padding:5px 7px;border:1px solid #4a4031;background:#272116;display:flex;align-items:center;gap:6px;color:#b8a27f;font-size:7px}
+.songFallbackBanner svg{width:12px;height:12px}
+@media(max-width:1180px){.songSetupGrid{grid-template-columns:1fr}.songStemSection{grid-column:auto}}

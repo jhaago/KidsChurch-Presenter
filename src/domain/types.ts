@@ -1,5 +1,6 @@
 export type PlaylistItemType =
   | 'presentation'
+  | 'song'
   | 'media'
   | 'bible'
   | 'timer'
@@ -10,6 +11,16 @@ export type SlideGroupType = 'verse' | 'chorus' | 'bridge' | 'scripture' | 'gene
 
 export type ScreenKind = 'audience' | 'stage';
 export type ScreenTransport = 'local-display' | 'network';
+
+export type SongPlaybackMode =
+  | 'slides-track'
+  | 'slides-stems'
+  | 'lyrics-video'
+  | 'slides-live';
+
+export type LyricControlMode = 'manual' | 'assisted' | 'auto';
+
+export type SongAudioMode = 'none' | 'single-track' | 'stems' | 'embedded-video';
 
 export interface NetworkStageInfo {
   running: boolean;
@@ -80,6 +91,41 @@ export interface Presentation {
   groups: SlideGroup[];
 }
 
+export interface SongLyricCue {
+  id: string;
+  timeMs: number;
+  slideId: string;
+  label?: string;
+}
+
+export interface SongStem {
+  id: string;
+  name: string;
+  role: 'drums' | 'bass' | 'piano' | 'keys' | 'acoustic' | 'electric' | 'bgv' | 'click' | 'other';
+  assetId?: string;
+  enabled: boolean;
+  gainDb: number;
+}
+
+export interface SongAudioSession {
+  mode: SongAudioMode;
+  masterGainDb: number;
+  singleTrackAssetId?: string;
+  stems: SongStem[];
+}
+
+export interface Song {
+  id: string;
+  title: string;
+  presentationId?: string;
+  playbackMode: SongPlaybackMode;
+  lyricControlMode: LyricControlMode;
+  backgroundAssetId?: string;
+  lyricsVideoAssetId?: string;
+  audio: SongAudioSession;
+  lyricCues: SongLyricCue[];
+}
+
 export interface PlaylistItem {
   id: string;
   title: string;
@@ -120,6 +166,9 @@ export interface LiveMediaState {
   fileUrl?: string;
   sourceId?: string;
   sourceLabel?: string;
+  muted?: boolean;
+  loop?: boolean;
+  playbackRole?: 'background' | 'video';
 }
 
 export interface OutputState {

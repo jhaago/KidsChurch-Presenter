@@ -1,4 +1,4 @@
-import type { MediaAsset, Playlist, Presentation } from '../domain/types';
+import type { MediaAsset, Playlist, Presentation, Song } from '../domain/types';
 
 export const presentations: Presentation[] = [
   {
@@ -149,23 +149,69 @@ export const mediaAssets: MediaAsset[] = [
   { id: 'intro-video', title: 'Kids Church Intro Video', kind: 'video', source: 'local' },
 ];
 
+export const songs: Song[] = [
+  {
+    id: 'song-light-of-hope',
+    title: 'Light of Hope',
+    presentationId: 'light-of-hope',
+    playbackMode: 'slides-track',
+    lyricControlMode: 'manual',
+    backgroundAssetId: 'media-1',
+    audio: {
+      mode: 'single-track',
+      masterGainDb: 0,
+      stems: [
+        { id: 'loh-drums', name: 'Drums', role: 'drums', enabled: true, gainDb: 0 },
+        { id: 'loh-bass', name: 'Bass', role: 'bass', enabled: true, gainDb: 0 },
+        { id: 'loh-piano', name: 'Piano', role: 'piano', enabled: true, gainDb: 0 },
+        { id: 'loh-acoustic', name: 'Acoustic', role: 'acoustic', enabled: true, gainDb: 0 },
+        { id: 'loh-bgv', name: 'Backing Vocals', role: 'bgv', enabled: true, gainDb: 0 },
+      ],
+    },
+    lyricCues: [
+      { id: 'loh-cue-1', timeMs: 0, slideId: 'loh-v1-1', label: 'Verse 1' },
+      { id: 'loh-cue-2', timeMs: 12000, slideId: 'loh-v1-2' },
+      { id: 'loh-cue-3', timeMs: 24000, slideId: 'loh-c1-1', label: 'Chorus' },
+      { id: 'loh-cue-4', timeMs: 36000, slideId: 'loh-c1-2' },
+      { id: 'loh-cue-5', timeMs: 50000, slideId: 'loh-v2-1', label: 'Verse 2' },
+      { id: 'loh-cue-6', timeMs: 62000, slideId: 'loh-v2-2' },
+      { id: 'loh-cue-7', timeMs: 76000, slideId: 'loh-b1-1', label: 'Bridge' },
+      { id: 'loh-cue-8', timeMs: 88000, slideId: 'loh-b1-2' },
+    ],
+  },
+  {
+    id: 'song-closing',
+    title: 'Closing Song',
+    presentationId: 'closing',
+    playbackMode: 'lyrics-video',
+    lyricControlMode: 'manual',
+    audio: {
+      mode: 'embedded-video',
+      masterGainDb: 0,
+      stems: [],
+    },
+    lyricCues: [],
+  },
+];
+
 export const sundayKidsPlaylist: Playlist = {
   id: 'sunday-kids',
   title: 'Sunday Kids',
   items: [
     { id: 'pi-welcome', title: 'Welcome', type: 'presentation', resourceId: 'welcome' },
     { id: 'pi-countdown', title: '5 Minute Countdown', type: 'timer', resourceId: 'countdown' },
-    { id: 'pi-song', title: 'Light of Hope', type: 'presentation', resourceId: 'light-of-hope' },
+    { id: 'pi-song', title: 'Light of Hope', type: 'song', resourceId: 'song-light-of-hope' },
     { id: 'pi-video', title: 'Kids Church Intro Video', type: 'media', resourceId: 'intro-video' },
     { id: 'pi-bible', title: 'Bible — Mark 10:13–16', type: 'bible', resourceId: 'bible-mark' },
     { id: 'pi-message', title: 'Message Slides', type: 'presentation', resourceId: 'message' },
     { id: 'pi-wheel', title: 'Spin the Wheel', type: 'interactive' },
     { id: 'pi-bingo', title: 'Donuts Bingo', type: 'web-tool' },
     { id: 'pi-memory', title: 'Memory Verse', type: 'presentation', resourceId: 'memory' },
-    { id: 'pi-closing', title: 'Closing Song', type: 'presentation', resourceId: 'closing' },
+    { id: 'pi-closing', title: 'Closing Song', type: 'song', resourceId: 'song-closing' },
     { id: 'pi-announcements', title: 'Announcements', type: 'presentation', resourceId: 'announcements' },
   ],
 };
 
 export const presentationById = (id?: string) => presentations.find((presentation) => presentation.id === id);
 export const mediaById = (id?: string) => mediaAssets.find((asset) => asset.id === id);
+export const songById = (id?: string) => songs.find((song) => song.id === id);

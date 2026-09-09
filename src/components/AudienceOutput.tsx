@@ -19,8 +19,8 @@ function MediaLayer({ output, preview }: { output: OutputState; preview: boolean
         className="audienceMediaElement"
         src={media.fileUrl}
         autoPlay
-        loop={media.kind === 'motion'}
-        muted
+        loop={media.loop ?? media.kind === 'motion'}
+        muted={preview ? true : (media.muted ?? media.kind !== 'video')}
         playsInline
         preload={preview ? 'metadata' : 'auto'}
       />

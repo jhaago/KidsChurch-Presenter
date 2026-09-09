@@ -1,4 +1,4 @@
-import { presentationById, sundayKidsPlaylist } from '../data/demo';
+import { presentationById, songById, sundayKidsPlaylist } from '../data/demo';
 import type { OutputState, PlaylistItem, ResourceSource } from '../domain/types';
 import { Icon, type IconName } from './ui/Icon';
 
@@ -14,6 +14,7 @@ interface LibraryPanelProps {
 
 const itemIcons: Record<PlaylistItem['type'], IconName> = {
   presentation: 'presentation',
+  song: 'audio',
   media: 'media',
   bible: 'bible',
   timer: 'timer',
@@ -22,6 +23,7 @@ const itemIcons: Record<PlaylistItem['type'], IconName> = {
 };
 
 function itemTone(item: PlaylistItem) {
+  if (item.type === 'song') return 'song';
   if (item.type === 'presentation') {
     const presentation = presentationById(item.resourceId);
     if (presentation?.category === 'song') return 'song';
@@ -32,6 +34,10 @@ function itemTone(item: PlaylistItem) {
 }
 
 function isLiveItem(item: PlaylistItem, output: OutputState) {
+  if (item.type === 'song') {
+    const song = songById(item.resourceId);
+    return output.slide?.presentationId === song?.presentationId || output.media?.id === song?.lyricsVideoAssetId;
+  }
   return output.slide?.presentationId === item.resourceId || output.media?.id === item.resourceId;
 }
 
