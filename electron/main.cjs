@@ -13,6 +13,7 @@ let resourceLibrary = null;
 const devUrl = process.env.VITE_DEV_SERVER_URL || null;
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 const screenKinds = new Set(['audience', 'stage']);
+const appIconPath = path.join(__dirname, '..', 'build', 'icon.png');
 
 const screenAssignments = {
   audience: {
@@ -78,6 +79,7 @@ function createOperatorWindow() {
     minHeight: 700,
     backgroundColor: '#15171a',
     title: 'KidsChurch Presenter',
+    icon: appIconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
@@ -158,6 +160,7 @@ function createScreenWindow(kind) {
     frame: false,
     backgroundColor: '#000000',
     title: 'KidsChurch Presenter — ' + (kind === 'audience' ? 'Audience' : 'Stage'),
+    icon: appIconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,

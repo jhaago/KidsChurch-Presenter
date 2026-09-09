@@ -1,6 +1,6 @@
 {
   "name": "kidschurch-presenter",
-  "version": "0.4.0-alpha.1",
+  "version": "0.4.0-alpha.2",
   "type": "module",
   "private": true,
   "description": "A ProPresenter-familiar presentation application for Kids Church.",
@@ -39,11 +39,13 @@
     "appId": "com.kidschurch.presenter",
     "productName": "KidsChurch Presenter",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "build/icon.png",
       "package.json"
     ],
     "win": {
@@ -55,7 +57,8 @@
           ]
         }
       ],
-      "artifactName": "KidsChurch-Presenter-${version}-Setup.${ext}"
+      "artifactName": "KidsChurch-Presenter-${version}-Setup.${ext}",
+      "icon": "build/icon.png"
     },
     "nsis": {
       "oneClick": false,
@@ -66,7 +69,8 @@
     "mac": {
       "target": "dmg",
       "category": "public.app-category.productivity",
-      "artifactName": "KidsChurch-Presenter-${version}.${ext}"
+      "artifactName": "KidsChurch-Presenter-${version}.${ext}",
+      "icon": "build/icon.png"
     }
   }
 }
