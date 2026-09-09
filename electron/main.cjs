@@ -111,22 +111,27 @@ function resolveDisplay(kind) {
 
 function placeScreenWindow(kind) {
   const window = screenWindows.get(kind);
-  if (!window) return;
+  if (!window || window.isDestroyed()) return null;
+
+  // Always leave fullscreen before moving/resizing a window. Reusing a hidden
+  // fullscreen BrowserWindow is unreliable on Windows after an output toggle.
+  window.setFullScreen(false);
 
   const display = resolveDisplay(kind);
   if (display) {
     const { x, y, width, height } = display.bounds;
-    window.setFullScreen(false);
     window.setBounds({ x, y, width, height });
-    window.setFullScreen(true);
-    return;
+
+    // If this is a live display-remap, restore fullscreen after the move.
+    if (window.isVisible()) window.setFullScreen(true);
+    return display;
   }
 
-  window.setFullScreen(false);
   const width = kind === 'stage' ? 1100 : 960;
   const height = kind === 'stage' ? 650 : 540;
   window.setBounds({ width, height });
   window.center();
+  return null;
 }
 
 function sendScreenState(kind) {
@@ -175,6 +180,20 @@ function createScreenWindow(kind) {
   return window;
 }
 
+function destroyScreenWindow(kind) {
+  const window = screenWindows.get(kind);
+  if (!window) return;
+
+  // Remove it from the registry first so any synchronous closed event cannot
+  // leave a stale reference behind.
+  screenWindows.delete(kind);
+
+  if (!window.isDestroyed()) {
+    window.setFullScreen(false);
+    window.destroy();
+  }
+}
+
 function setScreenVisible(kind, visible) {
   assertScreenKind(kind);
   const assignment = screenAssignments[kind];
@@ -183,23 +202,36 @@ function setScreenVisible(kind, visible) {
     return false;
   }
 
+  if (!visible) {
+    // Dispose of the output window instead of hiding a fullscreen window.
+    // The next enable gets a clean BrowserWindow and is rehydrated from
+    // latestPresenterOutput by did-finish-load/sendScreenState.
+    destroyScreenWindow(kind);
+    if (operatorWindow) operatorWindow.webContents.send('screen:visibility', kind, false);
+    return false;
+  }
+
   const window = createScreenWindow(kind);
   if (!window) return false;
 
-  if (visible) {
-    placeScreenWindow(kind);
-    if (typeof window.showInactive === 'function') {
-      window.showInactive();
-    } else {
-      window.show();
-      if (operatorWindow) operatorWindow.focus();
-    }
+  const display = placeScreenWindow(kind);
+
+  if (typeof window.showInactive === 'function') {
+    window.showInactive();
   } else {
-    window.hide();
+    window.show();
+    if (operatorWindow) operatorWindow.focus();
   }
 
-  if (operatorWindow) operatorWindow.webContents.send('screen:visibility', kind, visible);
-  return visible;
+  // Enter fullscreen only after the window is visible. This avoids the
+  // Windows hidden-fullscreen lifecycle bug observed after toggling outputs.
+  if (display && !window.isDestroyed()) {
+    window.setFullScreen(true);
+  }
+
+  sendScreenState(kind);
+  if (operatorWindow) operatorWindow.webContents.send('screen:visibility', kind, true);
+  return true;
 }
 
 app.whenReady().then(async () => {
