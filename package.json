@@ -7,7 +7,13 @@
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
     "build": "tsc -b && vite build",
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win nsis --x64",
+    "dist:mac": "npm run build && electron-builder --mac dmg"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   },
   "dependencies": {
     "react": "19.2.8",
@@ -20,8 +26,43 @@
     "concurrently": "10.0.5",
     "cross-env": "10.1.0",
     "electron": "44.3.0",
+    "electron-builder": "26.15.3",
     "typescript": "7.0.2",
     "vite": "8.2.2",
     "wait-on": "9.1.0"
+  },
+  "build": {
+    "appId": "com.kidschurch.presenter",
+    "productName": "KidsChurch Presenter",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "KidsChurch-Presenter-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity",
+      "artifactName": "KidsChurch-Presenter-${version}.${ext}"
+    }
   }
 }
