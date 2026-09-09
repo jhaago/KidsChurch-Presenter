@@ -374,6 +374,7 @@ export function useSongTransport(assets: MediaAsset[]) {
     resume,
     stop,
     seek,
+    getPositionMs: currentPositionMs,
     setStemEnabled,
   };
 }
