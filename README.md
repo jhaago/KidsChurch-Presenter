@@ -16,6 +16,7 @@ Implemented in source:
 - React + TypeScript operator renderer
 - separate Operator and Audience windows
 - automatic fullscreen Audience placement on an external display when available
+- explicit Windows x64 installer target
 - operator selection kept separate from live output
 - ProPresenter-style independent output layers
 - slide triggering and live-state indication
@@ -53,7 +54,23 @@ npm run build
 npm start
 ```
 
-Packaging as a signed/installable macOS or Windows application is intentionally a later milestone.
+### Windows installer
+
+Windows is now an explicit first-class build target:
+
+```bash
+npm run dist:win
+```
+
+This produces an NSIS setup executable in `release/`. Code signing is not configured yet for the alpha.
+
+### macOS disk image
+
+```bash
+npm run dist:mac
+```
+
+See `docs/WINDOWS.md` for the Windows laptop + projector setup and test checklist.
 
 ## First desktop test checklist
 
@@ -106,4 +123,4 @@ The live presentation engine must continue to work if an external provider is un
 
 KidsChurch Presenter is not intended to copy Renewed Vision branding or proprietary artwork. It intentionally mirrors familiar presentation concepts and operating workflow while using its own implementation and visual identity.
 
-See `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and `docs/PROPRESENTER-COMPATIBILITY.md` for the current design direction.
+See `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/PROPRESENTER-COMPATIBILITY.md`, and `docs/WINDOWS.md` for the current design direction.
