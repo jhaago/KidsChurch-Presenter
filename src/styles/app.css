@@ -946,3 +946,50 @@ kbd {
   .resourceFolderList{max-height:36px}
   .librarySummary{display:none}
 }
+
+
+/* v0.5.2 multiple saved services */
+.libraryPanel{grid-template-rows:minmax(360px,56%) minmax(0,1fr)}
+.libraryManager{overflow:auto}
+.servicesManager{margin:0 5px 6px;border:1px solid #30373d;background:#171b1f}
+.servicesManagerHeader{height:27px;padding:0 6px;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:6px;border-bottom:1px solid #2d3439;color:#818a92;font-size:7px;font-weight:800;letter-spacing:.1em}
+.servicesManagerHeader small{color:#59636b;font-size:7px}
+.servicesManagerHeader button{height:20px;padding:0 6px;border:1px solid #3b566b;border-radius:2px;background:#213747;color:#a9c8de;cursor:pointer;font-size:7px}
+.servicesManagerHeader button:hover{background:#2a4c64;color:#fff}
+.servicesList{max-height:90px;overflow:auto;padding:2px}
+.servicesList>button{width:100%;height:28px;padding:0 5px;border:0;border-radius:2px;background:transparent;display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:center;gap:4px;color:#929aa1;cursor:pointer;text-align:left}
+.servicesList>button:hover{background:#22282d}
+.servicesList>button.isActive{background:#244f72;color:#fff}
+.servicesList>button>svg{width:12px;height:12px;color:#6f7d88}
+.servicesList>button.isActive>svg{color:#d8ebf8}
+.servicesList>button>span{min-width:0}
+.servicesList>button strong{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:8px;font-weight:650}
+.servicesList>button small{display:block;margin-top:1px;color:#667079;font-size:6.5px}
+.servicesList>button.isActive small{color:#b7d0e1}
+.servicesList>button em{font-style:normal;color:#59636b;font-size:7px}
+.servicesList>button.isActive em{color:#c4d9e8}
+.servicesActions{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-top:1px solid #292f34}
+.servicesActions button{height:21px;border:1px solid #394148;border-radius:2px;background:#23292e;color:#879199;cursor:pointer;font-size:7px}
+.servicesActions button:hover:not(:disabled){background:#30373d;color:#fff}
+.servicesActions button.danger{border-color:#4c3438;color:#ad7c82}
+.servicesActions button.danger:hover:not(:disabled){background:#342023;color:#e09aa1}
+.servicesActions button:disabled{opacity:.3;cursor:not-allowed}
+.serviceHeaderEditable{height:auto;min-height:76px;padding:6px 7px;align-items:stretch}
+.serviceHeaderEditable .serviceHeaderFields{width:100%;display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+.serviceHeaderFields>input,.serviceHeaderFields>div>input{height:23px;box-sizing:border-box;border:1px solid #353d43;border-radius:2px;background:#121518;color:#c1c7cc;padding:0 6px;font-size:8px;outline:none}
+.serviceHeaderFields>input:focus,.serviceHeaderFields>div>input:focus{border-color:#4b80a8}
+.serviceHeaderFields>div{display:grid;grid-template-columns:126px 1fr;align-items:center;gap:6px}
+.serviceHeaderFields>div>span{color:#69737b;font-size:7px}
+.serviceDescriptionInput{color:#8f989f!important}
+.emptyService{height:100%;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:12px;color:#68727a;text-align:center}
+.emptyService svg,.emptyServiceWorkspace svg{width:28px;height:28px;color:#4d6272}
+.emptyService strong,.emptyServiceWorkspace strong{color:#9aa3aa;font-size:10px}
+.emptyService span,.emptyServiceWorkspace span{font-size:8px}
+.emptyService p,.emptyServiceWorkspace p{margin:0;color:#5d666d;font-size:7px}
+.emptyServiceWorkspace{display:grid;place-items:center}
+.emptyServiceWorkspace>div{display:flex;max-width:330px;flex-direction:column;align-items:center;gap:6px;text-align:center}
+@media(max-height:780px){
+  .libraryPanel{grid-template-rows:minmax(315px,58%) minmax(0,1fr)}
+  .servicesList{max-height:58px}
+  .serviceHeaderEditable{min-height:70px}
+}

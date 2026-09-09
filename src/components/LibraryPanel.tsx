@@ -12,6 +12,8 @@ interface LibraryPanelProps {
   selectedItemId: string;
   output: OutputState;
   playlist: Playlist;
+  playlists: Playlist[];
+  activePlaylistId: string;
   presentations: Presentation[];
   songs: Song[];
   resourceSources: ResourceSource[];
@@ -27,6 +29,11 @@ interface LibraryPanelProps {
   onRemoveServiceItem: (itemId: string) => void;
   onMoveServiceItem: (itemId: string, direction: -1 | 1) => void;
   onSelectItem: (id: string) => void;
+  onSelectService: (playlistId: string) => void;
+  onCreateService: () => void;
+  onDuplicateService: () => void;
+  onDeleteService: () => void;
+  onUpdateService: (updates: Partial<Pick<Playlist, 'title' | 'serviceDate' | 'description'>>) => void;
 }
 
 const itemIcons: Record<PlaylistItem['type'], IconName> = {
@@ -58,10 +65,19 @@ function isLiveItem(item: PlaylistItem, output: OutputState, songs: Song[]) {
   return output.slide?.presentationId === item.resourceId || output.media?.id === item.resourceId;
 }
 
+function serviceDateLabel(value?: string) {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.valueOf())) return value;
+  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
 export function LibraryPanel({
   selectedItemId,
   output,
   playlist,
+  playlists,
+  activePlaylistId,
   presentations,
   songs,
   resourceSources,
@@ -77,6 +93,11 @@ export function LibraryPanel({
   onRemoveServiceItem,
   onMoveServiceItem,
   onSelectItem,
+  onSelectService,
+  onCreateService,
+  onDuplicateService,
+  onDeleteService,
+  onUpdateService,
 }: LibraryPanelProps) {
   const selectedItem = playlist.items.find((item) => item.id === selectedItemId);
   const canManageSelected = Boolean(
@@ -97,6 +118,36 @@ export function LibraryPanel({
           <span>LIBRARY</span>
           <button className="panelAction" title="Add a local or OneDrive-synced resource folder" type="button" onClick={onAddResourceFolder}>＋</button>
         </div>
+
+        <section className="servicesManager" aria-label="Saved services">
+          <div className="servicesManagerHeader">
+            <span>SERVICES</span>
+            <small>{playlists.length}</small>
+            <button type="button" onClick={onCreateService}>＋ New</button>
+          </div>
+          <div className="servicesList">
+            {playlists.map((service) => (
+              <button
+                className={service.id === activePlaylistId ? 'isActive' : ''}
+                key={service.id}
+                onClick={() => onSelectService(service.id)}
+                type="button"
+                title={service.description || service.title}
+              >
+                <Icon name="playlist" />
+                <span>
+                  <strong>{service.title}</strong>
+                  <small>{serviceDateLabel(service.serviceDate) || `${service.items.length} items`}</small>
+                </span>
+                <em>{service.items.length}</em>
+              </button>
+            ))}
+          </div>
+          <div className="servicesActions">
+            <button type="button" onClick={onDuplicateService}>Duplicate Service</button>
+            <button className="danger" type="button" disabled={playlists.length <= 1} onClick={onDeleteService}>Delete Service</button>
+          </div>
+        </section>
 
         <div className="libraryCreateRow">
           <button type="button" onClick={onCreatePresentation}>
@@ -156,8 +207,8 @@ export function LibraryPanel({
         </div>
 
         <div className="librarySelectionActions">
-          <button type="button" disabled={!canManageSelected} onClick={onDuplicateSelected}>Duplicate</button>
-          <button className="danger" type="button" disabled={!canManageSelected} onClick={onDeleteSelected}>Delete</button>
+          <button type="button" disabled={!canManageSelected} onClick={onDuplicateSelected}>Duplicate Item</button>
+          <button className="danger" type="button" disabled={!canManageSelected} onClick={onDeleteSelected}>Delete Item</button>
         </div>
 
         <div className="treeSectionLabel resourceTreeLabel">
@@ -194,15 +245,33 @@ export function LibraryPanel({
       </section>
 
       <section className="serviceOrder">
-        <div className="serviceHeader">
-          <div>
-            <strong>{playlist.title.toUpperCase()}</strong>
-            <small>CURRENT SERVICE</small>
+        <div className="serviceHeader serviceHeaderEditable">
+          <div className="serviceHeaderFields">
+            <input
+              aria-label="Service name"
+              value={playlist.title}
+              onChange={(event) => onUpdateService({ title: event.target.value })}
+            />
+            <div>
+              <input
+                aria-label="Service date"
+                type="date"
+                value={playlist.serviceDate ?? ''}
+                onChange={(event) => onUpdateService({ serviceDate: event.target.value || undefined })}
+              />
+              <span>{playlist.items.length} items</span>
+            </div>
+            <input
+              aria-label="Service description"
+              className="serviceDescriptionInput"
+              placeholder="Optional service note"
+              value={playlist.description ?? ''}
+              onChange={(event) => onUpdateService({ description: event.target.value || undefined })}
+            />
           </div>
-          <span>{playlist.items.length} items</span>
         </div>
         <div className="serviceItems">
-          {playlist.items.map((item, index) => {
+          {playlist.items.length ? playlist.items.map((item, index) => {
             const live = isLiveItem(item, output, songs);
             const selected = selectedItemId === item.id;
             return (
@@ -242,7 +311,6 @@ export function LibraryPanel({
                     className="danger"
                     type="button"
                     title="Remove from service (keeps library resource)"
-                    disabled={playlist.items.length <= 1}
                     onClick={() => onRemoveServiceItem(item.id)}
                   >
                     ×
@@ -250,7 +318,13 @@ export function LibraryPanel({
                 </div>
               </div>
             );
-          })}
+          }) : (
+            <div className="emptyService">
+              <Icon name="playlist" />
+              <strong>This service is empty</strong>
+              <span>Add saved Songs/Presentations with the ＋ buttons in the Library above.</span>
+            </div>
+          )}
         </div>
       </section>
     </aside>

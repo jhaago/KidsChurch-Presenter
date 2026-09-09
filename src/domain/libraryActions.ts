@@ -1,4 +1,5 @@
 import type {
+  Playlist,
   PlaylistItem,
   Presentation,
   Slide,
@@ -150,5 +151,24 @@ export function playlistItemForSong(song: Song): PlaylistItem {
     title: song.title,
     type: 'song',
     resourceId: song.id,
+  };
+}
+
+
+export function createBlankService(title = 'New Service'): Playlist {
+  return {
+    id: newId('playlist'),
+    title,
+    items: [],
+  };
+}
+
+export function duplicateService(source: Playlist): Playlist {
+  return {
+    ...structuredClone(source),
+    id: newId('playlist'),
+    title: `${source.title} Copy`,
+    serviceDate: undefined,
+    items: source.items.map((item) => ({ ...item, id: newId('playlist-item') })),
   };
 }

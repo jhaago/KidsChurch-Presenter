@@ -33,15 +33,25 @@ async function main() {
       {
         id: 'service',
         title: 'Sunday Kids',
+        serviceDate: '2026-09-13',
         items: [{ id: 'item', title: 'Editable Slides', type: 'presentation', resourceId: 'p1' }],
       },
+      {
+        id: 'service-next',
+        title: 'Sunday Kids Next Week',
+        items: [],
+      },
     ],
+    activePlaylistId: 'service-next',
   };
 
   await store.save(data);
   loaded = await store.load();
   assert.equal(loaded.data.presentations[0].title, 'Editable Slides');
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].text, 'Hello');
+  assert.equal(loaded.data.playlists.length, 2);
+  assert.equal(loaded.data.playlists[0].serviceDate, '2026-09-13');
+  assert.equal(loaded.data.activePlaylistId, 'service-next');
 
   const changed = structuredClone(data);
   changed.presentations[0].groups[0].slides[0].text = 'Changed and saved';

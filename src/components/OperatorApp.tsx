@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import { useSongTransport } from '../audio/useSongTransport';
 import {
   createBlankPresentation,
+  createBlankService,
   createBlankSong,
   duplicatePresentationResource,
+  duplicateService,
   duplicateSongResource,
   playlistItemForPresentation,
   playlistItemForSong,
@@ -81,24 +83,42 @@ export function OperatorApp() {
   });
   const [presentations, setPresentations] = useState<Presentation[]>(() => structuredClone(demoPresentations));
   const [songs, setSongs] = useState<Song[]>(() => structuredClone(demoSongs));
-  const [playlist, setPlaylist] = useState<Playlist>(() => structuredClone(demoPlaylist));
+  const [playlists, setPlaylists] = useState<Playlist[]>(() => [structuredClone(demoPlaylist)]);
+  const [activePlaylistId, setActivePlaylistId] = useState(demoPlaylist.id);
+  const activePlaylistIdRef = useRef(demoPlaylist.id);
   const [libraryReady, setLibraryReady] = useState(false);
   const [libraryStatus, setLibraryStatus] = useState<'loading' | 'saved' | 'saving' | 'error' | 'recovered'>('loading');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
+  const playlist = useMemo<Playlist>(
+    () => playlists.find((candidate) => candidate.id === activePlaylistId) ?? playlists[0] ?? structuredClone(demoPlaylist),
+    [activePlaylistId, playlists],
+  );
+
+  const setPlaylist = useCallback((updater: Playlist | ((current: Playlist) => Playlist)) => {
+    setPlaylists((current) => current.map((service) => {
+      if (service.id !== activePlaylistIdRef.current) return service;
+      return typeof updater === 'function' ? updater(service) : updater;
+    }));
+  }, []);
+
+  useEffect(() => {
+    activePlaylistIdRef.current = activePlaylistId;
+  }, [activePlaylistId]);
+
   const selectedItem = useMemo(
-    () => playlist.items.find((item) => item.id === selectedItemId) ?? playlist.items[0],
+    () => playlist?.items.find((item) => item.id === selectedItemId) ?? playlist?.items[0],
     [playlist, selectedItemId],
   );
-  const selectedSong = selectedItem.type === 'song'
+  const selectedSong = selectedItem?.type === 'song'
     ? songs.find((song) => song.id === selectedItem.resourceId)
     : undefined;
   const selectedPresentation = selectedSong
     ? presentations.find((presentation) => presentation.id === selectedSong.presentationId)
-    : presentations.find((presentation) => presentation.id === selectedItem.resourceId);
-  const selectedMedia = selectedItem.type === 'media' ? mediaById(selectedItem.resourceId) : undefined;
+    : presentations.find((presentation) => presentation.id === selectedItem?.resourceId);
+  const selectedMedia = selectedItem?.type === 'media' ? mediaById(selectedItem.resourceId) : undefined;
   const allMediaAssets = useMemo(
     () => [...demoMediaAssets, ...resourceLibrary.assets],
     [resourceLibrary.assets],
@@ -127,6 +147,7 @@ export function OperatorApp() {
       presentations: structuredClone(demoPresentations),
       songs: structuredClone(demoSongs),
       playlists: [structuredClone(demoPlaylist)],
+      activePlaylistId: demoPlaylist.id,
     };
 
     if (!window.kidsPresenter?.getPresenterLibrary) {
@@ -139,9 +160,21 @@ export function OperatorApp() {
       .then(async (result) => {
         if (cancelled) return;
         const data = result.data ?? seed;
+        const loadedPlaylists = data.playlists.length
+          ? structuredClone(data.playlists)
+          : [structuredClone(demoPlaylist)];
+        const loadedActiveId = data.activePlaylistId &&
+          loadedPlaylists.some((service) => service.id === data.activePlaylistId)
+          ? data.activePlaylistId
+          : loadedPlaylists[0].id;
+        const loadedActive = loadedPlaylists.find((service) => service.id === loadedActiveId) ?? loadedPlaylists[0];
+
         setPresentations(structuredClone(data.presentations));
         setSongs(structuredClone(data.songs));
-        setPlaylist(structuredClone(data.playlists[0] ?? demoPlaylist));
+        setPlaylists(loadedPlaylists);
+        setActivePlaylistId(loadedActiveId);
+        activePlaylistIdRef.current = loadedActiveId;
+        setSelectedItemId(loadedActive.items[0]?.id ?? '');
         setLibraryStatus(result.recoveredFromBackup ? 'recovered' : 'saved');
         setLibraryReady(true);
         if (!result.data) await window.kidsPresenter?.savePresenterLibrary(seed);
@@ -163,14 +196,15 @@ export function OperatorApp() {
         schemaVersion: 1,
         presentations,
         songs,
-        playlists: [playlist],
+        playlists,
+        activePlaylistId,
       };
       window.kidsPresenter?.savePresenterLibrary(data)
         .then(() => setLibraryStatus('saved'))
         .catch(() => setLibraryStatus('error'));
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [libraryReady, playlist, presentations, songs]);
+  }, [activePlaylistId, libraryReady, playlists, presentations, songs]);
 
   useEffect(() => {
     const firstSlide = selectedPresentation ? allSlides(selectedPresentation)[0] : null;
@@ -306,14 +340,14 @@ export function OperatorApp() {
     setPresentations((current) => current.map((presentation) =>
       presentation.id === updatedPresentation.id ? updatedPresentation : presentation,
     ));
-    setPlaylist((current) => ({
-      ...current,
-      items: current.items.map((item) =>
+    setPlaylists((current) => current.map((service) => ({
+      ...service,
+      items: service.items.map((item) =>
         item.type !== 'song' && item.resourceId === updatedPresentation.id
           ? { ...item, title: updatedPresentation.title }
           : item,
       ),
-    }));
+    })));
 
     const liveSlide = output.slide?.presentationId === updatedPresentation.id
       ? allSlides(updatedPresentation).find((slide) => slide.id === output.slide?.slideId)
@@ -365,14 +399,14 @@ export function OperatorApp() {
       ));
     }
 
-    setPlaylist((current) => ({
-      ...current,
-      items: current.items.map((item) =>
+    setPlaylists((current) => current.map((service) => ({
+      ...service,
+      items: service.items.map((item) =>
         item.type === 'song' && item.resourceId === updatedSong.id
           ? { ...item, title: updatedSong.title }
           : item,
       ),
-    }));
+    })));
 
     setOutput((current) => ({
       ...current,
@@ -450,7 +484,6 @@ export function OperatorApp() {
   }, [presentations, selectedItem, songs]);
 
   const removeServiceItem = useCallback((itemId: string) => {
-    if (playlist.items.length <= 1) return;
     const index = playlist.items.findIndex((item) => item.id === itemId);
     if (index < 0) return;
     const nextItems = playlist.items.filter((item) => item.id !== itemId);
@@ -458,9 +491,9 @@ export function OperatorApp() {
     setPlaylist((current) => ({ ...current, items: current.items.filter((item) => item.id !== itemId) }));
     if (selectedItemId === itemId) {
       const replacement = nextItems[Math.min(index, nextItems.length - 1)];
-      if (replacement) setSelectedItemId(replacement.id);
+      setSelectedItemId(replacement?.id ?? '');
     }
-  }, [playlist.items, selectedItemId]);
+  }, [playlist.items, selectedItemId, setPlaylist]);
 
   const moveServiceItem = useCallback((itemId: string, direction: -1 | 1) => {
     setPlaylist((current) => {
@@ -480,11 +513,6 @@ export function OperatorApp() {
     if (selectedItem.type === 'song') {
       const song = songs.find((candidate) => candidate.id === selectedItem.resourceId);
       if (!song) return;
-      const affectedItems = playlist.items.filter((item) => item.type === 'song' && item.resourceId === song.id);
-      if (playlist.items.length - affectedItems.length < 1) {
-        window.alert('Add another item to the service before deleting this Song.');
-        return;
-      }
       if (!window.confirm(`Delete “${song.title}” from the library? This removes every service reference to it but does not delete media/audio files.`)) return;
 
       if (songTransport.state.songId === song.id) stopSong();
@@ -495,11 +523,13 @@ export function OperatorApp() {
       }
 
       const remainingItems = playlist.items.filter((item) => !(item.type === 'song' && item.resourceId === song.id));
-      setPlaylist((current) => ({
-        ...current,
-        items: current.items.filter((item) => !(item.type === 'song' && item.resourceId === song.id)),
-      }));
-      setSelectedItemId(remainingItems[0]?.id ?? selectedItemId);
+      setPlaylists((current) => current.map((service) => ({
+        ...service,
+        items: service.items.filter((item) => !(item.type === 'song' && item.resourceId === song.id)),
+      })));
+      if (selectedItem.type === 'song' && selectedItem.resourceId === song.id) {
+        setSelectedItemId(remainingItems[0]?.id ?? '');
+      }
 
       if (linkedPresentationId && output.slide?.presentationId === linkedPresentationId) {
         setOutput((current) => ({ ...current, slide: null }));
@@ -514,20 +544,17 @@ export function OperatorApp() {
     if (['presentation', 'bible', 'timer'].includes(selectedItem.type)) {
       const presentation = presentations.find((candidate) => candidate.id === selectedItem.resourceId);
       if (!presentation) return;
-      const affectedItems = playlist.items.filter((item) => item.resourceId === presentation.id);
-      if (playlist.items.length - affectedItems.length < 1) {
-        window.alert('Add another item to the service before deleting this Presentation.');
-        return;
-      }
       if (!window.confirm(`Delete “${presentation.title}” from the library? This removes every service reference to it.`)) return;
 
       setPresentations((current) => current.filter((candidate) => candidate.id !== presentation.id));
       const remainingItems = playlist.items.filter((item) => item.resourceId !== presentation.id);
-      setPlaylist((current) => ({
-        ...current,
-        items: current.items.filter((item) => item.resourceId !== presentation.id),
-      }));
-      setSelectedItemId(remainingItems[0]?.id ?? selectedItemId);
+      setPlaylists((current) => current.map((service) => ({
+        ...service,
+        items: service.items.filter((item) => item.resourceId !== presentation.id),
+      })));
+      if (selectedItem.resourceId === presentation.id) {
+        setSelectedItemId(remainingItems[0]?.id ?? '');
+      }
 
       if (output.slide?.presentationId === presentation.id) {
         setOutput((current) => ({ ...current, slide: null }));
@@ -545,6 +572,53 @@ export function OperatorApp() {
     songs,
     stopSong,
   ]);
+
+  const selectService = useCallback((playlistId: string) => {
+    const next = playlists.find((service) => service.id === playlistId);
+    if (!next || next.id === activePlaylistIdRef.current) return;
+    activePlaylistIdRef.current = next.id;
+    setActivePlaylistId(next.id);
+    setSelectedItemId(next.items[0]?.id ?? '');
+    setSelectedSlideId(null);
+  }, [playlists]);
+
+  const createService = useCallback(() => {
+    const proposed = window.prompt('Name this service', 'New Service');
+    if (proposed === null) return;
+    const next = createBlankService(proposed.trim() || 'New Service');
+    setPlaylists((current) => [...current, next]);
+    activePlaylistIdRef.current = next.id;
+    setActivePlaylistId(next.id);
+    setSelectedItemId('');
+    setSelectedSlideId(null);
+  }, []);
+
+  const duplicateActiveService = useCallback(() => {
+    const next = duplicateService(playlist);
+    setPlaylists((current) => [...current, next]);
+    activePlaylistIdRef.current = next.id;
+    setActivePlaylistId(next.id);
+    setSelectedItemId(next.items[0]?.id ?? '');
+    setSelectedSlideId(null);
+  }, [playlist]);
+
+  const deleteActiveService = useCallback(() => {
+    if (playlists.length <= 1) return;
+    if (!window.confirm(`Delete service “${playlist.title}”? Library Songs, Presentations and media are not deleted.`)) return;
+
+    const index = playlists.findIndex((service) => service.id === playlist.id);
+    const remaining = playlists.filter((service) => service.id !== playlist.id);
+    const next = remaining[Math.min(Math.max(index, 0), remaining.length - 1)] ?? remaining[0];
+    setPlaylists(remaining);
+    activePlaylistIdRef.current = next.id;
+    setActivePlaylistId(next.id);
+    setSelectedItemId(next.items[0]?.id ?? '');
+    setSelectedSlideId(null);
+  }, [playlist, playlists]);
+
+  const updateActiveService = useCallback((updates: Partial<Pick<Playlist, 'title' | 'serviceDate' | 'description'>>) => {
+    setPlaylist((current) => ({ ...current, ...updates }));
+  }, [setPlaylist]);
 
   const clearAll = useCallback(() => {
     songTransport.stop();
@@ -696,7 +770,14 @@ export function OperatorApp() {
       ? playlist.items.find((candidate) => candidate.type === 'song' && candidate.resourceId === matchingSong.id)
       : undefined;
     const item = directItem ?? songItem;
-    if (item) setSelectedItemId(item.id);
+    if (item) {
+      setSelectedItemId(item.id);
+    } else if (matchingSong) {
+      appendAndSelectServiceItem(playlistItemForSong(matchingSong));
+    } else {
+      const presentation = presentations.find((candidate) => candidate.id === presentationId);
+      if (presentation) appendAndSelectServiceItem(playlistItemForPresentation(presentation));
+    }
     setSearchOpen(false);
   };
 
@@ -712,6 +793,8 @@ export function OperatorApp() {
       <main className="operatorMain">
         <LibraryPanel
           playlist={playlist}
+          playlists={playlists}
+          activePlaylistId={activePlaylistId}
           presentations={presentations}
           songs={songs}
           onCreatePresentation={createPresentation}
@@ -722,6 +805,11 @@ export function OperatorApp() {
           onDeleteSelected={deleteSelected}
           onMoveServiceItem={moveServiceItem}
           onRemoveServiceItem={removeServiceItem}
+          onSelectService={selectService}
+          onCreateService={createService}
+          onDuplicateService={duplicateActiveService}
+          onDeleteService={deleteActiveService}
+          onUpdateService={updateActiveService}
           onAddResourceFolder={() => {
             void window.kidsPresenter?.addResourceFolder().then(setResourceLibrary);
           }}
@@ -734,27 +822,38 @@ export function OperatorApp() {
           resourceSources={resourceLibrary.sources}
           selectedItemId={selectedItemId}
         />
-        <SlideWorkspace
-          availableAssets={allMediaAssets}
-          media={selectedMedia}
-          onChangePresentation={updatePresentation}
-          onChangeSong={updateSong}
-          onSelectSlide={setSelectedSlideId}
-          onTriggerLyricsVideo={triggerLyricsVideo}
-          onTriggerMedia={triggerMedia}
-          onTriggerSlide={triggerSlide}
-          output={output}
-          presentation={selectedPresentation}
-          selectedItem={selectedItem}
-          selectedSlideId={selectedSlideId}
-          song={selectedSong}
-          songTransport={songTransport.state}
-          onPauseSong={pauseSong}
-          onPlaySong={(song) => void playSong(song)}
-          onResumeSong={resumeSong}
-          onSeekSong={seekSong}
-          onStopSong={stopSong}
-        />
+        {selectedItem ? (
+          <SlideWorkspace
+            availableAssets={allMediaAssets}
+            media={selectedMedia}
+            onChangePresentation={updatePresentation}
+            onChangeSong={updateSong}
+            onSelectSlide={setSelectedSlideId}
+            onTriggerLyricsVideo={triggerLyricsVideo}
+            onTriggerMedia={triggerMedia}
+            onTriggerSlide={triggerSlide}
+            output={output}
+            presentation={selectedPresentation}
+            selectedItem={selectedItem}
+            selectedSlideId={selectedSlideId}
+            song={selectedSong}
+            songTransport={songTransport.state}
+            onPauseSong={pauseSong}
+            onPlaySong={(song) => void playSong(song)}
+            onResumeSong={resumeSong}
+            onSeekSong={seekSong}
+            onStopSong={stopSong}
+          />
+        ) : (
+          <section className="slideWorkspace emptyServiceWorkspace">
+            <div>
+              <Icon name="playlist" />
+              <strong>{playlist.title}</strong>
+              <span>This service has no items yet.</span>
+              <p>Add a Song or Presentation from the Library, or create a new one.</p>
+            </div>
+          </section>
+        )}
         <LivePanel
           networkStage={networkStage}
           onClearAll={clearAll}
@@ -808,7 +907,7 @@ export function OperatorApp() {
         <span>KidsChurch Presenter <b>v{APP_VERSION}</b> · {libraryStatus === 'saving' ? 'Saving…' : libraryStatus === 'error' ? 'Save error' : libraryStatus === 'recovered' ? 'Recovered backup' : 'Saved'}</span>
         <span>{songTransport.state.songTitle
           ? `${songTransport.state.songTitle} · ${songTransport.state.status.toUpperCase()}`
-          : 'Sunday Kids'}</span>
+          : playlist.title}</span>
         <span><i className={screenVisibility.audience ? 'isOn' : ''}/>Audience <i className={screenVisibility.stage ? 'isOn' : ''}/>Stage</span>
       </footer>
 

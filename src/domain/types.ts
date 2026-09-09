@@ -137,6 +137,8 @@ export interface Playlist {
   id: string;
   title: string;
   items: PlaylistItem[];
+  serviceDate?: string;
+  description?: string;
 }
 
 export interface PresenterLibraryData {
@@ -144,6 +146,7 @@ export interface PresenterLibraryData {
   presentations: Presentation[];
   songs: Song[];
   playlists: Playlist[];
+  activePlaylistId?: string;
   savedAt?: string;
 }
 

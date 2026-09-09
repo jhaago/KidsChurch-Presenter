@@ -173,9 +173,22 @@ Status: implemented in source.
 - remove service references without deleting resources
 - reorder current service items
 
+## v0.5.2 — Multiple saved services
+
+Status: implemented in source.
+
+- persistent collection of services/playlists
+- active service persisted across restart
+- create empty service
+- duplicate service with independent playlist-item IDs
+- rename service inline
+- optional service date and note
+- delete/switch services without altering live output
+- library resource rename/delete propagation across all services
+- empty-service operator state
+
 ### Next v0.5 passes
 
-- multiple saved service playlists
 - arrangements / repeat Verse-Chorus sections without duplicating source lyrics
 - undo/redo
 - cue-map editor / tap-to-time Auto Lyrics workflow

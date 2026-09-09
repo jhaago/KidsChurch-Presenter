@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.5.1-alpha.1 — Library + Service Management**
+**v0.5.2-alpha.1 — Multiple Saved Services**
 
 Implemented in source:
 
@@ -73,6 +73,13 @@ Implemented in source:
 - remove an item from the service without deleting its library resource
 - move service items up/down while preserving live output
 - Library pane now lists saved Presentation/Song resources independently from the current service
+- multiple persistent service playlists sharing the same library
+- New / Duplicate / Delete / Switch Service workflow
+- editable service title, date and optional note
+- empty services are valid and can be built from the shared library
+- active service selection persists across app restarts
+- switching or deleting a service does not clear already-live Audience/Stage output
+- resource renames and deletes propagate safely across every saved service
 
 ## Run on macOS or Windows
 
@@ -145,6 +152,22 @@ Lyrics can independently be configured as **Manual**, **Assisted**, or **Auto**.
 The Song transport now uses the Web Audio API. Assigned stems are decoded and scheduled against one shared AudioContext start time, rather than starting independent HTML audio elements. Muted stems remain on the shared timeline at zero gain, so a stem can be switched on during playback without restarting it.
 
 **Auto Lyrics** uses the exact same transport position as the backing track/stems. **Assisted** mode leaves slide control with the operator but displays the next stored cue and countdown. Song and presentation configuration is now persisted automatically in the desktop app data folder.
+
+## Multiple saved services
+
+Presenter now stores a collection of services rather than only one current playlist. The existing saved **Sunday Kids** service is preserved and becomes the first service automatically.
+
+The **SERVICES** section supports:
+
+- **New** — create an empty service
+- **Duplicate Service** — copy the service order while keeping references to the same library resources
+- **Delete Service** — remove only that service; library Songs, Presentations and media remain
+- click any saved service to switch the operator workspace to it
+- edit the active service name, date and optional note directly above its service order
+
+A duplicated service receives fresh playlist-item IDs, so its order can be edited independently without duplicating the underlying Songs/Presentations.
+
+Switching services changes preparation context only. Existing Audience/Stage output and an already-running Song transport are intentionally left alone.
 
 ## Library and service management
 
