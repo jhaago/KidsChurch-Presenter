@@ -19,10 +19,6 @@ const kindIcon: Record<PlaylistItem['type'], string> = {
   'web-tool': '⌘',
 };
 
-function findSlide(presentation: Presentation, slideId: string) {
-  return presentation.groups.flatMap((group) => group.slides).find((slide) => slide.id === slideId);
-}
-
 function allSlides(presentation: Presentation) {
   return presentation.groups.flatMap((group) => group.slides);
 }
@@ -262,7 +258,7 @@ export function OperatorApp() {
           <div className="playlist">
             <div className="playlistHead">
               <div className="panelTitle">SUNDAY KIDS</div>
-              <div className="sub">Demo service •  typed playlist items</div>
+              <div className="sub">Demo service • typed playlist items</div>
             </div>
             <div className="playlistItems">
               {sundayKidsPlaylist.items.map((item, index) => (
@@ -312,12 +308,12 @@ export function OperatorApp() {
                           <span className="canvas">
                             <span className="slideText">
                               {slide.text.split('\n').map((line, lineIndex) => (
-                                <span key={`${Slide.id}-${lineIndex}`}>{line}</span>
+                                <span key={`${slide.id}-${lineIndex}`}>{line}</span>
                               ))}
                             </span>
                           </span>
                         </button>
-                     );
+                      );
                     })}
                   </div>
                 </section>
