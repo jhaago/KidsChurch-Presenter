@@ -300,7 +300,6 @@ class NetworkStageServer {
         return this.info();
       }
 
-      server.close();
       if (result.error?.code !== 'EADDRINUSE') {
         this.lastError = result.error?.message || String(result.error);
         this.emitInfo();

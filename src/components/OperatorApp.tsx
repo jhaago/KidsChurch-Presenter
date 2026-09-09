@@ -438,17 +438,21 @@ export function OperatorApp() {
                 <span>Tablet clients</span>
                 <strong>{networkStage.clientCount}</strong>
               </div>
-              {networkStage.urls[0] ? (
-                <>
-                  <div className="networkStageUrl" title={networkStage.urls[0]}>{networkStage.urls[0]}</div>
-                  <button
-                    className="networkStageCopy"
-                    type="button"
-                    onClick={() => navigator.clipboard?.writeText(networkStage.urls[0]).catch(() => undefined)}
-                  >
-                    Copy Stage Link
-                  </button>
-                </>
+              {networkStage.urls.length ? (
+                <div className="networkStageLinks">
+                  {networkStage.urls.map((url, index) => (
+                    <div className="networkStageLink" key={url}>
+                      <div className="networkStageUrl" title={url}>{url}</div>
+                      <button
+                        className="networkStageCopy"
+                        type="button"
+                        onClick={() => navigator.clipboard?.writeText(url).catch(() => undefined)}
+                      >
+                        Copy {networkStage.urls.length > 1 ? 'Link ' + (index + 1) : 'Stage Link'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div className="networkStageHint">
                   {networkStage.error || 'Connect the laptop to a local network to expose a tablet Stage address.'}
