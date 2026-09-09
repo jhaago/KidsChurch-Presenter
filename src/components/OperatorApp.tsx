@@ -142,7 +142,7 @@ export function OperatorApp() {
   );
   const clearToLogo = useCallback(() => setOutput({ ...EMPTY_OUTPUT_STATE, logo: true }), []);
   const toggleBlack = useCallback(
-    () => setOutput((current) => ({ ...current, black: !current.black, logo: current.black ? current.logo : false })),
+    () => setOutput((current) => ({ ...current, black: !current.black })),
     [],
   );
 
