@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   PRESENTATION_THEMES,
+  isBuiltInTheme,
   resolveSlideFormat,
+  resolveSlideLayout,
   themeById,
   withTheme,
 } from '../domain/themes';
 import type {
   MediaAsset,
   Presentation,
+  PresentationTheme,
   Slide,
   SlideGroup,
   SlideGroupType,
@@ -19,7 +22,11 @@ interface PresentationEditorPanelProps {
   presentation: Presentation;
   isSongPresentation: boolean;
   availableAssets: MediaAsset[];
+  customThemes: PresentationTheme[];
   onChange: (presentation: Presentation) => void;
+  onCreateTheme: (theme: PresentationTheme) => void;
+  onUpdateTheme: (theme: PresentationTheme) => void;
+  onDeleteTheme: (themeId: string) => void;
 }
 
 const groupTypes: Array<{ value: SlideGroupType; label: string }> = [
@@ -74,7 +81,11 @@ export function PresentationEditorPanel({
   presentation,
   isSongPresentation,
   availableAssets,
+  customThemes,
   onChange,
+  onCreateTheme,
+  onUpdateTheme,
+  onDeleteTheme,
 }: PresentationEditorPanelProps) {
   const pastRef = useRef<Presentation[]>([]);
   const futureRef = useRef<Presentation[]>([]);
@@ -193,8 +204,62 @@ export function PresentationEditorPanel({
   const backgroundAssets = availableAssets.filter((asset) =>
     asset.kind === 'still' || asset.kind === 'motion',
   );
-  const resolvedPresentationFormat = resolveSlideFormat(presentation);
-  const activeTheme = themeById(presentation.themeId);
+  const resolvedPresentationFormat = resolveSlideFormat(presentation, undefined, customThemes);
+  const resolvedPresentationLayout = resolveSlideLayout(presentation, undefined, customThemes);
+  const activeTheme = themeById(presentation.themeId, customThemes);
+  const activeCustomTheme = customThemes.find((theme) => theme.id === presentation.themeId);
+  const saveCurrentAsTheme = () => {
+    const proposed = window.prompt('Name this reusable theme', `${presentation.title} Theme`);
+    if (proposed === null) return;
+    const name = proposed.trim();
+    if (!name) return;
+    if (customThemes.some((theme) => theme.name.toLowerCase() === name.toLowerCase())) {
+      window.alert('A custom theme with that name already exists.');
+      return;
+    }
+
+    const theme: PresentationTheme = {
+      id: id('theme'),
+      name,
+      description: `Created from ${presentation.title}`,
+      format: { ...resolvedPresentationFormat },
+      layout: { ...resolvedPresentationLayout },
+    };
+    onCreateTheme(theme);
+    commit(withTheme(presentation, theme.id));
+  };
+
+  const updateActiveCustomTheme = () => {
+    if (!activeCustomTheme) return;
+    if (!window.confirm(`Update “${activeCustomTheme.name}” from this Presentation? Every Presentation using this theme will inherit the new style and layout.`)) return;
+
+    onUpdateTheme({
+      ...activeCustomTheme,
+      format: { ...resolvedPresentationFormat },
+      layout: { ...resolvedPresentationLayout },
+    });
+    commit(withTheme(presentation, activeCustomTheme.id));
+  };
+
+  const renameActiveCustomTheme = () => {
+    if (!activeCustomTheme) return;
+    const proposed = window.prompt('Rename custom theme', activeCustomTheme.name);
+    if (proposed === null) return;
+    const name = proposed.trim();
+    if (!name || name === activeCustomTheme.name) return;
+    if (customThemes.some((theme) => theme.id !== activeCustomTheme.id && theme.name.toLowerCase() === name.toLowerCase())) {
+      window.alert('A custom theme with that name already exists.');
+      return;
+    }
+    onUpdateTheme({ ...activeCustomTheme, name });
+  };
+
+  const deleteActiveCustomTheme = () => {
+    if (!activeCustomTheme) return;
+    if (!window.confirm(`Delete custom theme “${activeCustomTheme.name}”? Presentations using it will keep their current appearance as local formatting.`)) return;
+    onDeleteTheme(activeCustomTheme.id);
+  };
+
   const canUndo = pastRef.current.length > 0;
   const canRedo = futureRef.current.length > 0;
   void historyRevision;
@@ -266,11 +331,22 @@ export function PresentationEditorPanel({
               value={presentation.themeId ?? 'default'}
               onChange={(event) => commit(withTheme(presentation, event.target.value))}
             >
-              {PRESENTATION_THEMES.map((theme) => (
-                <option value={theme.id} key={theme.id}>{theme.name}</option>
-              ))}
+              <optgroup label="Built-in Themes">
+                {PRESENTATION_THEMES.map((theme) => (
+                  <option value={theme.id} key={theme.id}>{theme.name}</option>
+                ))}
+              </optgroup>
+              {customThemes.length ? (
+                <optgroup label="My Themes">
+                  {customThemes.map((theme) => (
+                    <option value={theme.id} key={theme.id}>{theme.name}</option>
+                  ))}
+                </optgroup>
+              ) : null}
             </select>
-            <small>{activeTheme.description}</small>
+            <small>
+              {activeTheme.description ?? (activeCustomTheme ? 'Custom reusable theme' : '')}
+            </small>
           </label>
           <label>
             <span>BACKGROUND</span>
@@ -293,6 +369,24 @@ export function PresentationEditorPanel({
                 : 'Still and motion resources can be assigned to the whole presentation.'}
             </small>
           </label>
+        </div>
+
+        <div className="customThemeActions">
+          <div>
+            <strong>MY THEMES</strong>
+            <span>{customThemes.length ? `${customThemes.length} saved reusable theme${customThemes.length === 1 ? '' : 's'}` : 'No custom themes saved yet'}</span>
+          </div>
+          <div>
+            <button type="button" onClick={saveCurrentAsTheme}>＋ Save Current as Theme</button>
+            <button type="button" disabled={!activeCustomTheme} onClick={updateActiveCustomTheme}>Update Theme</button>
+            <button type="button" disabled={!activeCustomTheme} onClick={renameActiveCustomTheme}>Rename</button>
+            <button className="danger" type="button" disabled={!activeCustomTheme} onClick={deleteActiveCustomTheme}>Delete</button>
+          </div>
+          <small>
+            {isBuiltInTheme(presentation.themeId ?? 'default')
+              ? 'Built-in themes are read-only. Save the current appearance as a new theme to customise and reuse it.'
+              : 'This Presentation is linked to a custom theme. Updating that theme changes every linked Presentation; slide-specific overrides remain local.'}
+          </small>
         </div>
 
         <div className="formatControls">
@@ -469,7 +563,7 @@ export function PresentationEditorPanel({
 
             <div className="presentationEditSlides">
               {group.slides.map((slide, slideIndex) => {
-                const resolvedSlideFormat = resolveSlideFormat(presentation, slide);
+                const resolvedSlideFormat = resolveSlideFormat(presentation, slide, customThemes);
                 const hasCustomFormat = Boolean(slide.format);
                 return (
                   <article className="presentationEditSlide" key={slide.id}>

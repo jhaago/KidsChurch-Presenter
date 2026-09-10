@@ -28,6 +28,7 @@ import {
   type Playlist,
   type PresenterLibraryData,
   type PresenterOutputState,
+  type PresentationTheme,
   type ResourceLibrarySnapshot,
   type ScreenKind,
   type Slide,
@@ -85,6 +86,7 @@ export function OperatorApp() {
     lastError: null,
   });
   const [presentations, setPresentations] = useState<Presentation[]>(() => structuredClone(demoPresentations));
+  const [customThemes, setCustomThemes] = useState<PresentationTheme[]>([]);
   const [songs, setSongs] = useState<Song[]>(() => structuredClone(demoSongs));
   const [playlists, setPlaylists] = useState<Playlist[]>(() => [structuredClone(demoPlaylist)]);
   const [activePlaylistId, setActivePlaylistId] = useState(demoPlaylist.id);
@@ -151,6 +153,7 @@ export function OperatorApp() {
       presentations: structuredClone(demoPresentations),
       songs: structuredClone(demoSongs),
       playlists: [structuredClone(demoPlaylist)],
+      customThemes: [],
       activePlaylistId: demoPlaylist.id,
     };
 
@@ -174,6 +177,7 @@ export function OperatorApp() {
         const loadedActive = loadedPlaylists.find((service) => service.id === loadedActiveId) ?? loadedPlaylists[0];
 
         setPresentations(structuredClone(data.presentations));
+        setCustomThemes(structuredClone(data.customThemes ?? []));
         setSongs(structuredClone(data.songs));
         setPlaylists(loadedPlaylists);
         setActivePlaylistId(loadedActiveId);
@@ -201,6 +205,7 @@ export function OperatorApp() {
         presentations,
         songs,
         playlists,
+        customThemes,
         activePlaylistId,
       };
       window.kidsPresenter?.savePresenterLibrary(data)
@@ -208,12 +213,11 @@ export function OperatorApp() {
         .catch(() => setLibraryStatus('error'));
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [activePlaylistId, libraryReady, playlists, presentations, songs]);
+  }, [activePlaylistId, customThemes, libraryReady, playlists, presentations, songs]);
 
   useEffect(() => {
     if (!selectedPresentation) {
       setSelectedSlideId(null);
-    setSelectedArrangementEntryId(null);
       setSelectedArrangementEntryId(null);
       return;
     }
@@ -229,6 +233,31 @@ export function OperatorApp() {
     setSelectedSlideId(firstSlide?.id ?? null);
     setSelectedArrangementEntryId(null);
   }, [selectedPresentation, selectedSong]);
+
+  useEffect(() => {
+    if (!output.slide) return;
+    const livePresentation = presentations.find((presentation) =>
+      presentation.id === output.slide?.presentationId,
+    );
+    const liveSlide = livePresentation
+      ? allSlides(livePresentation).find((slide) => slide.id === output.slide?.slideId)
+      : undefined;
+    if (!livePresentation || !liveSlide) return;
+
+    setOutput((current) => ({
+      ...current,
+      slide: current.slide ? {
+        ...current.slide,
+        format: resolveSlideFormat(livePresentation, liveSlide, customThemes),
+        layout: resolveSlideLayout(livePresentation, liveSlide, customThemes),
+      } : null,
+    }));
+  }, [
+    customThemes,
+    presentations,
+    output.slide?.presentationId,
+    output.slide?.slideId,
+  ]);
 
   useEffect(() => {
     const presenterOutput: PresenterOutputState = { audience: output, stage: stageOutput };
@@ -299,8 +328,8 @@ export function OperatorApp() {
     const background = backgroundId
       ? allMediaAssets.find((asset) => asset.id === backgroundId)
       : undefined;
-    const format = resolveSlideFormat(presentation, slide);
-    const layout = resolveSlideLayout(presentation, slide);
+    const format = resolveSlideFormat(presentation, slide, customThemes);
+    const layout = resolveSlideLayout(presentation, slide, customThemes);
 
     setOutput((current) => ({
       ...current,
@@ -329,7 +358,7 @@ export function OperatorApp() {
       nextText: nextSlide?.text ?? null,
       notes: slide.notes ?? null,
     });
-  }, [allMediaAssets, songs]);
+  }, [allMediaAssets, customThemes, songs]);
 
   const triggerMedia = useCallback((asset: MediaAsset) => {
     const playbackRole = asset.kind === 'video' ? 'video' : 'background';
@@ -456,8 +485,8 @@ export function OperatorApp() {
           ...current.slide,
           presentationTitle: updatedPresentation.title,
           text: liveSlide.text,
-          format: resolveSlideFormat(updatedPresentation, liveSlide),
-          layout: resolveSlideLayout(updatedPresentation, liveSlide),
+          format: resolveSlideFormat(updatedPresentation, liveSlide, customThemes),
+          layout: resolveSlideLayout(updatedPresentation, liveSlide, customThemes),
         } : null,
         media: liveBackground
           ? liveMediaFromAsset(liveBackground, 'background')
@@ -500,7 +529,71 @@ export function OperatorApp() {
         notes: currentSlide?.notes ?? null,
       };
     });
-  }, [allMediaAssets, output.slide, presentations, songs]);
+  }, [allMediaAssets, customThemes, output.slide, presentations, songs]);
+
+  const createCustomTheme = useCallback((theme: PresentationTheme) => {
+    setCustomThemes((current) => [...current, theme]);
+  }, []);
+
+  const updateCustomTheme = useCallback((updatedTheme: PresentationTheme) => {
+    const nextThemes = customThemes.map((theme) =>
+      theme.id === updatedTheme.id ? updatedTheme : theme,
+    );
+    setCustomThemes(nextThemes);
+
+    const livePresentation = output.slide
+      ? presentations.find((presentation) => presentation.id === output.slide?.presentationId)
+      : undefined;
+    const liveSlide = livePresentation && output.slide
+      ? allSlides(livePresentation).find((slide) => slide.id === output.slide?.slideId)
+      : undefined;
+    if (livePresentation?.themeId === updatedTheme.id && liveSlide) {
+      setOutput((current) => ({
+        ...current,
+        slide: current.slide ? {
+          ...current.slide,
+          format: resolveSlideFormat(livePresentation, liveSlide, nextThemes),
+          layout: resolveSlideLayout(livePresentation, liveSlide, nextThemes),
+        } : null,
+      }));
+    }
+  }, [customThemes, output.slide, presentations]);
+
+  const deleteCustomTheme = useCallback((themeId: string) => {
+    const theme = customThemes.find((candidate) => candidate.id === themeId);
+    if (!theme) return;
+
+    const nextThemes = customThemes.filter((candidate) => candidate.id !== themeId);
+    const nextPresentations = presentations.map((presentation) => {
+      if (presentation.themeId !== themeId) return presentation;
+      return {
+        ...presentation,
+        themeId: 'default',
+        format: { ...resolveSlideFormat(presentation, undefined, customThemes) },
+        layout: { ...resolveSlideLayout(presentation, undefined, customThemes) },
+      };
+    });
+
+    setCustomThemes(nextThemes);
+    setPresentations(nextPresentations);
+
+    const livePresentation = output.slide
+      ? nextPresentations.find((presentation) => presentation.id === output.slide?.presentationId)
+      : undefined;
+    const liveSlide = livePresentation && output.slide
+      ? allSlides(livePresentation).find((slide) => slide.id === output.slide?.slideId)
+      : undefined;
+    if (livePresentation && liveSlide) {
+      setOutput((current) => ({
+        ...current,
+        slide: current.slide ? {
+          ...current.slide,
+          format: resolveSlideFormat(livePresentation, liveSlide, nextThemes),
+          layout: resolveSlideLayout(livePresentation, liveSlide, nextThemes),
+        } : null,
+      }));
+    }
+  }, [customThemes, output.slide, presentations]);
 
   const updateSong = useCallback((updatedSong: Song) => {
     const previous = songs.find((song) => song.id === updatedSong.id);
@@ -1011,8 +1104,12 @@ export function OperatorApp() {
         {selectedItem ? (
           <SlideWorkspace
             availableAssets={allMediaAssets}
+            customThemes={customThemes}
             media={selectedMedia}
             onChangePresentation={updatePresentation}
+            onCreateTheme={createCustomTheme}
+            onUpdateTheme={updateCustomTheme}
+            onDeleteTheme={deleteCustomTheme}
             onChangeSong={updateSong}
             onSelectSlide={(slideId, arrangementEntryId) => {
               setSelectedSlideId(slideId);

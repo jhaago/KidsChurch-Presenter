@@ -6,6 +6,7 @@ import {
 import type {
   MediaAsset,
   Presentation,
+  PresentationTheme,
   Slide,
   SlideBoxLayout,
 } from '../domain/types';
@@ -16,6 +17,7 @@ interface SlideLayoutEditorProps {
   selectedSlideId: string | null;
   availableAssets: MediaAsset[];
   defaultBackgroundAssetId?: string;
+  customThemes: PresentationTheme[];
   onChange: (presentation: Presentation) => void;
   onSelectSlide: (slideId: string) => void;
 }
@@ -89,6 +91,7 @@ export function SlideLayoutEditor({
   selectedSlideId,
   availableAssets,
   defaultBackgroundAssetId,
+  customThemes,
   onChange,
   onSelectSlide,
 }: SlideLayoutEditorProps) {
@@ -123,8 +126,8 @@ export function SlideLayoutEditor({
     );
   }
 
-  const format = resolveSlideFormat(presentation, selected.slide);
-  const layout = resolveSlideLayout(presentation, selected.slide);
+  const format = resolveSlideFormat(presentation, selected.slide, customThemes);
+  const layout = resolveSlideLayout(presentation, selected.slide, customThemes);
   const backgroundId = selected.slide.backgroundAssetId === null
     ? undefined
     : selected.slide.backgroundAssetId ??

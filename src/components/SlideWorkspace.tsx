@@ -6,7 +6,7 @@ import {
   occurrenceLabel,
 } from '../domain/songArrangement';
 import { resolveBackgroundAssetId, resolveSlideFormat, resolveSlideLayout } from '../domain/themes';
-import type { MediaAsset, OutputState, PlaylistItem, Presentation, Slide, Song } from '../domain/types';
+import type { MediaAsset, OutputState, PlaylistItem, Presentation, PresentationTheme, Slide, Song } from '../domain/types';
 import { PresentationEditorPanel } from './PresentationEditorPanel';
 import { SlideLayoutEditor } from './SlideLayoutEditor';
 import { SongArrangementEditor } from './SongArrangementEditor';
@@ -21,6 +21,7 @@ interface SlideWorkspaceProps {
   song?: Song;
   media?: MediaAsset;
   availableAssets: MediaAsset[];
+  customThemes: PresentationTheme[];
   selectedSlideId: string | null;
   selectedArrangementEntryId: string | null;
   output: OutputState;
@@ -28,6 +29,9 @@ interface SlideWorkspaceProps {
   timingTransport: SongTransportSnapshot;
   getTimingPositionMs: () => number;
   onChangePresentation: (presentation: Presentation) => void;
+  onCreateTheme: (theme: PresentationTheme) => void;
+  onUpdateTheme: (theme: PresentationTheme) => void;
+  onDeleteTheme: (themeId: string) => void;
   onChangeSong: (song: Song) => void;
   onPlaySong: (song: Song) => void;
   onPauseSong: () => void;
@@ -62,6 +66,7 @@ export function SlideWorkspace({
   song,
   media,
   availableAssets,
+  customThemes,
   selectedSlideId,
   selectedArrangementEntryId,
   output,
@@ -69,6 +74,9 @@ export function SlideWorkspace({
   timingTransport,
   getTimingPositionMs,
   onChangePresentation,
+  onCreateTheme,
+  onUpdateTheme,
+  onDeleteTheme,
   onChangeSong,
   onPlaySong,
   onPauseSong,
@@ -247,6 +255,7 @@ export function SlideWorkspace({
         {viewMode === 'layout' && presentation ? (
           <SlideLayoutEditor
             availableAssets={availableAssets}
+            customThemes={customThemes}
             defaultBackgroundAssetId={song?.backgroundAssetId}
             onChange={onChangePresentation}
             onSelectSlide={(slideId) => onSelectSlide(slideId)}
@@ -275,8 +284,12 @@ export function SlideWorkspace({
         ) : viewMode === 'edit' && presentation ? (
           <PresentationEditorPanel
             availableAssets={availableAssets}
+            customThemes={customThemes}
             isSongPresentation={Boolean(song)}
             onChange={onChangePresentation}
+            onCreateTheme={onCreateTheme}
+            onUpdateTheme={onUpdateTheme}
+            onDeleteTheme={onDeleteTheme}
             presentation={presentation}
           />
         ) : presentation ? (
@@ -323,8 +336,8 @@ export function SlideWorkspace({
                         ? output.slide.arrangementEntryId === arrangementEntryId ||
                           (!output.slide.arrangementEntryId && selectedArrangementEntryId === arrangementEntryId)
                         : true);
-                    const format = resolveSlideFormat(presentation, slide);
-                    const layout = resolveSlideLayout(presentation, slide);
+                    const format = resolveSlideFormat(presentation, slide, customThemes);
+                    const layout = resolveSlideLayout(presentation, slide, customThemes);
                     const backgroundId = resolveBackgroundAssetId(presentation, slide);
                     const background = backgroundId
                       ? availableAssets.find((asset) => asset.id === backgroundId)

@@ -56,6 +56,26 @@ async function main() {
         ],
       },
     ],
+    customThemes: [
+      {
+        id: 'theme-user-1',
+        name: 'Kids Song',
+        description: 'Reusable test theme',
+        format: {
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontSizeVw: 5.8,
+          fontWeight: 700,
+          lineHeight: 1.1,
+          textAlign: 'center',
+          verticalAlign: 'middle',
+          textColor: '#ffffff',
+          shadow: true,
+          uppercase: true,
+          marginPercent: 9,
+        },
+        layout: { xPercent: 8, yPercent: 55, widthPercent: 84, heightPercent: 30 },
+      },
+    ],
     playlists: [
       {
         id: 'service',
@@ -83,7 +103,10 @@ async function main() {
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].format.textAlign, 'left');
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].layout.xPercent, 18);
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].backgroundAssetId, null);
-  assert.equal(loaded.data.playlists.length, 2);
+  assert.equal(loaded.data.customThemes.length, 1);
+  assert.equal(loaded.data.customThemes[0].name, 'Kids Song');
+  assert.equal(loaded.data.customThemes[0].layout.yPercent, 55);
+    assert.equal(loaded.data.playlists.length, 2);
   assert.equal(loaded.data.playlists[0].serviceDate, '2026-09-13');
   assert.equal(loaded.data.activePlaylistId, 'service-next');
   assert.equal(loaded.data.songs[0].arrangement.length, 2);

@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.5.6-alpha.1 — Visual Slide Layout Editor**
+**v0.5.7-alpha.1 — User-Created Reusable Themes**
 
 Implemented in source:
 
@@ -126,6 +126,16 @@ Implemented in source:
 - layout-specific undo/redo during visual editing
 - slide thumbnails and Audience output use the same resolved box geometry
 - editor input/arrow keys no longer accidentally trigger live slide navigation
+- persistent user-created reusable Themes
+- custom Themes store resolved text formatting and presentation text-box geometry
+- Save Current as Theme from any Presentation/Song lyrics editor
+- built-in and user Themes are clearly separated in the Theme picker
+- custom Theme updates propagate to every linked Presentation
+- Rename / Update / Delete management for custom Themes
+- applying a Theme resets presentation-level style/layout overrides while preserving per-slide overrides
+- deleting a custom Theme preserves linked Presentation appearance by baking its resolved style/layout locally
+- custom Themes persist in the presenter library with backward compatibility for older saved data
+- currently-live slides re-resolve immediately when a linked custom Theme changes
 
 ## Run on macOS or Windows
 
@@ -246,6 +256,26 @@ The current editor supports:
 Changes autosave after a short debounce. The desktop process owns the saved JSON file and keeps the previous successful save as a backup. If the primary library file is unreadable on launch, Presenter attempts to recover the backup.
 
 The built-in demo service is now only the first-run seed. After the first successful save, the editable saved library becomes the source of truth.
+
+## User-created reusable Themes
+
+The built-in Theme presets remain available, but Presenter now also has a persistent **My Themes** library.
+
+From **Edit → Presentation Format** you can:
+
+- **Save Current as Theme** — capture the Presentation's resolved text style and default text-box geometry
+- apply a saved custom Theme from the same Theme picker as the built-in presets
+- **Update Theme** from the current Presentation
+- **Rename** a custom Theme
+- **Delete** a custom Theme
+
+Custom Themes are references rather than one-time copies. If five Presentations use **Kids Song** and that Theme is updated, all five inherit the new Theme formatting and layout automatically.
+
+Presentation-level overrides sit on top of a Theme while you experiment. Applying a Theme clears those Presentation-level style/layout overrides so the Presentation genuinely follows the selected Theme. Individual slide overrides remain local and are not discarded.
+
+Deleting a custom Theme is non-destructive. Before removing the Theme, Presenter resolves its current style/layout into each linked Presentation and switches those Presentations back to the built-in default Theme underneath. Their visible appearance therefore stays the same.
+
+The custom Theme library is saved in the same versioned presenter-library data as Presentations, Songs and services. Older libraries without a custom-Theme collection simply load with an empty **My Themes** list.
 
 ## Visual slide layout editor
 

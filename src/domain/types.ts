@@ -94,6 +94,14 @@ export interface SlideTextFormat {
   marginPercent: number;
 }
 
+export interface PresentationTheme {
+  id: string;
+  name: string;
+  description?: string;
+  format: SlideTextFormat;
+  layout?: SlideBoxLayout;
+}
+
 export interface Slide {
   id: string;
   text: string;
@@ -183,6 +191,7 @@ export interface PresenterLibraryData {
   presentations: Presentation[];
   songs: Song[];
   playlists: Playlist[];
+  customThemes?: PresentationTheme[];
   activePlaylistId?: string;
   savedAt?: string;
 }

@@ -1,10 +1,7 @@
-import type { Presentation, Slide, SlideBoxLayout, SlideTextFormat } from './types';
+import type { Presentation, PresentationTheme, Slide, SlideBoxLayout, SlideTextFormat } from './types';
 
-export interface PresentationThemePreset {
-  id: string;
-  name: string;
+export interface PresentationThemePreset extends PresentationTheme {
   description: string;
-  format: SlideTextFormat;
 }
 
 export const DEFAULT_SLIDE_LAYOUT: SlideBoxLayout = {
@@ -90,14 +87,26 @@ export const PRESENTATION_THEMES: PresentationThemePreset[] = [
   },
 ];
 
-export function themeById(themeId?: string) {
-  return PRESENTATION_THEMES.find((theme) => theme.id === themeId) ?? PRESENTATION_THEMES[0];
+export function allPresentationThemes(customThemes: PresentationTheme[] = []) {
+  return [...PRESENTATION_THEMES, ...customThemes];
 }
 
-export function resolveSlideFormat(presentation: Presentation, slide?: Slide): SlideTextFormat {
+export function themeById(themeId?: string, customThemes: PresentationTheme[] = []) {
+  return allPresentationThemes(customThemes).find((theme) => theme.id === themeId) ?? PRESENTATION_THEMES[0];
+}
+
+export function isBuiltInTheme(themeId?: string) {
+  return PRESENTATION_THEMES.some((theme) => theme.id === themeId);
+}
+
+export function resolveSlideFormat(
+  presentation: Presentation,
+  slide?: Slide,
+  customThemes: PresentationTheme[] = [],
+): SlideTextFormat {
   return {
     ...DEFAULT_SLIDE_FORMAT,
-    ...themeById(presentation.themeId).format,
+    ...themeById(presentation.themeId, customThemes).format,
     ...presentation.format,
     ...slide?.format,
   };
@@ -108,6 +117,7 @@ export function withTheme(presentation: Presentation, themeId: string): Presenta
     ...presentation,
     themeId,
     format: undefined,
+    layout: undefined,
   };
 }
 
@@ -122,8 +132,13 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function resolveSlideLayout(presentation: Presentation, slide?: Slide): SlideBoxLayout {
-  const format = resolveSlideFormat(presentation, slide);
+export function resolveSlideLayout(
+  presentation: Presentation,
+  slide?: Slide,
+  customThemes: PresentationTheme[] = [],
+): SlideBoxLayout {
+  const format = resolveSlideFormat(presentation, slide, customThemes);
+  const theme = themeById(presentation.themeId, customThemes);
   const margin = clamp(format.marginPercent, 0, 40);
   const derived: SlideBoxLayout = {
     xPercent: margin,
@@ -135,6 +150,7 @@ export function resolveSlideLayout(presentation: Presentation, slide?: Slide): S
   const merged = {
     ...DEFAULT_SLIDE_LAYOUT,
     ...derived,
+    ...theme.layout,
     ...presentation.layout,
     ...slide?.layout,
   };

@@ -265,9 +265,25 @@ Status: implemented in source.
 - backward-compatible derivation from legacy margin settings
 - editing controls no longer leak Left/Right keys into live navigation
 
+## v0.5.7 — User-created reusable Themes
+
+Status: implemented in source.
+
+- persistent custom Theme library
+- save current resolved Presentation style/layout as a Theme
+- built-in vs My Themes grouping
+- apply custom Themes to Presentations and Song lyrics
+- update linked Theme from current Presentation
+- rename custom Theme
+- delete custom Theme without visually changing linked Presentations
+- linked Presentations inherit Theme updates automatically
+- Presentation-level overrides clear when applying/updating a Theme
+- per-slide overrides remain local
+- live Audience slide refresh when a linked Theme changes
+- backward-compatible loading of pre-theme presenter libraries
+
 ### Next v0.5 passes
 
-- user-created named Themes
 - richer text boxes and multi-element slide layouts
 - duplicate/add text or image elements
 - drag ordering and layer controls
