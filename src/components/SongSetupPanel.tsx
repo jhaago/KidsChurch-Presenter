@@ -5,7 +5,6 @@ interface SongSetupPanelProps {
   song: Song;
   assets: MediaAsset[];
   onChange: (song: Song) => void;
-  onTriggerLyricsVideo: (asset: MediaAsset) => void;
 }
 
 const playbackModes: Array<{ id: SongPlaybackMode; label: string; detail: string }> = [
@@ -38,24 +37,28 @@ function updatePlaybackMode(song: Song, playbackMode: SongPlaybackMode): Song {
   };
 }
 
-export function SongSetupPanel({ song, assets, onChange, onTriggerLyricsVideo }: SongSetupPanelProps) {
+export function SongSetupPanel({ song, assets, onChange }: SongSetupPanelProps) {
   const audioAssets = assets.filter((asset) => asset.kind === 'audio');
   const visualAssets = assets.filter((asset) => asset.kind !== 'audio');
   const videoAssets = assets.filter((asset) => asset.kind === 'motion' || asset.kind === 'video');
-  const videoAsset = videoAssets.find((asset) => asset.id === song.lyricsVideoAssetId);
 
   return (
-    <section className="songSetupPanel">
+    <section className="songSetupPanel songBuildPanel" data-presenter-editor="true">
       <header className="songSetupHeader">
         <div>
-          <Icon name="audio" />
+          <span className="songBuildMark"><Icon name="presentation" /></span>
           <div>
-            <strong>SONG SETUP</strong>
+            <strong>BUILD SONG</strong>
             <span>{song.title}</span>
           </div>
         </div>
-        <span className="songEngineBadge">EDITABLE SONG</span>
+        <span className="songEngineBadge songBuildBadge">CONFIGURATION</span>
       </header>
+
+      <div className="songBuildNotice">
+        <strong>PREPARATION MODE</strong>
+        <span>Changes here are saved as the Song's setup for future performances. Build mode does not start live playback or trigger Audience output.</span>
+      </div>
 
       <div className="songSetupGrid">
         <section className="songSetupSection">
@@ -104,10 +107,10 @@ export function SongSetupPanel({ song, assets, onChange, onTriggerLyricsVideo }:
             {song.playbackMode === 'lyrics-video'
               ? 'Lyrics are embedded in the video, so slide control is not used.'
               : song.lyricControlMode === 'manual'
-                ? 'Operator advances every lyric slide.'
+                ? 'Operator advances every lyric slide during Performance.'
                 : song.lyricControlMode === 'assisted'
-                  ? 'Operator remains in control; stored timing cues will provide next-slide prompts.'
-                  : `Auto mode will follow ${song.lyricCues.length} stored timing cues from the song transport.`}
+                  ? 'Operator remains in control; stored timing cues provide next-slide prompts during Performance.'
+                  : `Auto mode follows ${song.lyricCues.length} stored timing cues from the live Song transport.`}
           </p>
         </section>
 
@@ -143,13 +146,13 @@ export function SongSetupPanel({ song, assets, onChange, onTriggerLyricsVideo }:
                 <option value={asset.id} key={asset.id}>{asset.title}</option>
               ))}
             </select>
-            <p className="songModeHint">Single-track transport will use the same master song clock as Auto Lyrics.</p>
+            <p className="songModeHint">The live Performance transport uses this track and the same master clock as Auto Lyrics.</p>
           </section>
         ) : null}
 
         {song.playbackMode === 'slides-stems' ? (
           <section className="songSetupSection songStemSection">
-            <small>STEMS</small>
+            <small>STEM DEFAULTS</small>
             <div className="stemRows">
               {song.audio.stems.map((stem) => (
                 <div className="stemRow" key={stem.id}>
@@ -196,7 +199,7 @@ export function SongSetupPanel({ song, assets, onChange, onTriggerLyricsVideo }:
               ))}
             </div>
             <p className="songModeHint">
-              All stems share one master transport clock. Muted stems stay synchronized at zero gain.
+              These ON/OFF states are saved starting defaults. Live stem changes made in Performance are session-only and reset to these defaults when the Song starts again.
             </p>
           </section>
         ) : null}
@@ -213,23 +216,14 @@ export function SongSetupPanel({ song, assets, onChange, onTriggerLyricsVideo }:
                 <option value={asset.id} key={asset.id}>{asset.title}</option>
               ))}
             </select>
-            <button
-              className="songVideoTrigger"
-              type="button"
-              disabled={!videoAsset?.fileUrl}
-              onClick={() => videoAsset && onTriggerLyricsVideo(videoAsset)}
-            >
-              <Icon name="media" />
-              Trigger Lyrics Video
-            </button>
-            <p className="songModeHint">Lyrics video mode plays the file full-screen with its embedded audio and does not loop.</p>
+            <p className="songModeHint">Assign the video here. Triggering it is intentionally only available in Performance mode.</p>
           </section>
         ) : null}
 
         {song.playbackMode === 'slides-live' ? (
           <section className="songSetupSection">
             <small>LIVE BAND</small>
-            <div className="songLiveMode"><Icon name="audio" /><span>No backing audio. Lyrics remain operator-controlled.</span></div>
+            <div className="songLiveMode"><Icon name="audio" /><span>No backing audio. Lyrics remain operator-controlled during Performance.</span></div>
           </section>
         ) : null}
       </div>
