@@ -8,6 +8,8 @@
   background: #15181b;
 }
 
+.audioCuePanel.isHidden { display: none; }
+
 .audioCueLibrary,
 .audioCueControls,
 .audioSongTransport {
