@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { AUDIO_CUE_STATE_EVENT, clearAudioCues } from '../audio/audioCueEvents';
 import type { NetworkStageInfo, OutputState, ScreenKind } from '../domain/types';
 import { AudienceOutput } from './AudienceOutput';
 import { Icon } from './ui/Icon';
@@ -50,15 +52,36 @@ export function LivePanel({
   onClearToLogo,
   onToggleBlack,
 }: LivePanelProps) {
-  const live = hasLiveContent(output);
+  const [audioCueLive, setAudioCueLive] = useState(false);
+
+  useEffect(() => {
+    const listener = (event: Event) => {
+      const detail = (event as CustomEvent<{ active?: boolean }>).detail;
+      setAudioCueLive(Boolean(detail?.active));
+    };
+    window.addEventListener(AUDIO_CUE_STATE_EVENT, listener);
+    return () => window.removeEventListener(AUDIO_CUE_STATE_EVENT, listener);
+  }, []);
+
+  const live = hasLiveContent(output) || audioCueLive;
   const layerRows = [
     ['Background', Boolean(output.media)],
     ['Media', Boolean(output.media)],
     ['Slide', Boolean(output.slide)],
     ['Prop', Boolean(output.prop)],
     ['Message', Boolean(output.message || output.announcement)],
-    ['Audio', Boolean(output.audio)],
+    ['Audio', Boolean(output.audio) || audioCueLive],
   ] as const;
+
+  const clearAllLayers = () => {
+    clearAudioCues();
+    onClearAll();
+  };
+
+  const clearAudioLayer = () => {
+    clearAudioCues();
+    onClearAudio();
+  };
 
   return (
     <aside className="livePanel" aria-label="Live output status">
@@ -94,11 +117,11 @@ export function LivePanel({
       <section className="consoleSection clearSection">
         <div className="sectionTitle"><span>CLEAR</span><small>LAYER CONTROLS</small></div>
         <div className="clearGrid">
-          <button className="clearAllButton" onClick={onClearAll} type="button"><kbd>F1</kbd><span>Clear All</span></button>
+          <button className="clearAllButton" onClick={clearAllLayers} type="button"><kbd>F1</kbd><span>Clear All</span></button>
           <button onClick={onClearSlide} type="button"><kbd>F2</kbd><span>Slide</span></button>
           <button onClick={onClearMedia} type="button"><kbd>F3</kbd><span>Media</span></button>
           <button onClick={onClearProps} type="button"><kbd>F4</kbd><span>Props</span></button>
-          <button onClick={onClearAudio} type="button"><kbd>F5</kbd><span>Audio</span></button>
+          <button onClick={clearAudioLayer} type="button"><kbd>F5</kbd><span>Audio</span></button>
           <button onClick={onClearMessage} type="button"><kbd>F6</kbd><span>Message</span></button>
           <button className={output.logo ? 'isActive' : ''} onClick={onClearToLogo} type="button"><kbd>F12</kbd><span>Logo</span></button>
           <button className={`blackButton ${output.black ? 'isActive' : ''}`} onClick={onToggleBlack} type="button"><i /><span>Black</span></button>
