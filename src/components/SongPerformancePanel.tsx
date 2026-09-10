@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { SongTransportSnapshot } from '../audio/useSongTransport';
 import { arrangedSlides } from '../domain/songArrangement';
 import type { MediaAsset, OutputState, Presentation, Slide, Song } from '../domain/types';
+import '../styles/song-workspace.css';
 import { Icon } from './ui/Icon';
 
 interface SongPerformancePanelProps {
