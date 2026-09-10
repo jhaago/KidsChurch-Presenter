@@ -1,13 +1,20 @@
+.mediaBinBody > .mediaPlaybackEditor {
+  flex: 0 0 clamp(390px, 34vw, 520px);
+}
+
 .mediaPlaybackEditor {
   display: grid;
-  grid-template-columns: minmax(180px, 260px) 1fr;
-  gap: 12px;
-  margin: 10px 12px 12px;
-  padding: 10px;
+  grid-template-columns: 170px minmax(0, 1fr);
+  align-self: stretch;
+  gap: 8px;
+  margin: 7px 8px 7px 0;
+  padding: 7px;
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 8px;
+  border-radius: 6px;
   background: rgba(7, 9, 12, 0.72);
-  min-height: 112px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .mediaPlaybackEditor.isEmpty,
@@ -25,13 +32,13 @@
 .mediaPlaybackEditor.isEmpty strong,
 .mediaPlaybackEditor.isStill strong {
   color: rgba(255, 255, 255, 0.92);
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.08em;
 }
 
 .mediaPlaybackEditor.isEmpty span,
 .mediaPlaybackEditor.isStill span {
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .mediaPlaybackEditor.isStill > div {
@@ -42,10 +49,11 @@
 
 .mediaPlaybackPreview {
   min-width: 0;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 4px;
   overflow: hidden;
   background: #050607;
   aspect-ratio: 16 / 9;
@@ -60,95 +68,100 @@
 
 .mediaPlaybackNoPreview {
   color: rgba(255, 255, 255, 0.45);
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .mediaPlaybackControls {
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  justify-content: center;
+  gap: 6px;
 }
 
 .mediaPlaybackHeading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .mediaPlaybackHeading > div {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .mediaPlaybackHeading strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
-  letter-spacing: 0.07em;
+  font-size: 10px;
+  letter-spacing: 0.06em;
   color: rgba(255, 255, 255, 0.94);
 }
 
 .mediaPlaybackHeading span {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.52);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .mediaPlaybackControlRow {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
 .mediaPlaybackControlRow label {
   display: flex;
   align-items: center;
-  gap: 5px;
-  min-height: 30px;
-  padding: 0 7px;
+  gap: 4px;
+  min-height: 26px;
+  padding: 0 5px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 5px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.035);
 }
 
 .mediaPlaybackControlRow label > span {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
   color: rgba(255, 255, 255, 0.7);
 }
 
 .mediaPlaybackControlRow label > small {
-  font-size: 9px;
+  font-size: 8px;
   color: rgba(255, 255, 255, 0.42);
 }
 
 .mediaPlaybackControlRow input[type='number'] {
-  width: 64px;
+  width: 50px;
   min-width: 0;
   border: 0;
   outline: 0;
   background: transparent;
   color: rgba(255, 255, 255, 0.94);
   font: inherit;
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .mediaPlaybackControlRow button,
 .mediaPlaybackReset {
-  min-height: 30px;
+  min-height: 26px;
   border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: 5px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.055);
   color: rgba(255, 255, 255, 0.82);
-  padding: 0 9px;
+  padding: 0 6px;
   font: inherit;
-  font-size: 10px;
+  font-size: 9px;
   cursor: pointer;
 }
 
@@ -174,24 +187,24 @@
 
 .mediaPlaybackReset {
   flex: 0 0 auto;
-  min-height: 24px;
-  padding: 0 8px;
+  min-height: 22px;
+  padding: 0 6px;
 }
 
 .mediaPlaybackReadout {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
-  font-size: 9px;
+  gap: 4px 9px;
+  font-size: 8px;
   color: rgba(255, 255, 255, 0.46);
 }
 
 .mediaPlaybackError {
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-radius: 4px;
   background: rgba(200, 55, 55, 0.14);
   color: #ffb8b8;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .mediaAsset.isSelected:not(.isLive) {
@@ -200,11 +213,15 @@
 }
 
 @media (max-width: 1180px) {
-  .mediaPlaybackEditor {
-    grid-template-columns: 180px 1fr;
+  .mediaBinBody > .mediaPlaybackEditor {
+    flex-basis: 370px;
   }
 
-  .mediaPlaybackControlRow {
-    gap: 5px;
+  .mediaPlaybackEditor {
+    grid-template-columns: 135px minmax(0, 1fr);
+  }
+
+  .mediaPlaybackReadout span:last-child {
+    display: none;
   }
 }
