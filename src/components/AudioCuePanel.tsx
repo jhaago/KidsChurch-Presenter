@@ -18,6 +18,7 @@ interface AudioCuePanelProps {
   onResumeSong: () => void;
   onStopSong: () => void;
   onSeekSong: (positionMs: number) => void;
+  hidden?: boolean;
 }
 
 function formatTime(ms: number) {
@@ -41,6 +42,7 @@ export function AudioCuePanel({
   onResumeSong,
   onStopSong,
   onSeekSong,
+  hidden = false,
 }: AudioCuePanelProps) {
   const audioAssets = useMemo(() => assets.filter((asset) => asset.kind === 'audio'), [assets]);
   const cueTransport = useAudioCueTransport();
@@ -154,7 +156,7 @@ export function AudioCuePanel({
   const songActive = Boolean(activeSong && songTransport.songId === activeSong.id);
 
   return (
-    <div className="audioCuePanel">
+    <div className={`audioCuePanel ${hidden ? 'isHidden' : ''}`} aria-hidden={hidden || undefined}>
       <section className="audioCueLibrary">
         <header><Icon name="audio" /><strong>AUDIO CUES</strong><span>{audioAssets.length}</span></header>
         <div className="audioCueAssetList">
@@ -169,6 +171,7 @@ export function AudioCuePanel({
                 onClick={() => setSelectedAssetId(asset.id)}
                 type="button"
                 title={asset.relativePath || asset.title}
+                tabIndex={hidden ? -1 : undefined}
               >
                 <Icon name="audio" />
                 <span>{asset.title}</span>
