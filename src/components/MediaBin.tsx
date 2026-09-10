@@ -8,6 +8,7 @@ import type {
   StageOutputState,
   Song,
 } from '../domain/types';
+import { AudioCuePanel } from './AudioCuePanel';
 import { Icon } from './ui/Icon';
 import { MediaPlaybackEditor } from './MediaPlaybackEditor';
 
@@ -50,99 +51,6 @@ function PlaceholderTab({ tab, detail }: { tab: Exclude<MediaBinTab, 'Media'>; d
   );
 }
 
-function formatTransportTime(ms: number) {
-  const seconds = Math.max(0, Math.floor(ms / 1000));
-  return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
-}
-
-function AudioTransportTab({
-  audioCount,
-  activeSong,
-  transport,
-  onPlaySong,
-  onPauseSong,
-  onResumeSong,
-  onStopSong,
-  onSeekSong,
-}: {
-  audioCount: number;
-  activeSong?: Song;
-  transport: SongTransportSnapshot;
-  onPlaySong: (song: Song) => void;
-  onPauseSong: () => void;
-  onResumeSong: () => void;
-  onStopSong: () => void;
-  onSeekSong: (positionMs: number) => void;
-}) {
-  if (!activeSong) {
-    return <PlaceholderTab tab="Audio" detail={`${audioCount} indexed audio asset${audioCount === 1 ? '' : 's'} · start playback from a Song item.`} />;
-  }
-
-  const playing = transport.status === 'playing';
-  const paused = transport.status === 'paused';
-  const active = transport.songId === activeSong.id;
-
-  return (
-    <div className="audioTransportTab">
-      <div className="audioTransportIdentity">
-        <Icon name="audio" />
-        <div>
-          <strong>{activeSong.title}</strong>
-          <span>{transport.status.toUpperCase()} · {transport.loadedTrackCount} track{transport.loadedTrackCount === 1 ? '' : 's'}</span>
-        </div>
-      </div>
-      <div className="audioTransportButtons">
-        {playing ? (
-          <button type="button" onClick={onPauseSong}>Ⅱ Pause</button>
-        ) : paused ? (
-          <button className="isPrimary" type="button" onClick={onResumeSong}>▶ Resume</button>
-        ) : (
-          <button className="isPrimary" type="button" onClick={() => onPlaySong(activeSong)}>▶ Play</button>
-        )}
-        <button type="button" onClick={onStopSong}>■ Stop</button>
-      </div>
-      <div className="audioTransportSeek">
-        <span>{formatTransportTime(transport.positionMs)}</span>
-        <input
-          aria-label="Active song position"
-          max={Math.max(transport.durationMs, 1)}
-          min={0}
-          onChange={(event) => onSeekSong(Number(event.target.value))}
-          step={100}
-          type="range"
-          value={Math.min(transport.positionMs, Math.max(transport.durationMs, 1))}
-          disabled={transport.durationMs <= 0}
-        />
-        <span>{transport.durationMs ? formatTransportTime(transport.durationMs) : '--:--'}</span>
-      </div>
-      {activeSong.playbackMode === 'slides-stems' ? (
-        <div className="audioStemQuickControls">
-          {activeSong.audio.stems.filter((stem) => stem.assetId).map((stem) => {
-            const enabled = active
-              ? transport.stemEnabled[stem.id] ?? stem.enabled
-              : stem.enabled;
-            return (
-              <button
-                className={enabled ? 'isEnabled' : ''}
-                disabled={!active || (!playing && !paused)}
-                key={stem.id}
-                type="button"
-                onClick={() => transport.setStemEnabled(stem.id, !enabled)}
-                title="Live session only; saved Build defaults are unchanged"
-              >
-                {stem.name} <b>{enabled ? 'ON' : 'OFF'}</b>
-              </button>
-            );
-          })}
-          <span className="audioStemSessionNote">Live mix only · restart resets to saved Build defaults</span>
-        </div>
-      ) : null}
-      {transport.warning ? <span className="audioTransportNotice">{transport.warning}</span> : null}
-      {transport.error ? <span className="audioTransportNotice isError">{transport.error}</span> : null}
-    </div>
-  );
-}
-
 function AssetArtwork({ asset, live }: { asset: MediaAsset; live: boolean }) {
   return (
     <span className={`assetArtwork asset-${asset.id}`}>
@@ -180,7 +88,6 @@ export function MediaBin({
   const [filter, setFilter] = useState<'all' | 'backgrounds' | string>('all');
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const visualAssets = useMemo(() => assets.filter((asset) => asset.kind !== 'audio'), [assets]);
-  const audioCount = assets.length - visualAssets.length;
 
   const visibleAssets = useMemo(() => {
     if (filter === 'backgrounds') return visualAssets.filter((asset) => asset.kind === 'still' || asset.kind === 'motion');
@@ -217,7 +124,13 @@ export function MediaBin({
           {activeTab === 'Media' && resourceSources.length ? (
             <button type="button" onClick={onRescanResources}>Rescan Folders</button>
           ) : null}
-          <span className="binContext">{activeTab === 'Media' ? `${visibleAssets.length} of ${visualAssets.length} visual assets` : 'Operator utility'}</span>
+          <span className="binContext">
+            {activeTab === 'Media'
+              ? `${visibleAssets.length} of ${visualAssets.length} visual assets`
+              : activeTab === 'Audio'
+                ? `${assets.filter((asset) => asset.kind === 'audio').length} indexed audio assets`
+                : 'Operator utility'}
+          </span>
         </div>
       </header>
 
@@ -275,15 +188,15 @@ export function MediaBin({
             />
           </>
         ) : activeTab === 'Audio' ? (
-          <AudioTransportTab
+          <AudioCuePanel
             activeSong={activeSong}
-            audioCount={audioCount}
+            assets={assets}
             onPauseSong={onPauseSong}
             onPlaySong={onPlaySong}
             onResumeSong={onResumeSong}
             onSeekSong={onSeekSong}
             onStopSong={onStopSong}
-            transport={songTransport}
+            songTransport={songTransport}
           />
         ) : activeTab === 'Stage' ? (
           <PlaceholderTab tab="Stage" detail={`${networkStage.clientCount} tablet${networkStage.clientCount === 1 ? '' : 's'} connected · ${stageOutput.presentationTitle || 'No live presentation'}`} />
