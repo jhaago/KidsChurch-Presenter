@@ -37,10 +37,22 @@ function updatePlaybackMode(song: Song, playbackMode: SongPlaybackMode): Song {
   };
 }
 
+function secondsToMs(value: string) {
+  if (!value.trim()) return undefined;
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds) || seconds <= 0) return undefined;
+  return Math.round(seconds * 1000);
+}
+
+function msToSeconds(value?: number) {
+  return value && value > 0 ? (value / 1000).toString() : '';
+}
+
 export function SongSetupPanel({ song, assets, onChange }: SongSetupPanelProps) {
   const audioAssets = assets.filter((asset) => asset.kind === 'audio');
   const visualAssets = assets.filter((asset) => asset.kind !== 'audio');
   const videoAssets = assets.filter((asset) => asset.kind === 'motion' || asset.kind === 'video');
+  const hasBackingAudio = song.playbackMode === 'slides-track' || song.playbackMode === 'slides-stems';
 
   return (
     <section className="songSetupPanel songBuildPanel" data-presenter-editor="true">
@@ -200,6 +212,54 @@ export function SongSetupPanel({ song, assets, onChange }: SongSetupPanelProps) 
             </div>
             <p className="songModeHint">
               These ON/OFF states are saved starting defaults. Live stem changes made in Performance are session-only and reset to these defaults when the Song starts again.
+            </p>
+          </section>
+        ) : null}
+
+        {hasBackingAudio ? (
+          <section className="songSetupSection songTrimSection">
+            <small>PLAYBACK TRIM</small>
+            <div className="songTrimRow">
+              <label>
+                <span>IN</span>
+                <input
+                  min="0"
+                  step="0.1"
+                  type="number"
+                  placeholder="0.0"
+                  value={msToSeconds(song.audio.trimStartMs)}
+                  onChange={(event) => onChange({
+                    ...song,
+                    audio: { ...song.audio, trimStartMs: secondsToMs(event.target.value) },
+                  })}
+                />
+                <small>sec</small>
+              </label>
+              <label>
+                <span>OUT</span>
+                <input
+                  min="0"
+                  step="0.1"
+                  type="number"
+                  placeholder="End"
+                  value={msToSeconds(song.audio.trimEndMs)}
+                  onChange={(event) => onChange({
+                    ...song,
+                    audio: { ...song.audio, trimEndMs: secondsToMs(event.target.value) },
+                  })}
+                />
+                <small>sec</small>
+              </label>
+              <button
+                type="button"
+                onClick={() => onChange({
+                  ...song,
+                  audio: { ...song.audio, trimStartMs: undefined, trimEndMs: undefined },
+                })}
+              >Reset Trim</button>
+            </div>
+            <p className="songModeHint">
+              Non-destructive trim. The Song transport shows 0:00 at the In point. For stems, the same In/Out points are applied to every stem together so they remain synchronised.
             </p>
           </section>
         ) : null}
