@@ -80,15 +80,20 @@ export function createBlankSong(title = 'New Song') {
 
 export function duplicatePresentationResource(source: Presentation) {
   const slideIdMap = new Map<string, string>();
-  const groups = source.groups.map((group) => ({
-    ...group,
-    id: newId('group'),
-    slides: group.slides.map((slide) => {
-      const slideId = newId('slide');
-      slideIdMap.set(slide.id, slideId);
-      return { ...slide, id: slideId };
-    }),
-  }));
+  const groupIdMap = new Map<string, string>();
+  const groups = source.groups.map((group) => {
+    const groupId = newId('group');
+    groupIdMap.set(group.id, groupId);
+    return {
+      ...group,
+      id: groupId,
+      slides: group.slides.map((slide) => {
+        const slideId = newId('slide');
+        slideIdMap.set(slide.id, slideId);
+        return { ...slide, id: slideId };
+      }),
+    };
+  });
 
   const presentation: Presentation = {
     ...structuredClone(source),
@@ -100,6 +105,7 @@ export function duplicatePresentationResource(source: Presentation) {
   return {
     presentation,
     slideIdMap,
+    groupIdMap,
     item: playlistItemForPresentation(presentation),
   };
 }
@@ -108,6 +114,20 @@ export function duplicateSongResource(source: Song, sourcePresentation: Presenta
   const duplicatedPresentation = duplicatePresentationResource(sourcePresentation);
   duplicatedPresentation.presentation.title = `${source.title} Copy`;
   duplicatedPresentation.presentation.category = 'song';
+
+  const arrangementEntryIdMap = new Map<string, string>();
+  const arrangement = source.arrangement?.map((entry) => {
+    const entryId = newId('arrangement');
+    arrangementEntryIdMap.set(entry.id, entryId);
+    return {
+      id: entryId,
+      groupId: duplicatedPresentation.groupIdMap.get(entry.groupId) ?? entry.groupId,
+    };
+  });
+
+  for (const [oldGroupId, newGroupId] of duplicatedPresentation.groupIdMap) {
+    arrangementEntryIdMap.set(`source:${oldGroupId}`, `source:${newGroupId}`);
+  }
 
   const song: Song = {
     ...structuredClone(source),
@@ -118,10 +138,14 @@ export function duplicateSongResource(source: Song, sourcePresentation: Presenta
       ...structuredClone(source.audio),
       stems: source.audio.stems.map((stem) => ({ ...stem, id: newId('stem') })),
     },
+    arrangement,
     lyricCues: source.lyricCues.map((cue) => ({
       ...cue,
       id: newId('cue'),
       slideId: duplicatedPresentation.slideIdMap.get(cue.slideId) ?? cue.slideId,
+      arrangementEntryId: cue.arrangementEntryId
+        ? arrangementEntryIdMap.get(cue.arrangementEntryId)
+        : undefined,
     })),
   };
 

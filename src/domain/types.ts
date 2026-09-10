@@ -95,7 +95,13 @@ export interface SongLyricCue {
   id: string;
   timeMs: number;
   slideId: string;
+  arrangementEntryId?: string;
   label?: string;
+}
+
+export interface SongArrangementEntry {
+  id: string;
+  groupId: string;
 }
 
 export interface SongStem {
@@ -123,6 +129,7 @@ export interface Song {
   backgroundAssetId?: string;
   lyricsVideoAssetId?: string;
   audio: SongAudioSession;
+  arrangement?: SongArrangementEntry[];
   lyricCues: SongLyricCue[];
 }
 
@@ -173,6 +180,7 @@ export interface LiveSlideState {
   presentationId: string;
   presentationTitle: string;
   slideId: string;
+  arrangementEntryId?: string;
   text: string;
 }
 
@@ -216,8 +224,10 @@ export interface StageOutputState {
   presentationId: string | null;
   presentationTitle: string | null;
   currentSlideId: string | null;
+  currentArrangementEntryId?: string | null;
   currentText: string | null;
   nextSlideId: string | null;
+  nextArrangementEntryId?: string | null;
   nextText: string | null;
   notes: string | null;
 }
@@ -226,8 +236,10 @@ export const EMPTY_STAGE_OUTPUT_STATE: StageOutputState = {
   presentationId: null,
   presentationTitle: null,
   currentSlideId: null,
+  currentArrangementEntryId: null,
   currentText: null,
   nextSlideId: null,
+  nextArrangementEntryId: null,
   nextText: null,
   notes: null,
 };

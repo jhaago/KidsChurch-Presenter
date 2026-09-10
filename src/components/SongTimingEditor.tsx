@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SongTransportSnapshot } from '../audio/useSongTransport';
-import type { Presentation, Slide, Song, SongLyricCue } from '../domain/types';
+import {
+  arrangedSlides,
+  findCueForOccurrence,
+  occurrenceLabel,
+  type ArrangedSlideOccurrence,
+} from '../domain/songArrangement';
+import type { Presentation, Song, SongLyricCue } from '../domain/types';
 import { Icon } from './ui/Icon';
 
 interface SongTimingEditorProps {
@@ -16,25 +22,6 @@ interface SongTimingEditorProps {
   onSeekPreview: (positionMs: number) => Promise<void>;
 }
 
-interface TimingSlide {
-  slide: Slide;
-  groupName: string;
-  groupType: string;
-  sequence: number;
-}
-
-function allTimingSlides(presentation: Presentation): TimingSlide[] {
-  let sequence = 0;
-  return presentation.groups.flatMap((group) =>
-    group.slides.map((slide) => ({
-      slide,
-      groupName: group.name,
-      groupType: group.type,
-      sequence: ++sequence,
-    })),
-  );
-}
-
 function formatTime(ms: number) {
   const safe = Math.max(0, Math.round(ms));
   const minutes = Math.floor(safe / 60000);
@@ -47,8 +34,8 @@ function cueId() {
   return `cue-${crypto.randomUUID()}`;
 }
 
-function labelFor(item: TimingSlide) {
-  return `${item.groupName} · Slide ${item.sequence}`;
+function labelFor(item: ArrangedSlideOccurrence) {
+  return `${occurrenceLabel(item.group, item.occurrenceIndex, item.occurrenceCount)} · Slide ${item.sequence}`;
 }
 
 export function SongTimingEditor({
@@ -63,7 +50,7 @@ export function SongTimingEditor({
   onStopPreview,
   onSeekPreview,
 }: SongTimingEditorProps) {
-  const slides = useMemo(() => allTimingSlides(presentation), [presentation]);
+  const slides = useMemo(() => arrangedSlides(song, presentation), [presentation, song]);
   const songRef = useRef(song);
   const [armed, setArmed] = useState(false);
   const [nextIndex, setNextIndex] = useState(0);
@@ -95,32 +82,51 @@ export function SongTimingEditor({
     onChangeSong(nextSong);
   }, [onChangeSong]);
 
-  const cueForSlide = useCallback((slideId: string) => {
-    return [...song.lyricCues]
-      .sort((a, b) => a.timeMs - b.timeMs)
-      .find((cue) => cue.slideId === slideId);
-  }, [song.lyricCues]);
+  const cueForOccurrence = useCallback((item: ArrangedSlideOccurrence) => {
+    return findCueForOccurrence(song.lyricCues, item, slides);
+  }, [slides, song.lyricCues]);
 
-  const setCueForSlide = useCallback((item: TimingSlide, timeMs: number) => {
+  const setCueForOccurrence = useCallback((item: ArrangedSlideOccurrence, timeMs: number) => {
     const current = songRef.current;
-    const existing = current.lyricCues.find((cue) => cue.slideId === item.slide.id);
+    const currentSequence = arrangedSlides(current, presentation);
+    const currentOccurrence =
+      currentSequence.find((candidate) =>
+        candidate.arrangementEntryId === item.arrangementEntryId &&
+        candidate.slide.id === item.slide.id,
+      ) ?? item;
+    const existing = findCueForOccurrence(current.lyricCues, currentOccurrence, currentSequence);
     const nextCue: SongLyricCue = existing
-      ? { ...existing, timeMs: Math.max(0, Math.round(timeMs)), label: existing.label || labelFor(item) }
+      ? {
+          ...existing,
+          timeMs: Math.max(0, Math.round(timeMs)),
+          arrangementEntryId: currentOccurrence.arrangementEntryId,
+          label: labelFor(currentOccurrence),
+        }
       : {
           id: cueId(),
           timeMs: Math.max(0, Math.round(timeMs)),
-          slideId: item.slide.id,
-          label: labelFor(item),
+          slideId: currentOccurrence.slide.id,
+          arrangementEntryId: currentOccurrence.arrangementEntryId,
+          label: labelFor(currentOccurrence),
         };
     commitCues([
       ...current.lyricCues.filter((cue) => cue.id !== existing?.id),
       nextCue,
     ]);
-  }, [commitCues]);
+  }, [commitCues, presentation]);
 
-  const clearCueForSlide = useCallback((slideId: string) => {
-    commitCues(songRef.current.lyricCues.filter((cue) => cue.slideId !== slideId));
-  }, [commitCues]);
+  const clearCueForOccurrence = useCallback((item: ArrangedSlideOccurrence) => {
+    const current = songRef.current;
+    const currentSequence = arrangedSlides(current, presentation);
+    const currentOccurrence =
+      currentSequence.find((candidate) =>
+        candidate.arrangementEntryId === item.arrangementEntryId &&
+        candidate.slide.id === item.slide.id,
+      ) ?? item;
+    const existing = findCueForOccurrence(current.lyricCues, currentOccurrence, currentSequence);
+    if (!existing) return;
+    commitCues(current.lyricCues.filter((cue) => cue.id !== existing.id));
+  }, [commitCues, presentation]);
 
   const captureNext = useCallback(() => {
     if (!armed || nextIndex >= slides.length) return;
@@ -131,7 +137,7 @@ export function SongTimingEditor({
 
     const item = slides[nextIndex];
     const captured = getPositionMs();
-    setCueForSlide(item, captured);
+    setCueForOccurrence(item, captured);
 
     const following = nextIndex + 1;
     if (following >= slides.length) {
@@ -149,7 +155,7 @@ export function SongTimingEditor({
     isPreviewSong,
     nextIndex,
     onPausePreview,
-    setCueForSlide,
+    setCueForOccurrence,
     slides,
     transport.status,
   ]);
@@ -157,10 +163,10 @@ export function SongTimingEditor({
   const undoTap = useCallback(() => {
     if (!armed || nextIndex <= 0) return;
     const previousIndex = nextIndex - 1;
-    clearCueForSlide(slides[previousIndex].slide.id);
+    clearCueForOccurrence(slides[previousIndex]);
     setNextIndex(previousIndex);
     setMessage(`Removed ${labelFor(slides[previousIndex])}. Tap it again when ready.`);
-  }, [armed, clearCueForSlide, nextIndex, slides]);
+  }, [armed, clearCueForOccurrence, nextIndex, slides]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -210,23 +216,24 @@ export function SongTimingEditor({
   }, [canStart, onChangeSong, onPlayPreview, onStopPreview]);
 
   const armFromFirstMissing = useCallback(() => {
-    const firstMissing = slides.findIndex((item) => !cueForSlide(item.slide.id));
+    const firstMissing = slides.findIndex((item) => !cueForOccurrence(item));
     const index = firstMissing >= 0 ? firstMissing : 0;
+    if (!slides[index]) return;
     setNextIndex(index);
     setArmed(true);
     setMessage(`Tap mode armed from ${labelFor(slides[index])}. Start/resume preview, then press SPACE.`);
-  }, [cueForSlide, slides]);
+  }, [cueForOccurrence, slides]);
 
-  const adjustCue = useCallback((item: TimingSlide, deltaMs: number) => {
-    const cue = cueForSlide(item.slide.id);
+  const adjustCue = useCallback((item: ArrangedSlideOccurrence, deltaMs: number) => {
+    const cue = cueForOccurrence(item);
     if (!cue) return;
-    setCueForSlide(item, cue.timeMs + deltaMs);
-  }, [cueForSlide, setCueForSlide]);
+    setCueForOccurrence(item, cue.timeMs + deltaMs);
+  }, [cueForOccurrence, setCueForOccurrence]);
 
-  const setCueSeconds = useCallback((item: TimingSlide, seconds: number) => {
+  const setCueSeconds = useCallback((item: ArrangedSlideOccurrence, seconds: number) => {
     if (!Number.isFinite(seconds)) return;
-    setCueForSlide(item, seconds * 1000);
-  }, [setCueForSlide]);
+    setCueForOccurrence(item, seconds * 1000);
+  }, [setCueForOccurrence]);
 
   const clearAll = useCallback(() => {
     if (!songRef.current.lyricCues.length) return;
@@ -237,7 +244,7 @@ export function SongTimingEditor({
     setMessage('All lyric timing cues cleared.');
   }, [commitCues]);
 
-  const timedCount = slides.filter((item) => Boolean(cueForSlide(item.slide.id))).length;
+  const timedCount = slides.filter((item) => Boolean(cueForOccurrence(item))).length;
   const timelineDuration = isPreviewSong && transport.durationMs > 0
     ? transport.durationMs
     : Math.max(1, ...song.lyricCues.map((cue) => cue.timeMs + 5000));
@@ -249,7 +256,7 @@ export function SongTimingEditor({
           <Icon name="timer" />
           <div>
             <strong>SONG TIMING EDITOR</strong>
-            <span>{timedCount}/{slides.length} lyric slides timed</span>
+            <span>{timedCount}/{slides.length} arranged lyric slides timed</span>
           </div>
         </div>
         <span className={armed ? 'isArmed' : ''}>{armed ? 'TAP MODE ARMED' : 'PREPARATION MODE'}</span>
@@ -257,7 +264,7 @@ export function SongTimingEditor({
 
       <div className="timingSafetyNote">
         <Icon name="stage" />
-        <span>Preview transport is local/editor-only. Timing taps never trigger Audience or Stage output.</span>
+        <span>Preview transport is local/editor-only. Timing follows the Song Arrangement and never triggers Audience or Stage output.</span>
       </div>
 
       {!supportedMode ? (
@@ -320,7 +327,7 @@ export function SongTimingEditor({
                   ? `Set ${labelFor(slides[nextIndex])}`
                   : 'Timing Complete'}
               </strong>
-              <small>{nextIndex < slides.length ? slides[nextIndex].slide.text.replace(/\n/g, ' / ') : 'All slides have been captured.'}</small>
+              <small>{nextIndex < slides.length ? slides[nextIndex].slide.text.replace(/\n/g, ' / ') : 'All arranged slides have been captured.'}</small>
             </button>
             <div className="timingTapMessage">{message}</div>
           </div>
@@ -341,16 +348,19 @@ export function SongTimingEditor({
 
           <div className="timingCueTable">
             <div className="timingCueHeader">
-              <span>#</span><span>LYRIC SLIDE</span><span>TIME</span><span>FINE ADJUST</span><span>ACTIONS</span>
+              <span>#</span><span>ARRANGED LYRIC SLIDE</span><span>TIME</span><span>FINE ADJUST</span><span>ACTIONS</span>
             </div>
             {slides.map((item, index) => {
-              const cue = cueForSlide(item.slide.id);
+              const cue = cueForOccurrence(item);
               const isNext = armed && index === nextIndex;
               return (
-                <div className={`timingCueRow ${cue ? 'isTimed' : ''} ${isNext ? 'isNext' : ''}`} key={item.slide.id}>
+                <div
+                  className={`timingCueRow ${cue ? 'isTimed' : ''} ${isNext ? 'isNext' : ''}`}
+                  key={`${item.arrangementEntryId}:${item.slide.id}`}
+                >
                   <span className="timingCueNumber">{item.sequence}</span>
                   <div className="timingCueText">
-                    <strong>{item.groupName}</strong>
+                    <strong>{occurrenceLabel(item.group, item.occurrenceIndex, item.occurrenceCount)}</strong>
                     <span>{item.slide.text.replace(/\n/g, ' / ')}</span>
                   </div>
                   <div className="timingCueTime">
@@ -362,7 +372,7 @@ export function SongTimingEditor({
                       placeholder="--"
                       value={cue ? (cue.timeMs / 1000).toFixed(3) : ''}
                       onChange={(event) => {
-                        if (event.target.value === '') clearCueForSlide(item.slide.id);
+                        if (event.target.value === '') clearCueForOccurrence(item);
                         else setCueSeconds(item, Number(event.target.value));
                       }}
                     />
@@ -380,12 +390,12 @@ export function SongTimingEditor({
                       type="button"
                       title="Set this cue to the current preview position"
                       disabled={!isPreviewSong}
-                      onClick={() => setCueForSlide(item, getPositionMs())}
+                      onClick={() => setCueForOccurrence(item, getPositionMs())}
                     >
                       Set Now
                     </button>
                     <button type="button" disabled={!cue} onClick={() => cue && void onSeekPreview(cue.timeMs)}>Go</button>
-                    <button className="danger" type="button" disabled={!cue} onClick={() => clearCueForSlide(item.slide.id)}>×</button>
+                    <button className="danger" type="button" disabled={!cue} onClick={() => clearCueForOccurrence(item)}>×</button>
                   </div>
                 </div>
               );
@@ -394,8 +404,8 @@ export function SongTimingEditor({
 
           <footer className="timingFooter">
             <div>
-              <strong>{timedCount === slides.length && slides.length ? 'Timing map complete' : `${slides.length - timedCount} cues remaining`}</strong>
-              <span>Saved automatically with this Song.</span>
+              <strong>{timedCount === slides.length && slides.length ? 'Arrangement timing map complete' : `${slides.length - timedCount} cues remaining`}</strong>
+              <span>Saved automatically with this Song and tied to each arrangement occurrence.</span>
             </div>
             <div>
               <button type="button" className="danger" disabled={!song.lyricCues.length} onClick={clearAll}>Clear All Cues</button>

@@ -205,9 +205,27 @@ Status: implemented in source.
 - no Audience/Stage changes while timing
 - guard against preview/live backing-track overlap
 
+## v0.5.4 — Song Arrangements
+
+Status: implemented in source.
+
+- source lyric groups remain single editable resources
+- ordered arrangement entries reference source groups
+- repeat sections without duplicating source slides
+- Add / Repeat / Remove / Move arrangement controls
+- reset to source order
+- stable per-occurrence arrangement IDs
+- arrangement-aware thumbnail/live selection
+- Left/Right navigation follows repeated occurrences
+- Stage CURRENT/NEXT follows arrangement sequence
+- Auto Lyrics supports multiple cues for the same source slide via occurrence IDs
+- Timing Editor follows arranged occurrences
+- structural arrangement changes clear stale timing maps with confirmation
+- source-group deletion sanitizes arrangement/cue references
+- Song duplication remaps arrangement/cue occurrence IDs
+
 ### Next v0.5 passes
 
-- arrangements / repeat Verse-Chorus sections without duplicating source lyrics
 - undo/redo
 - themes / text formatting baseline
 - more ProPresenter-like thumbnail behaviour

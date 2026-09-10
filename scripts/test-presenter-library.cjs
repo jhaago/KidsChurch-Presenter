@@ -28,7 +28,24 @@ async function main() {
         ],
       },
     ],
-    songs: [],
+    songs: [
+      {
+        id: 'song1',
+        title: 'Arrangement Test',
+        presentationId: 'p1',
+        playbackMode: 'slides-track',
+        lyricControlMode: 'auto',
+        audio: { mode: 'single-track', masterGainDb: 0, stems: [] },
+        arrangement: [
+          { id: 'arr-verse', groupId: 'g1' },
+          { id: 'arr-repeat', groupId: 'g1' },
+        ],
+        lyricCues: [
+          { id: 'cue-1', timeMs: 1000, slideId: 's1', arrangementEntryId: 'arr-verse' },
+          { id: 'cue-2', timeMs: 5000, slideId: 's1', arrangementEntryId: 'arr-repeat' },
+        ],
+      },
+    ],
     playlists: [
       {
         id: 'service',
@@ -52,6 +69,8 @@ async function main() {
   assert.equal(loaded.data.playlists.length, 2);
   assert.equal(loaded.data.playlists[0].serviceDate, '2026-09-13');
   assert.equal(loaded.data.activePlaylistId, 'service-next');
+  assert.equal(loaded.data.songs[0].arrangement.length, 2);
+  assert.equal(loaded.data.songs[0].lyricCues[1].arrangementEntryId, 'arr-repeat');
 
   const changed = structuredClone(data);
   changed.presentations[0].groups[0].slides[0].text = 'Changed and saved';

@@ -1074,3 +1074,58 @@ kbd {
   .timingTransport{grid-template-columns:1fr}
   .timingClock{justify-content:flex-start}
 }
+
+
+/* v0.5.4 song arrangements */
+.songArrangementEditor{margin:8px 11px 14px;border:1px solid #394149;background:#14191d}
+.songArrangementHeader{height:36px;padding:0 9px;border-bottom:1px solid #30383e;background:#1b2227;display:flex;align-items:center;justify-content:space-between}
+.songArrangementHeader>div{display:flex;align-items:center;gap:7px}
+.songArrangementHeader svg{width:15px;height:15px;color:#8e78bb}
+.songArrangementHeader strong{display:block;color:#d9dde0;font-size:9px;letter-spacing:.08em}
+.songArrangementHeader span{display:block;margin-top:1px;color:#6e7981;font-size:7px}
+.songArrangementHeader>span{margin:0;padding:4px 6px;border:1px solid #3c454c;border-radius:2px;background:#20262b;color:#77828a;font-size:7px;font-weight:800;letter-spacing:.08em}
+.songArrangementHeader>span.isCustom{border-color:#6c5790;background:#2c2340;color:#c4ade8}
+.arrangementExplanation{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid #283039;background:#181d22;color:#7f8a92;font-size:7px;line-height:1.35}
+.arrangementExplanation svg{width:12px;height:12px;flex:0 0 auto;color:#7c6aa3}
+.arrangementColumns{display:grid;grid-template-columns:minmax(210px,.8fr) minmax(330px,1.3fr);min-height:260px}
+.arrangementSources{border-right:1px solid #30373d;background:#15191d}
+.arrangementSources>header,.arrangementSequence>header{min-height:36px;padding:6px 8px;box-sizing:border-box;border-bottom:1px solid #2b3238;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.arrangementSources>header{flex-direction:column;align-items:flex-start;justify-content:center}
+.arrangementSources>header strong,.arrangementSequence>header strong{color:#aeb6bc;font-size:7px;letter-spacing:.08em}
+.arrangementSources>header span,.arrangementSequence>header span{color:#626d75;font-size:6.5px}
+.arrangementSources>div,.arrangementSequenceRows{padding:5px;display:grid;gap:4px}
+.arrangementSource{min-height:48px;padding:5px;border:1px solid #2d343a;background:#1a1f23;display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:6px;align-items:center}
+.arrangementSource>i,.arrangementSequenceRow>i{align-self:stretch;border-radius:2px;background:#68727a}
+.arrangementSource.group-verse>i,.arrangementSequenceRow.group-verse>i{background:#4e84b3}
+.arrangementSource.group-chorus>i,.arrangementSequenceRow.group-chorus>i{background:#8c5fb1}
+.arrangementSource.group-bridge>i,.arrangementSequenceRow.group-bridge>i{background:#bd7a42}
+.arrangementSource.group-scripture>i,.arrangementSequenceRow.group-scripture>i{background:#5e9670}
+.arrangementSource div{min-width:0}
+.arrangementSource strong{display:block;color:#b9c0c5;font-size:8px}
+.arrangementSource span{display:block;margin-top:1px;color:#66717a;font-size:6.5px}
+.arrangementSource small{display:block;margin-top:3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#59636b;font-size:6px}
+.arrangementSource button,.arrangementSequence>header button,.arrangementRowActions button{height:23px;padding:0 6px;border:1px solid #394148;border-radius:2px;background:#252b30;color:#929ca4;cursor:pointer;font-size:7px}
+.arrangementSource button:hover,.arrangementSequence>header button:hover:not(:disabled),.arrangementRowActions button:hover:not(:disabled){background:#323940;color:#fff}
+.arrangementSequence>header>div{display:flex;flex-direction:column;gap:2px}
+.arrangementSequence>header button:disabled,.arrangementRowActions button:disabled{opacity:.3;cursor:not-allowed}
+.arrangementSequenceRow{min-height:42px;padding:4px 5px;border:1px solid #2e353b;background:#181d21;display:grid;grid-template-columns:25px 4px minmax(110px,1fr) auto;gap:6px;align-items:center}
+.arrangementOrdinal{display:grid;place-items:center;color:#647079;font-size:8px;font-weight:800}
+.arrangementSectionName{min-width:0}
+.arrangementSectionName strong{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#bdc4c9;font-size:8px}
+.arrangementSectionName span{display:block;margin-top:2px;color:#66717a;font-size:6.5px}
+.arrangementRowActions{display:flex;gap:3px}
+.arrangementRowActions button{height:22px;min-width:22px;padding:0 5px}
+.arrangementRowActions button.duplicate{min-width:45px;border-color:#51466a;color:#a995c7}
+.arrangementRowActions button.danger{border-color:#51373b;color:#b77f85}
+.arrangementRowActions button.danger:hover:not(:disabled){background:#382226;color:#e9a4aa}
+.arrangementFooter{min-height:38px;padding:6px 8px;border-top:1px solid #30373d;background:#1b2024;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.arrangementFooter span{color:#68737b;font-size:6.5px}
+.arrangementFooter strong{color:#9687ae;font-size:7px;white-space:nowrap}
+.songArrangementBanner{margin:0 0 7px;padding:5px 7px;border:1px solid #3b344b;border-radius:2px;background:#1f1a28;color:#9587ac;display:flex;align-items:center;gap:5px;font-size:7px;line-height:1.3}
+.songArrangementBanner svg{width:11px;height:11px;flex:0 0 auto;color:#9a83c0}
+@media(max-width:1120px){
+  .arrangementColumns{grid-template-columns:1fr}
+  .arrangementSources{border-right:0;border-bottom:1px solid #30373d}
+  .arrangementSequenceRow{grid-template-columns:23px 4px minmax(100px,1fr)}
+  .arrangementRowActions{grid-column:3}
+}

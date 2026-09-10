@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.5.3-alpha.1 — Song Timing Editor**
+**v0.5.4-alpha.1 — Song Arrangements**
 
 Implemented in source:
 
@@ -91,6 +91,17 @@ Implemented in source:
 - one-click switch to Auto Lyrics when every lyric slide has a cue
 - timing preview never sends slides/backgrounds to Audience or Stage
 - live-song guard prevents a timing preview from mixing over an actively playing service track
+- reusable Song Arrangement model separate from source lyric groups
+- repeat Verse / Chorus / Bridge sections without duplicating source slides
+- dedicated Arrangement editor with Add / Repeat / Remove / Move controls
+- arrangement-aware slide thumbnails and sequence numbering
+- Left/Right live navigation follows repeated arrangement occurrences correctly
+- Stage CURRENT/NEXT follows the arrangement rather than source-group order
+- Auto Lyrics cues are tied to arrangement occurrence IDs, so repeated Choruses can have different timestamps
+- Timing Editor now follows the complete arranged lyric sequence
+- arrangement edits clear stale timing cues with an explicit warning
+- deleting source groups sanitizes stale arrangement/cue references
+- duplicated Songs receive independent arrangement IDs and remapped cue occurrence IDs
 
 ## Run on macOS or Windows
 
@@ -212,6 +223,38 @@ Changes autosave after a short debounce. The desktop process owns the saved JSON
 
 The built-in demo service is now only the first-run seed. After the first successful save, the editable saved library becomes the source of truth.
 
+## Song Arrangements
+
+Songs now separate **source lyrics** from the **live arrangement**.
+
+For example, source lyrics can remain:
+
+```text
+Verse 1
+Chorus
+Verse 2
+Bridge
+```
+
+while the Arrangement is:
+
+```text
+Verse 1
+Chorus
+Verse 2
+Chorus
+Bridge
+Chorus
+```
+
+The repeated Chorus occurrences all reference the same source Chorus slides. Editing the Chorus text once updates every occurrence.
+
+Choose **Arrange** in a Song workspace to open the Arrangement editor. Source sections can be appended, existing occurrences can be repeated, removed, or moved up/down, and the arrangement can be reset to the source order.
+
+Each occurrence has its own stable arrangement-entry ID. This lets the same lyric slide appear several times while Manual navigation, Stage NEXT, Assisted/Auto Lyrics and the Timing Editor still know which occurrence is current.
+
+Changing arrangement structure clears the existing timing map after confirmation because timestamps belong to the previous sequence. The Timing Editor then records a fresh cue for every arranged slide occurrence.
+
 ## Song Timing Editor
 
 For Songs using **Slides + Track** or **Slides + Stems**, choose **Timing** in the central workspace.
@@ -232,7 +275,7 @@ A normal timing pass is:
 
 Individual cues support direct seconds entry, **Set Now**, seek-to-cue, deletion, and ±10/±100 ms adjustments. Cues autosave as part of the Song.
 
-The timing editor currently follows the presentation's flat lyric-slide order. A later Song Arrangements pass will allow repeated Verse/Chorus sections to define the timing sequence without duplicating source lyric slides.
+The timing editor follows the Song Arrangement. Repeated sections receive separate cue occurrences and can therefore have different timestamps while still sharing the same source lyric slides.
 
 ## Song Playback Engine test
 

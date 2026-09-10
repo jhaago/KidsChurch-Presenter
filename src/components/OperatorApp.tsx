@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { useSongTransport } from '../audio/useSongTransport';
+import { arrangedSlides, sanitizeSongForPresentation } from '../domain/songArrangement';
 import {
   createBlankPresentation,
   createBlankService,
@@ -62,6 +63,7 @@ function liveMediaFromAsset(asset: MediaAsset, playbackRole: 'background' | 'vid
 export function OperatorApp() {
   const [selectedItemId, setSelectedItemId] = useState('pi-song');
   const [selectedSlideId, setSelectedSlideId] = useState<string | null>('loh-v1-1');
+  const [selectedArrangementEntryId, setSelectedArrangementEntryId] = useState<string | null>(null);
   const [output, setOutput] = useState<OutputState>({ ...EMPTY_OUTPUT_STATE });
   const [stageOutput, setStageOutput] = useState<StageOutputState>({ ...EMPTY_STAGE_OUTPUT_STATE });
   const [activeMediaTab, setActiveMediaTab] = useState<MediaBinTab>('Media');
@@ -208,9 +210,24 @@ export function OperatorApp() {
   }, [activePlaylistId, libraryReady, playlists, presentations, songs]);
 
   useEffect(() => {
-    const firstSlide = selectedPresentation ? allSlides(selectedPresentation)[0] : null;
+    if (!selectedPresentation) {
+      setSelectedSlideId(null);
+    setSelectedArrangementEntryId(null);
+      setSelectedArrangementEntryId(null);
+      return;
+    }
+
+    if (selectedSong) {
+      const first = arrangedSlides(selectedSong, selectedPresentation)[0];
+      setSelectedSlideId(first?.slide.id ?? null);
+      setSelectedArrangementEntryId(first?.arrangementEntryId ?? null);
+      return;
+    }
+
+    const firstSlide = allSlides(selectedPresentation)[0] ?? null;
     setSelectedSlideId(firstSlide?.id ?? null);
-  }, [selectedPresentation]);
+    setSelectedArrangementEntryId(null);
+  }, [selectedPresentation, selectedSong]);
 
   useEffect(() => {
     const presenterOutput: PresenterOutputState = { audience: output, stage: stageOutput };
@@ -252,11 +269,27 @@ export function OperatorApp() {
     }
   }, []);
 
-  const triggerSlide = useCallback((presentation: Presentation, slide: Slide) => {
-    const slides = allSlides(presentation);
-    const currentIndex = slides.findIndex((candidate) => candidate.id === slide.id);
-    const nextSlide = currentIndex >= 0 ? slides[currentIndex + 1] ?? null : null;
+  const triggerSlide = useCallback((
+    presentation: Presentation,
+    slide: Slide,
+    arrangementEntryId?: string,
+  ) => {
     const song = songs.find((candidate) => candidate.presentationId === presentation.id);
+    const arranged = song ? arrangedSlides(song, presentation) : [];
+    const sourceSlides = allSlides(presentation);
+    const currentIndex = song
+      ? arranged.findIndex((candidate) =>
+          candidate.slide.id === slide.id &&
+          (!arrangementEntryId || candidate.arrangementEntryId === arrangementEntryId),
+        )
+      : sourceSlides.findIndex((candidate) => candidate.id === slide.id);
+    const currentOccurrence = song && currentIndex >= 0 ? arranged[currentIndex] : undefined;
+    const nextOccurrence = song && currentIndex >= 0 ? arranged[currentIndex + 1] : undefined;
+    const nextSlide = song
+      ? nextOccurrence?.slide ?? null
+      : currentIndex >= 0
+        ? sourceSlides[currentIndex + 1] ?? null
+        : null;
     const background = song?.playbackMode !== 'lyrics-video' && song?.backgroundAssetId
       ? allMediaAssets.find((asset) => asset.id === song.backgroundAssetId)
       : undefined;
@@ -267,6 +300,7 @@ export function OperatorApp() {
         presentationId: presentation.id,
         presentationTitle: presentation.title,
         slideId: slide.id,
+        arrangementEntryId: currentOccurrence?.arrangementEntryId,
         text: slide.text,
       },
       media: background ? liveMediaFromAsset(background, 'background') : current.media,
@@ -278,8 +312,10 @@ export function OperatorApp() {
       presentationId: presentation.id,
       presentationTitle: presentation.title,
       currentSlideId: slide.id,
+      currentArrangementEntryId: currentOccurrence?.arrangementEntryId ?? null,
       currentText: slide.text,
       nextSlideId: nextSlide?.id ?? null,
+      nextArrangementEntryId: nextOccurrence?.arrangementEntryId ?? null,
       nextText: nextSlide?.text ?? null,
       notes: slide.notes ?? null,
     });
@@ -348,9 +384,38 @@ export function OperatorApp() {
   }, [songTransport.stop]);
 
   const updatePresentation = useCallback((updatedPresentation: Presentation) => {
+    const previousPresentation = presentations.find((presentation) =>
+      presentation.id === updatedPresentation.id,
+    );
+    const linkedSongBefore = songs.find((song) => song.presentationId === updatedPresentation.id);
+    const structureSignature = (presentation?: Presentation) =>
+      presentation?.groups
+        .map((group) => `${group.id}:${group.slides.map((slide) => slide.id).join(',')}`)
+        .join('|') ?? '';
+    const lyricStructureChanged =
+      Boolean(previousPresentation) &&
+      structureSignature(previousPresentation) !== structureSignature(updatedPresentation);
+
+    if (
+      lyricStructureChanged &&
+      linkedSongBefore?.lyricCues.length &&
+      !window.confirm(
+        'Changing the lyric section/slide order changes the Song sequence, so the saved Auto Lyrics timing map must be cleared. Continue?',
+      )
+    ) {
+      return;
+    }
+
     setPresentations((current) => current.map((presentation) =>
       presentation.id === updatedPresentation.id ? updatedPresentation : presentation,
     ));
+
+    setSongs((current) => current.map((song) => {
+      if (song.presentationId !== updatedPresentation.id) return song;
+      const sanitized = sanitizeSongForPresentation(song, updatedPresentation);
+      return lyricStructureChanged ? { ...sanitized, lyricCues: [] } : sanitized;
+    }));
+
     setPlaylists((current) => current.map((service) => ({
       ...service,
       items: service.items.map((item) =>
@@ -360,6 +425,7 @@ export function OperatorApp() {
       ),
     })));
 
+    const linkedSong = linkedSongBefore;
     const liveSlide = output.slide?.presentationId === updatedPresentation.id
       ? allSlides(updatedPresentation).find((slide) => slide.id === output.slide?.slideId)
       : undefined;
@@ -376,18 +442,38 @@ export function OperatorApp() {
 
     setStageOutput((current) => {
       if (current.presentationId !== updatedPresentation.id) return current;
-      const slides = allSlides(updatedPresentation);
-      const currentSlide = slides.find((slide) => slide.id === current.currentSlideId);
-      const nextSlide = slides.find((slide) => slide.id === current.nextSlideId);
+
+      const safeSong = linkedSong
+        ? sanitizeSongForPresentation(linkedSong, updatedPresentation)
+        : undefined;
+      const sequence = safeSong ? arrangedSlides(safeSong, updatedPresentation) : [];
+      const sourceSlides = allSlides(updatedPresentation);
+      const currentIndex = safeSong
+        ? sequence.findIndex((item) =>
+            item.slide.id === current.currentSlideId &&
+            (!current.currentArrangementEntryId ||
+              item.arrangementEntryId === current.currentArrangementEntryId),
+          )
+        : sourceSlides.findIndex((slide) => slide.id === current.currentSlideId);
+      const currentSlide = safeSong
+        ? sequence[currentIndex]?.slide
+        : sourceSlides[currentIndex];
+      const nextOccurrence = safeSong ? sequence[currentIndex + 1] : undefined;
+      const nextSlide = safeSong
+        ? nextOccurrence?.slide
+        : sourceSlides[currentIndex + 1];
+
       return {
         ...current,
         presentationTitle: updatedPresentation.title,
         currentText: currentSlide?.text ?? current.currentText,
-        nextText: nextSlide?.text ?? current.nextText,
+        nextSlideId: nextSlide?.id ?? null,
+        nextArrangementEntryId: nextOccurrence?.arrangementEntryId ?? null,
+        nextText: nextSlide?.text ?? null,
         notes: currentSlide?.notes ?? null,
       };
     });
-  }, [output.slide]);
+  }, [output.slide, presentations, songs]);
 
   const updateSong = useCallback((updatedSong: Song) => {
     const previous = songs.find((song) => song.id === updatedSong.id);
@@ -423,7 +509,30 @@ export function OperatorApp() {
       ...current,
       audio: current.audio?.id === updatedSong.id ? { ...current.audio, title: updatedSong.title } : current.audio,
     }));
-  }, [songs, songTransport.setStemEnabled, songTransport.state.songId]);
+
+    if (selectedSong?.id === updatedSong.id && updatedSong.presentationId) {
+      const presentation = presentations.find((candidate) => candidate.id === updatedSong.presentationId);
+      if (presentation) {
+        const sequence = arrangedSlides(updatedSong, presentation);
+        const selectionStillExists = sequence.some((item) =>
+          item.slide.id === selectedSlideId &&
+          item.arrangementEntryId === selectedArrangementEntryId,
+        );
+        if (!selectionStillExists) {
+          setSelectedSlideId(sequence[0]?.slide.id ?? null);
+          setSelectedArrangementEntryId(sequence[0]?.arrangementEntryId ?? null);
+        }
+      }
+    }
+  }, [
+    presentations,
+    selectedArrangementEntryId,
+    selectedSlideId,
+    selectedSong?.id,
+    songs,
+    songTransport.setStemEnabled,
+    songTransport.state.songId,
+  ]);
 
   const appendAndSelectServiceItem = useCallback((item: Playlist['items'][number]) => {
     setPlaylist((current) => ({ ...current, items: [...current.items, item] }));
@@ -591,6 +700,7 @@ export function OperatorApp() {
     setActivePlaylistId(next.id);
     setSelectedItemId(next.items[0]?.id ?? '');
     setSelectedSlideId(null);
+    setSelectedArrangementEntryId(null);
   }, [playlists]);
 
   const createService = useCallback(() => {
@@ -602,6 +712,7 @@ export function OperatorApp() {
     setActivePlaylistId(next.id);
     setSelectedItemId('');
     setSelectedSlideId(null);
+    setSelectedArrangementEntryId(null);
   }, []);
 
   const duplicateActiveService = useCallback(() => {
@@ -611,6 +722,7 @@ export function OperatorApp() {
     setActivePlaylistId(next.id);
     setSelectedItemId(next.items[0]?.id ?? '');
     setSelectedSlideId(null);
+    setSelectedArrangementEntryId(null);
   }, [playlist]);
 
   const deleteActiveService = useCallback(() => {
@@ -625,6 +737,7 @@ export function OperatorApp() {
     setActivePlaylistId(next.id);
     setSelectedItemId(next.items[0]?.id ?? '');
     setSelectedSlideId(null);
+    setSelectedArrangementEntryId(null);
   }, [playlist, playlists]);
 
   const updateActiveService = useCallback((updates: Partial<Pick<Playlist, 'title' | 'serviceDate' | 'description'>>) => {
@@ -670,14 +783,17 @@ export function OperatorApp() {
     if (!cue || cue.id === lastAutoCueRef.current.cueId) return;
 
     const presentation = presentations.find((candidate) => candidate.id === song.presentationId);
-    const slide = presentation
-      ? allSlides(presentation).find((candidate) => candidate.id === cue.slideId)
-      : undefined;
-    if (!presentation || !slide) return;
+    const sequence = presentation ? arrangedSlides(song, presentation) : [];
+    const occurrence = sequence.find((candidate) =>
+      candidate.slide.id === cue.slideId &&
+      (!cue.arrangementEntryId || candidate.arrangementEntryId === cue.arrangementEntryId),
+    );
+    if (!presentation || !occurrence) return;
 
     lastAutoCueRef.current = { songId: song.id, cueId: cue.id };
-    setSelectedSlideId(slide.id);
-    triggerSlide(presentation, slide);
+    setSelectedSlideId(occurrence.slide.id);
+    setSelectedArrangementEntryId(occurrence.arrangementEntryId);
+    triggerSlide(presentation, occurrence.slide, occurrence.arrangementEntryId);
   }, [
     songTransport.state.positionMs,
     songTransport.state.songId,
@@ -699,9 +815,30 @@ export function OperatorApp() {
     (direction: -1 | 1) => {
       const presentation = selectedPresentation;
       if (!presentation) return;
+
+      if (selectedSong) {
+        const sequence = arrangedSlides(selectedSong, presentation);
+        if (!sequence.length) return;
+        const liveIndex = output.slide?.presentationId === presentation.id
+          ? sequence.findIndex((item) =>
+              item.slide.id === output.slide?.slideId &&
+              (!output.slide?.arrangementEntryId ||
+                item.arrangementEntryId === output.slide.arrangementEntryId),
+            )
+          : -1;
+        const nextIndex = liveIndex < 0
+          ? direction > 0 ? 0 : sequence.length - 1
+          : Math.max(0, Math.min(sequence.length - 1, liveIndex + direction));
+        const next = sequence[nextIndex];
+
+        setSelectedSlideId(next.slide.id);
+        setSelectedArrangementEntryId(next.arrangementEntryId);
+        triggerSlide(presentation, next.slide, next.arrangementEntryId);
+        return;
+      }
+
       const slides = allSlides(presentation);
       if (!slides.length) return;
-
       const liveIndex = output.slide?.presentationId === presentation.id
         ? slides.findIndex((slide) => slide.id === output.slide?.slideId)
         : -1;
@@ -710,9 +847,10 @@ export function OperatorApp() {
         : Math.max(0, Math.min(slides.length - 1, liveIndex + direction));
 
       setSelectedSlideId(slides[nextIndex].id);
+      setSelectedArrangementEntryId(null);
       triggerSlide(presentation, slides[nextIndex]);
     },
-    [output.slide, selectedPresentation, triggerSlide],
+    [output.slide, selectedPresentation, selectedSong, triggerSlide],
   );
 
   const openSearch = useCallback(() => {
@@ -839,7 +977,10 @@ export function OperatorApp() {
             media={selectedMedia}
             onChangePresentation={updatePresentation}
             onChangeSong={updateSong}
-            onSelectSlide={setSelectedSlideId}
+            onSelectSlide={(slideId, arrangementEntryId) => {
+              setSelectedSlideId(slideId);
+              setSelectedArrangementEntryId(arrangementEntryId ?? null);
+            }}
             onTriggerLyricsVideo={triggerLyricsVideo}
             onTriggerMedia={triggerMedia}
             onTriggerSlide={triggerSlide}
@@ -847,6 +988,7 @@ export function OperatorApp() {
             presentation={selectedPresentation}
             selectedItem={selectedItem}
             selectedSlideId={selectedSlideId}
+            selectedArrangementEntryId={selectedArrangementEntryId}
             song={selectedSong}
             songTransport={songTransport.state}
             timingTransport={timingTransport.state}

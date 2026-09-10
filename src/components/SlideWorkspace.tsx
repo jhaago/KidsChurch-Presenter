@@ -1,7 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { SongTransportSnapshot } from '../audio/useSongTransport';
+import {
+  arrangedSlides,
+  effectiveArrangement,
+  occurrenceLabel,
+} from '../domain/songArrangement';
 import type { MediaAsset, OutputState, PlaylistItem, Presentation, Slide, Song } from '../domain/types';
 import { PresentationEditorPanel } from './PresentationEditorPanel';
+import { SongArrangementEditor } from './SongArrangementEditor';
 import { SongSetupPanel } from './SongSetupPanel';
 import { SongTimingEditor } from './SongTimingEditor';
 import { SongTransportPanel } from './SongTransportPanel';
@@ -14,6 +20,7 @@ interface SlideWorkspaceProps {
   media?: MediaAsset;
   availableAssets: MediaAsset[];
   selectedSlideId: string | null;
+  selectedArrangementEntryId: string | null;
   output: OutputState;
   songTransport: SongTransportSnapshot;
   timingTransport: SongTransportSnapshot;
@@ -30,13 +37,13 @@ interface SlideWorkspaceProps {
   onResumeTimingSong: () => Promise<boolean>;
   onStopTimingSong: () => void;
   onSeekTimingSong: (positionMs: number) => Promise<void>;
-  onSelectSlide: (slideId: string) => void;
-  onTriggerSlide: (presentation: Presentation, slide: Slide) => void;
+  onSelectSlide: (slideId: string, arrangementEntryId?: string) => void;
+  onTriggerSlide: (presentation: Presentation, slide: Slide, arrangementEntryId?: string) => void;
   onTriggerMedia: (asset: MediaAsset) => void;
   onTriggerLyricsVideo: (asset: MediaAsset) => void;
 }
 
-function slideNumber(presentation: Presentation, target: Slide) {
+function sourceSlideNumber(presentation: Presentation, target: Slide) {
   let number = 0;
   for (const group of presentation.groups) {
     for (const slide of group.slides) {
@@ -54,6 +61,7 @@ export function SlideWorkspace({
   media,
   availableAssets,
   selectedSlideId,
+  selectedArrangementEntryId,
   output,
   songTransport,
   timingTransport,
@@ -75,12 +83,65 @@ export function SlideWorkspace({
   onTriggerMedia,
   onTriggerLyricsVideo,
 }: SlideWorkspaceProps) {
-  const [viewMode, setViewMode] = useState<'slides' | 'edit' | 'timing'>('slides');
+  const [viewMode, setViewMode] = useState<'slides' | 'edit' | 'arrange' | 'timing'>('slides');
 
   useEffect(() => {
     setViewMode('slides');
     onStopTimingSong();
   }, [selectedItem.id, onStopTimingSong]);
+
+  const songOccurrences = useMemo(
+    () => song && presentation ? effectiveArrangement(song, presentation) : [],
+    [presentation, song],
+  );
+  const arrangedSongSlides = useMemo(
+    () => song && presentation ? arrangedSlides(song, presentation) : [],
+    [presentation, song],
+  );
+  const arrangedSequenceByKey = useMemo(
+    () => new Map(
+      arrangedSongSlides.map((item) => [
+        `${item.arrangementEntryId}:${item.slide.id}`,
+        item.sequence,
+      ]),
+    ),
+    [arrangedSongSlides],
+  );
+
+  const openArrangeMode = () => {
+    if (viewMode === 'arrange') {
+      setViewMode('slides');
+      return;
+    }
+    if (
+      song &&
+      songTransport.songId === song.id &&
+      (songTransport.status === 'playing' || songTransport.status === 'paused')
+    ) {
+      window.alert('Stop the live Song transport before changing its arrangement.');
+      return;
+    }
+    onStopTimingSong();
+    setViewMode('arrange');
+  };
+
+  const renderGroups = song && presentation
+    ? songOccurrences.map((occurrence) => ({
+        key: occurrence.entry.id,
+        arrangementEntryId: occurrence.entry.id,
+        group: occurrence.group,
+        label: occurrenceLabel(
+          occurrence.group,
+          occurrence.occurrenceIndex,
+          occurrence.occurrenceCount,
+        ),
+      }))
+    : presentation?.groups.map((group) => ({
+        key: group.id,
+        arrangementEntryId: undefined,
+        group,
+        label: group.name,
+      })) ?? [];
 
   return (
     <section className="slideWorkspace" aria-label="Slide workspace">
@@ -105,9 +166,22 @@ export function SlideWorkspace({
           ) : null}
           {song && presentation ? (
             <button
+              className={viewMode === 'arrange' ? 'isActive' : ''}
+              type="button"
+              onClick={openArrangeMode}
+            >
+              <Icon name="playlist" />
+              {viewMode === 'arrange' ? 'Done Arranging' : 'Arrange'}
+            </button>
+          ) : null}
+          {song && presentation ? (
+            <button
               className={viewMode === 'timing' ? 'isActive' : ''}
               type="button"
-              onClick={() => setViewMode((current) => current === 'timing' ? 'slides' : 'timing')}
+              onClick={() => {
+                onStopTimingSong();
+                setViewMode((current) => current === 'timing' ? 'slides' : 'timing');
+              }}
             >
               <Icon name="timer" />
               {viewMode === 'timing' ? 'Done Timing' : 'Timing'}
@@ -115,7 +189,17 @@ export function SlideWorkspace({
           ) : null}
           <div className="workspaceView">
             <Icon name="grid" />
-            <span>{viewMode === 'edit' ? 'Editor' : viewMode === 'timing' ? 'Timing Editor' : song ? 'Song + Slide View' : 'Slide View'}</span>
+            <span>
+              {viewMode === 'edit'
+                ? 'Editor'
+                : viewMode === 'arrange'
+                  ? 'Arrangement Editor'
+                  : viewMode === 'timing'
+                    ? 'Timing Editor'
+                    : song
+                      ? 'Song + Slide View'
+                      : 'Slide View'}
+            </span>
           </div>
         </div>
       </header>
@@ -129,7 +213,7 @@ export function SlideWorkspace({
               onTriggerLyricsVideo={onTriggerLyricsVideo}
               song={song}
             />
-            {viewMode !== 'timing' ? (
+            {viewMode !== 'timing' && viewMode !== 'arrange' ? (
               <SongTransportPanel
                 onPause={onPauseSong}
                 onPlay={() => onPlaySong(song)}
@@ -156,6 +240,12 @@ export function SlideWorkspace({
             song={song}
             transport={timingTransport}
           />
+        ) : viewMode === 'arrange' && song && presentation ? (
+          <SongArrangementEditor
+            onChangeSong={onChangeSong}
+            presentation={presentation}
+            song={song}
+          />
         ) : viewMode === 'edit' && presentation ? (
           <PresentationEditorPanel
             isSongPresentation={Boolean(song)}
@@ -170,36 +260,61 @@ export function SlideWorkspace({
                 <span>Fallback / alternate lyric slides remain available, but Lyrics Video mode does not advance them automatically.</span>
               </div>
             ) : null}
-            {presentation.groups.map((group) => (
-              <section className={`slideGroup group-${group.type}`} key={group.id}>
+            {song && songOccurrences.length ? (
+              <div className="songArrangementBanner">
+                <Icon name="playlist" />
+                <span>
+                  Arrangement: {songOccurrences.map((occurrence) =>
+                    occurrenceLabel(
+                      occurrence.group,
+                      occurrence.occurrenceIndex,
+                      occurrence.occurrenceCount,
+                    ),
+                  ).join(' → ')}
+                </span>
+              </div>
+            ) : null}
+            {renderGroups.map(({ key, arrangementEntryId, group, label }) => (
+              <section className={`slideGroup group-${group.type}`} key={key}>
                 <div className="slideGroupHeader">
                   <span className="groupAccent" />
-                  <strong>{group.name}</strong>
+                  <strong>{label}</strong>
                   <span>{group.slides.length} slide{group.slides.length === 1 ? '' : 's'}</span>
                 </div>
                 <div className="slideGrid">
                   {group.slides.map((slide) => {
-                    const selected = selectedSlideId === slide.id;
-                    const live = output.slide?.presentationId === presentation.id && output.slide.slideId === slide.id;
+                    const sequence = arrangementEntryId
+                      ? arrangedSequenceByKey.get(`${arrangementEntryId}:${slide.id}`) ?? 0
+                      : sourceSlideNumber(presentation, slide);
+                    const selected =
+                      selectedSlideId === slide.id &&
+                      (song ? selectedArrangementEntryId === arrangementEntryId : true);
+                    const live =
+                      output.slide?.presentationId === presentation.id &&
+                      output.slide.slideId === slide.id &&
+                      (song
+                        ? output.slide.arrangementEntryId === arrangementEntryId ||
+                          (!output.slide.arrangementEntryId && selectedArrangementEntryId === arrangementEntryId)
+                        : true);
                     return (
                       <button
-                        aria-label={`${group.name}, slide ${slideNumber(presentation, slide)}${live ? ', live' : ''}`}
+                        aria-label={`${label}, slide ${sequence}${live ? ', live' : ''}`}
                         className={`slideThumbnail ${selected ? 'isSelected' : ''} ${live ? 'isLive' : ''}`}
-                        key={slide.id}
+                        key={`${key}:${slide.id}`}
                         onClick={() => {
-                          onSelectSlide(slide.id);
-                          onTriggerSlide(presentation, slide);
+                          onSelectSlide(slide.id, arrangementEntryId);
+                          onTriggerSlide(presentation, slide, arrangementEntryId);
                         }}
                         type="button"
                       >
                         <span className="slideSurface">
                           <span className="thumbnailText">
                             {slide.text.split('\n').map((line, lineIndex) => (
-                              <span key={`${slide.id}-${lineIndex}`}>{line}</span>
+                              <span key={`${key}:${slide.id}:${lineIndex}`}>{line}</span>
                             ))}
                           </span>
                         </span>
-                        <span className="slideOrdinal">{slideNumber(presentation, slide)}</span>
+                        <span className="slideOrdinal">{sequence}</span>
                         {live ? <span className="liveFlag">LIVE</span> : null}
                       </button>
                     );
