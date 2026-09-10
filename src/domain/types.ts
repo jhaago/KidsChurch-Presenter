@@ -200,6 +200,8 @@ export interface SongAudioSession {
   masterGainDb: number;
   singleTrackAssetId?: string;
   stems: SongStem[];
+  trimStartMs?: number;
+  trimEndMs?: number;
 }
 
 export interface Song {
