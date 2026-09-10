@@ -260,6 +260,7 @@ export function SlideWorkspace({
             defaultBackgroundAssetId={song?.backgroundAssetId}
             onChange={onChangePresentation}
             onSelectSlide={(slideId) => onSelectSlide(slideId)}
+            onUpdateTheme={onUpdateTheme}
             presentation={presentation}
             selectedSlideId={selectedSlideId}
           />

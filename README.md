@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.5.9-alpha.1 — Editor Productivity Tools**
+**v0.5.10-alpha.1 — Slide Layout Templates + Grouping**
 
 Implemented in source:
 
@@ -170,6 +170,21 @@ Implemented in source:
 - shape fill, border colour, border width and opacity controls
 - shape elements participate in normal layer ordering, duplication, copy/paste, alignment and Audience rendering
 - multi-delete removes supplemental selected elements while Primary Text remains protected
+- persistent Group / Ungroup metadata for Primary Text and supplemental slide elements
+- clicking any member of a saved group selects the complete group
+- dragging a grouped member moves the whole group while resize remains active-element-only
+- group relationships persist through save/reload
+- duplicated Presentations remap group IDs as well as element IDs
+- copied/pasted grouped element selections receive fresh group IDs while preserving relationships inside the pasted copy
+- whole-slide visual clipboard with Copy Slide Layout / Paste Slide Layout
+- Ctrl/Cmd+Shift+C and Ctrl/Cmd+Shift+V shortcuts for whole-slide visual copy/paste
+- whole-slide paste preserves destination Primary Text wording and Stage notes
+- whole-slide paste copies resolved Primary Text style/layout, effective background, supplemental elements, layer order and grouping
+- custom Themes can now contain reusable supplemental template elements
+- Theme template elements render as inherited locked layers beneath local slide elements/Primary Text
+- local supplemental elements can be promoted into the active custom Theme template
+- Theme template elements can be copied into a slide to create editable local versions
+- deleting a custom Theme materializes its template elements into every linked slide before removing the Theme
 
 ## Run on macOS or Windows
 
@@ -290,6 +305,47 @@ The current editor supports:
 Changes autosave after a short debounce. The desktop process owns the saved JSON file and keeps the previous successful save as a backup. If the primary library file is unreadable on launch, Presenter attempts to recover the backup.
 
 The built-in demo service is now only the first-run seed. After the first successful save, the editable saved library becomes the source of truth.
+
+## Slide layout templates and persistent groups
+
+### Whole-slide visual copy / paste
+
+The Layout workspace now has a second clipboard specifically for a slide's **visual design**.
+
+- **Copy Slide Layout** stores the current resolved Primary Text formatting/layout, effective background, supplemental elements, layer order and group structure.
+- **Paste Slide Layout** applies that visual design to another slide.
+- The destination slide's **Primary Text wording and Stage notes are deliberately preserved**.
+- **Ctrl/Cmd+Shift+C** copies the slide layout.
+- **Ctrl/Cmd+Shift+V** pastes the slide layout.
+
+Supplemental elements receive fresh IDs on paste. Group IDs are also remapped so the pasted design is independent from its source.
+
+### Persistent Group / Ungroup
+
+Multi-selection can now be converted into a persistent element group.
+
+A grouped element selection is stored as group metadata on the existing flat layer stack rather than as a nested renderer object. This keeps Audience rendering simple and backward compatible.
+
+- select two or more editable elements and choose **Group**
+- clicking any member later selects the complete group
+- dragging a grouped member moves the complete group
+- Arrow-key nudging / alignment tools operate on the selected group
+- resizing remains active-element-only in this first grouping pass
+- choose **Ungroup** to remove the persistent relationship
+- Primary Text can participate in a group without losing its protected Song/Stage role
+
+### Multi-element Theme templates
+
+Custom Themes can now carry supplemental Text, Image and Shape template elements in addition to Primary Text style/layout.
+
+Theme template elements are resolved as inherited locked layers **behind** the slide's Primary Text and local supplemental elements. Because they remain Theme references, changing the Theme updates every linked Presentation without storing duplicate copies on every slide.
+
+In Layout, use **Promote Local Elements to Theme** to move the current slide's supplemental elements into the active custom Theme. The local copies are then cleared from that slide to avoid double-rendering.
+
+Inherited Theme elements are shown as locked layers. They cannot be dragged or deleted from an individual slide, but they can be copied and pasted to create a local editable copy.
+
+Deleting a custom Theme remains non-destructive: Primary style/layout is baked locally as before, and Theme template elements are materialized onto each linked slide before the Theme is removed.
+
 
 ## Editor productivity tools
 

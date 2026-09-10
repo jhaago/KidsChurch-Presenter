@@ -37,6 +37,7 @@ async function main() {
                   id: 'el-text-1',
                   type: 'text',
                   name: 'Reference',
+                  groupId: 'group-lower-third',
                   text: 'John 3:16',
                   layout: { xPercent: 68, yPercent: 82, widthPercent: 26, heightPercent: 10 },
                   format: { fontSizeVw: 2.8, textAlign: 'right' },
@@ -55,6 +56,7 @@ async function main() {
                   id: 'el-shape-1',
                   type: 'shape',
                   name: 'Lower Third Bar',
+                  groupId: 'group-lower-third',
                   shape: 'rectangle',
                   layout: { xPercent: 8, yPercent: 76, widthPercent: 84, heightPercent: 14 },
                   fillColor: '#224466',
@@ -64,6 +66,7 @@ async function main() {
                 },
               ],
               layerOrder: ['el-image-1', 'el-shape-1', '__primary__', 'el-text-1'],
+              primaryGroupId: 'group-primary-logo',
               backgroundAssetId: null,
             }],
           },
@@ -106,6 +109,29 @@ async function main() {
           marginPercent: 9,
         },
         layout: { xPercent: 8, yPercent: 55, widthPercent: 84, heightPercent: 30 },
+        templateElements: [
+          {
+            id: 'theme-shape-1',
+            type: 'shape',
+            name: 'Theme Lower Bar',
+            shape: 'rectangle',
+            layout: { xPercent: 5, yPercent: 82, widthPercent: 90, heightPercent: 12 },
+            fillColor: '#113355',
+            borderColor: '#ffffff',
+            borderWidth: 0,
+            opacity: 0.65,
+          },
+          {
+            id: 'theme-text-1',
+            type: 'text',
+            name: 'Theme Label',
+            text: 'KIDS CHURCH',
+            groupId: 'theme-group-1',
+            layout: { xPercent: 6, yPercent: 84, widthPercent: 30, heightPercent: 8 },
+            format: { fontSizeVw: 2.4, textAlign: 'left' },
+            opacity: 1,
+          },
+        ],
       },
     ],
     playlists: [
@@ -140,6 +166,9 @@ async function main() {
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements[1].assetId, 'image-logo');
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements[2].shape, 'rectangle');
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements[2].borderWidth, 2);
+  assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements[0].groupId, 'group-lower-third');
+  assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements[2].groupId, 'group-lower-third');
+  assert.equal(loaded.data.presentations[0].groups[0].slides[0].primaryGroupId, 'group-primary-logo');
   assert.deepEqual(
     loaded.data.presentations[0].groups[0].slides[0].layerOrder,
     ['el-image-1', 'el-shape-1', '__primary__', 'el-text-1'],
@@ -147,6 +176,9 @@ async function main() {
   assert.equal(loaded.data.customThemes.length, 1);
   assert.equal(loaded.data.customThemes[0].name, 'Kids Song');
   assert.equal(loaded.data.customThemes[0].layout.yPercent, 55);
+  assert.equal(loaded.data.customThemes[0].templateElements.length, 2);
+  assert.equal(loaded.data.customThemes[0].templateElements[0].shape, 'rectangle');
+  assert.equal(loaded.data.customThemes[0].templateElements[1].groupId, 'theme-group-1');
   assert.equal(loaded.data.playlists.length, 2);
   assert.equal(loaded.data.playlists[0].serviceDate, '2026-09-13');
   assert.equal(loaded.data.activePlaylistId, 'service-next');

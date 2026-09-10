@@ -327,12 +327,35 @@ Status: implemented in source.
 - shapes share normal layering / duplication / clipboard / Audience rendering
 - multi-delete protects Primary Text
 
+## v0.5.10 — Slide layout templates + grouping
+
+Status: implemented in source.
+
+- whole-slide visual copy/paste
+- Primary Text wording and Stage notes preserved on layout paste
+- resolved Primary style/layout copied between slides
+- effective slide background copied
+- supplemental element stack / layer order copied with fresh IDs
+- Ctrl/Cmd+Shift+C / Ctrl/Cmd+Shift+V slide-layout shortcuts
+- persistent element Group / Ungroup metadata
+- Primary Text can safely participate in groups
+- grouped click selects all members
+- grouped drag moves all members
+- copied/duplicated groups receive fresh group IDs
+- custom Theme supplemental template elements
+- locked inherited Theme layers in Layout
+- Theme template elements render beneath Primary/local slide elements
+- promote local slide elements into a custom Theme template
+- copy inherited Theme elements into local slide content
+- Theme deletion materializes template layers before unlinking
+- persistence coverage for Theme templates and group metadata
+
 ### Next v0.5 passes
 
-- richer multi-element Theme templates
-- copy/paste complete slide layouts
-- group/ungroup elements
+- group resize / proportional scaling
 - optional rotation
+- direct edit mode for Theme template elements
+- copy/paste complete slides including wording when explicitly requested
 - expand undo/redo history across Song Setup / Arrangement / Timing changes
 - more ProPresenter-like thumbnail behaviour
 

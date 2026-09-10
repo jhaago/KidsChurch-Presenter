@@ -256,7 +256,7 @@ export function PresentationEditorPanel({
 
   const deleteActiveCustomTheme = () => {
     if (!activeCustomTheme) return;
-    if (!window.confirm(`Delete custom theme “${activeCustomTheme.name}”? Presentations using it will keep their current appearance as local formatting.`)) return;
+    if (!window.confirm(`Delete custom theme “${activeCustomTheme.name}”? Presentations using it will keep their current appearance: text/layout will be baked locally and reusable template elements will be copied onto each linked slide.`)) return;
     onDeleteTheme(activeCustomTheme.id);
   };
 
@@ -385,7 +385,7 @@ export function PresentationEditorPanel({
           <small>
             {isBuiltInTheme(presentation.themeId ?? 'default')
               ? 'Built-in themes are read-only. Save the current appearance as a new theme to customise and reuse it.'
-              : 'This Presentation is linked to a custom theme. Updating that theme changes every linked Presentation; slide-specific overrides remain local.'}
+              : `This Presentation is linked to a custom theme. Updating it changes every linked Presentation; slide-specific overrides remain local. ${activeCustomTheme?.templateElements?.length ?? 0} reusable template element${(activeCustomTheme?.templateElements?.length ?? 0) === 1 ? '' : 's'}.`}
           </small>
         </div>
 

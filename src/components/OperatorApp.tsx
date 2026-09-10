@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { useSongTransport } from '../audio/useSongTransport';
 import { arrangedSlides, sanitizeSongForPresentation } from '../domain/songArrangement';
-import { resolveSlideElements } from '../domain/slideElements';
+import {
+  cloneSlideElementsWithFreshIds,
+  normalizedLayerOrder,
+  resolveSlideElements,
+} from '../domain/slideElements';
 import { resolveBackgroundAssetId, resolveSlideFormat, resolveSlideLayout } from '../domain/themes';
 import {
   createBlankPresentation,
@@ -593,11 +597,31 @@ export function OperatorApp() {
     const nextThemes = customThemes.filter((candidate) => candidate.id !== themeId);
     const nextPresentations = presentations.map((presentation) => {
       if (presentation.themeId !== themeId) return presentation;
+
+      const groups = presentation.groups.map((group) => ({
+        ...group,
+        slides: group.slides.map((slide) => {
+          if (!theme.templateElements?.length) return slide;
+
+          const cloned = cloneSlideElementsWithFreshIds(
+            theme.templateElements,
+            theme.templateElements.map((element) => element.id),
+          );
+
+          return {
+            ...slide,
+            elements: [...cloned.elements, ...(slide.elements ?? [])],
+            layerOrder: [...cloned.layerOrder, ...normalizedLayerOrder(slide)],
+          };
+        }),
+      }));
+
       return {
         ...presentation,
         themeId: 'default',
         format: { ...resolveSlideFormat(presentation, undefined, customThemes) },
         layout: { ...resolveSlideLayout(presentation, undefined, customThemes) },
+        groups,
       };
     });
 

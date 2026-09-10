@@ -100,6 +100,7 @@ export interface PresentationTheme {
   description?: string;
   format: SlideTextFormat;
   layout?: SlideBoxLayout;
+  templateElements?: SlideElement[];
 }
 
 export type SlideImageFit = 'contain' | 'cover';
@@ -109,6 +110,7 @@ export interface SlideTextElement {
   id: string;
   type: 'text';
   name: string;
+  groupId?: string;
   text: string;
   layout: SlideBoxLayout;
   format?: Partial<SlideTextFormat>;
@@ -119,6 +121,7 @@ export interface SlideImageElement {
   id: string;
   type: 'image';
   name: string;
+  groupId?: string;
   assetId?: string;
   layout: SlideBoxLayout;
   fit: SlideImageFit;
@@ -129,6 +132,7 @@ export interface SlideShapeElement {
   id: string;
   type: 'shape';
   name: string;
+  groupId?: string;
   shape: SlideShapeKind;
   layout: SlideBoxLayout;
   fillColor: string;
@@ -147,6 +151,7 @@ export interface Slide {
   layout?: Partial<SlideBoxLayout>;
   elements?: SlideElement[];
   layerOrder?: string[];
+  primaryGroupId?: string;
   backgroundAssetId?: string | null;
 }
 
@@ -254,10 +259,15 @@ export interface MediaAsset {
   extension?: string;
 }
 
+export type SlideElementSource = 'primary' | 'slide' | 'theme';
+
 export interface LiveTextSlideElement {
   id: string;
   type: 'text';
   name: string;
+  source: SlideElementSource;
+  sourceElementId?: string;
+  groupId?: string;
   text: string;
   layout: SlideBoxLayout;
   format: SlideTextFormat;
@@ -268,6 +278,9 @@ export interface LiveImageSlideElement {
   id: string;
   type: 'image';
   name: string;
+  source: SlideElementSource;
+  sourceElementId?: string;
+  groupId?: string;
   assetId?: string;
   fileUrl?: string;
   layout: SlideBoxLayout;
@@ -279,6 +292,9 @@ export interface LiveShapeSlideElement {
   id: string;
   type: 'shape';
   name: string;
+  source: SlideElementSource;
+  sourceElementId?: string;
+  groupId?: string;
   shape: SlideShapeKind;
   layout: SlideBoxLayout;
   fillColor: string;

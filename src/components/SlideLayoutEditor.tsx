@@ -11,7 +11,10 @@ import {
   createShapeElement,
   createTextElement,
   duplicateSlideElement,
+  cloneSlideElementsWithFreshIds,
+  isThemeSlideElementId,
   normalizedLayerOrder,
+  orderedSupplementalElements,
   resolveSlideElements,
 } from '../domain/slideElements';
 import {
@@ -38,6 +41,7 @@ interface SlideLayoutEditorProps {
   customThemes: PresentationTheme[];
   onChange: (presentation: Presentation) => void;
   onSelectSlide: (slideId: string) => void;
+  onUpdateTheme: (theme: PresentationTheme) => void;
 }
 
 interface SourceSlide {
@@ -52,6 +56,8 @@ type ResizeHandle = 'move' | 'nw' | 'ne' | 'sw' | 'se';
 interface DragState {
   pointerId: number;
   elementId: string;
+  movingElementIds: string[];
+  startLayouts: Record<string, SlideBoxLayout>;
   handle: ResizeHandle;
   startClientX: number;
   startClientY: number;
@@ -148,6 +154,17 @@ function resolvedElementName(element: LiveSlideElement) {
 
 let copiedSlideElements: SlideElement[] = [];
 
+interface SlideVisualClipboard {
+  format?: Slide['format'];
+  layout?: Slide['layout'];
+  backgroundAssetId?: string | null;
+  elements: SlideElement[];
+  layerOrder: string[];
+  primaryGroupId?: string;
+}
+
+let copiedSlideVisual: SlideVisualClipboard | null = null;
+
 function snapNearest(value: number, candidates: number[], threshold = 0.8) {
   let best: { value: number; delta: number } | null = null;
   for (const candidate of candidates) {
@@ -159,11 +176,12 @@ function snapNearest(value: number, candidates: number[], threshold = 0.8) {
   return best;
 }
 
-function elementSnapCandidates(elements: LiveSlideElement[], excludeId: string) {
+function elementSnapCandidates(elements: LiveSlideElement[], excludeIds: string | string[]) {
+  const excluded = new Set(Array.isArray(excludeIds) ? excludeIds : [excludeIds]);
   const x = [0, 10, 50, 90, 100];
   const y = [0, 10, 50, 90, 100];
   for (const element of elements) {
-    if (element.id === excludeId) continue;
+    if (excluded.has(element.id)) continue;
     x.push(
       element.layout.xPercent,
       element.layout.xPercent + element.layout.widthPercent / 2,
@@ -186,6 +204,7 @@ export function SlideLayoutEditor({
   customThemes,
   onChange,
   onSelectSlide,
+  onUpdateTheme,
 }: SlideLayoutEditorProps) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -245,6 +264,7 @@ export function SlideLayoutEditor({
   const selectedElements = resolvedElements.filter((element) =>
     selectedElementIds.includes(element.id),
   );
+  const editableSelectedElements = selectedElements.filter((element) => element.source !== 'theme');
   const selectedRawElement =
     selectedElement?.id === PRIMARY_SLIDE_ELEMENT_ID
       ? undefined
@@ -259,35 +279,48 @@ export function SlideLayoutEditor({
     ? availableAssets.find((asset) => asset.id === backgroundId)
     : undefined;
   const stillAssets = availableAssets.filter((asset) => asset.kind === 'still');
+  const activeCustomTheme = customThemes.find((theme) => theme.id === presentation.themeId);
   const hasSlideOverride = Boolean(selected.slide.layout);
   const hasPresentationLayout = Boolean(presentation.layout);
   const canUndo = pastRef.current.length > 0;
   const canRedo = futureRef.current.length > 0;
   const selectionCount = selectedElements.length;
-  const removableSelectionCount = selectedElementIds.filter((id) => id !== PRIMARY_SLIDE_ELEMENT_ID).length;
+  const editableSelectionCount = editableSelectedElements.length;
+  const removableSelectionCount = editableSelectedElements.filter((element) => element.id !== PRIMARY_SLIDE_ELEMENT_ID).length;
+  const isThemeTemplate = selectedElement?.source === 'theme' || Boolean(selectedElement && isThemeSlideElementId(selectedElement.id));
   const isPrimary = selectedElement?.id === PRIMARY_SLIDE_ELEMENT_ID;
   const layout = selectedElement?.layout ?? resolveSlideLayout(presentation, selected.slide, customThemes);
   void historyRevision;
   void clipboardRevision;
 
+  const selectionMembersFor = (elementId: string) => {
+    const element = resolvedElements.find((candidate) => candidate.id === elementId);
+    if (!element || element.source === 'theme' || !element.groupId) return [elementId];
+    return resolvedElements
+      .filter((candidate) => candidate.source !== 'theme' && candidate.groupId === element.groupId)
+      .map((candidate) => candidate.id);
+  };
+
   const selectOnly = (elementId: string) => {
     setSelectedElementId(elementId);
-    setSelectedElementIds([elementId]);
+    setSelectedElementIds(selectionMembersFor(elementId));
   };
 
   const toggleSelection = (elementId: string) => {
+    const members = selectionMembersFor(elementId);
     setSelectedElementIds((current) => {
-      if (current.includes(elementId)) {
-        if (current.length === 1) {
-          setSelectedElementId(elementId);
-          return current;
-        }
-        const next = current.filter((id) => id !== elementId);
-        setSelectedElementId(next[next.length - 1]);
-        return next;
+      const allSelected = members.every((id) => current.includes(id));
+      const next = allSelected
+        ? current.filter((id) => !members.includes(id))
+        : [...new Set([...current, ...members])];
+
+      if (!next.length) {
+        setSelectedElementId(PRIMARY_SLIDE_ELEMENT_ID);
+        return [PRIMARY_SLIDE_ELEMENT_ID];
       }
-      setSelectedElementId(elementId);
-      return [...current, elementId];
+
+      setSelectedElementId(allSelected ? next[next.length - 1] : elementId);
+      return next;
     });
   };
 
@@ -387,26 +420,44 @@ export function SlideLayoutEditor({
     );
   };
 
+  const setLayoutsWithoutHistory = (
+    base: Presentation,
+    layouts: Map<string, SlideBoxLayout>,
+  ) => {
+    onChange(updateSlide(base, selected.slide.id, (slide) => {
+      let nextSlide = { ...slide };
+      const primaryLayout = layouts.get(PRIMARY_SLIDE_ELEMENT_ID);
+      if (primaryLayout) {
+        nextSlide.layout = {
+          xPercent: rounded(primaryLayout.xPercent),
+          yPercent: rounded(primaryLayout.yPercent),
+          widthPercent: rounded(primaryLayout.widthPercent),
+          heightPercent: rounded(primaryLayout.heightPercent),
+        };
+      }
+      nextSlide.elements = (nextSlide.elements ?? []).map((element) => {
+        const nextLayout = layouts.get(element.id);
+        if (!nextLayout) return element;
+        return {
+          ...element,
+          layout: {
+            xPercent: rounded(nextLayout.xPercent),
+            yPercent: rounded(nextLayout.yPercent),
+            widthPercent: rounded(nextLayout.widthPercent),
+            heightPercent: rounded(nextLayout.heightPercent),
+          },
+        };
+      });
+      return nextSlide;
+    }));
+  };
+
   const setLayoutWithoutHistory = (
     base: Presentation,
     elementId: string,
     nextLayout: SlideBoxLayout,
   ) => {
-    const roundedLayout = {
-      xPercent: rounded(nextLayout.xPercent),
-      yPercent: rounded(nextLayout.yPercent),
-      widthPercent: rounded(nextLayout.widthPercent),
-      heightPercent: rounded(nextLayout.heightPercent),
-    };
-    onChange(updateSlide(base, selected.slide.id, (slide) => {
-      if (elementId === PRIMARY_SLIDE_ELEMENT_ID) {
-        return { ...slide, layout: roundedLayout };
-      }
-      return updateExtraElement(slide, elementId, (element) => ({
-        ...element,
-        layout: roundedLayout,
-      }));
-    }));
+    setLayoutsWithoutHistory(base, new Map([[elementId, nextLayout]]));
   };
 
   const beginGesture = (
@@ -416,20 +467,48 @@ export function SlideLayoutEditor({
   ) => {
     event.preventDefault();
     event.stopPropagation();
+
+    if (element.source === 'theme') {
+      selectOnly(element.id);
+      return;
+    }
+
     if (event.ctrlKey || event.metaKey || event.shiftKey) {
       toggleSelection(element.id);
       return;
     }
+
+    const groupMembers = selectionMembersFor(element.id);
+    const movingElementIds = handle === 'move'
+      ? (
+          selectedElementIds.includes(element.id)
+            ? selectedElementIds.filter((id) => {
+                const candidate = resolvedElements.find((item) => item.id === id);
+                return candidate?.source !== 'theme';
+              })
+            : groupMembers
+        )
+      : [element.id];
+
     if (!selectedElementIds.includes(element.id)) {
       selectOnly(element.id);
     } else {
       setSelectedElementId(element.id);
     }
+
+    const startLayouts = Object.fromEntries(
+      resolvedElements
+        .filter((candidate) => movingElementIds.includes(candidate.id))
+        .map((candidate) => [candidate.id, { ...candidate.layout }]),
+    );
+
     setSnapGuides({});
     event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = {
       pointerId: event.pointerId,
       elementId: element.id,
+      movingElementIds,
+      startLayouts,
       handle,
       startClientX: event.clientX,
       startClientY: event.clientY,
@@ -448,8 +527,8 @@ export function SlideLayoutEditor({
     const bounds = canvas.getBoundingClientRect();
     if (!bounds.width || !bounds.height) return;
 
-    const dx = ((event.clientX - drag.startClientX) / bounds.width) * 100;
-    const dy = ((event.clientY - drag.startClientY) / bounds.height) * 100;
+    const rawDx = ((event.clientX - drag.startClientX) / bounds.width) * 100;
+    const rawDy = ((event.clientY - drag.startClientY) / bounds.height) * 100;
     const start = drag.startLayout;
     let left = start.xPercent;
     let top = start.yPercent;
@@ -457,11 +536,23 @@ export function SlideLayoutEditor({
     let bottom = start.yPercent + start.heightPercent;
 
     if (drag.handle === 'move') {
-      left = clamp(start.xPercent + dx, 0, 100 - start.widthPercent);
-      top = clamp(start.yPercent + dy, 0, 100 - start.heightPercent);
+      const movingLayouts = drag.movingElementIds
+        .map((id) => drag.startLayouts[id])
+        .filter((candidate): candidate is SlideBoxLayout => Boolean(candidate));
+      const minX = Math.min(...movingLayouts.map((candidate) => candidate.xPercent));
+      const maxX = Math.max(...movingLayouts.map((candidate) => candidate.xPercent + candidate.widthPercent));
+      const minY = Math.min(...movingLayouts.map((candidate) => candidate.yPercent));
+      const maxY = Math.max(...movingLayouts.map((candidate) => candidate.yPercent + candidate.heightPercent));
+      const dx = clamp(rawDx, -minX, 100 - maxX);
+      const dy = clamp(rawDy, -minY, 100 - maxY);
+
+      left = start.xPercent + dx;
+      top = start.yPercent + dy;
       right = left + start.widthPercent;
       bottom = top + start.heightPercent;
     } else {
+      const dx = rawDx;
+      const dy = rawDy;
       if (drag.handle.includes('w')) left = clamp(start.xPercent + dx, 0, right - 5);
       if (drag.handle.includes('e')) right = clamp(right + dx, left + 5, 100);
       if (drag.handle.includes('n')) top = clamp(start.yPercent + dy, 0, bottom - 5);
@@ -469,7 +560,7 @@ export function SlideLayoutEditor({
     }
 
     if (snapEnabled) {
-      const candidates = elementSnapCandidates(resolvedElements, drag.elementId);
+      const candidates = elementSnapCandidates(resolvedElements, drag.movingElementIds);
       let guideX: number | undefined;
       let guideY: number | undefined;
 
@@ -536,12 +627,37 @@ export function SlideLayoutEditor({
       setSnapGuides({});
     }
 
-    setLayoutWithoutHistory(drag.startPresentation, drag.elementId, {
+    const activeLayout = {
       xPercent: left,
       yPercent: top,
       widthPercent: right - left,
       heightPercent: bottom - top,
-    });
+    };
+
+    if (drag.handle === 'move' && drag.movingElementIds.length > 1) {
+      const originals = drag.movingElementIds
+        .map((id) => drag.startLayouts[id])
+        .filter((candidate): candidate is SlideBoxLayout => Boolean(candidate));
+      const minX = Math.min(...originals.map((candidate) => candidate.xPercent));
+      const maxX = Math.max(...originals.map((candidate) => candidate.xPercent + candidate.widthPercent));
+      const minY = Math.min(...originals.map((candidate) => candidate.yPercent));
+      const maxY = Math.max(...originals.map((candidate) => candidate.yPercent + candidate.heightPercent));
+      const dx = clamp(activeLayout.xPercent - drag.startLayout.xPercent, -minX, 100 - maxX);
+      const dy = clamp(activeLayout.yPercent - drag.startLayout.yPercent, -minY, 100 - maxY);
+      const layouts = new Map<string, SlideBoxLayout>();
+      for (const elementId of drag.movingElementIds) {
+        const original = drag.startLayouts[elementId];
+        if (!original) continue;
+        layouts.set(elementId, {
+          ...original,
+          xPercent: original.xPercent + dx,
+          yPercent: original.yPercent + dy,
+        });
+      }
+      setLayoutsWithoutHistory(drag.startPresentation, layouts);
+    } else {
+      setLayoutWithoutHistory(drag.startPresentation, drag.elementId, activeLayout);
+    }
   };
 
   const endGesture = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -583,7 +699,7 @@ export function SlideLayoutEditor({
   };
 
   const setGeometryField = (key: keyof SlideBoxLayout, value: number) => {
-    if (!selectedElement || !Number.isFinite(value)) return;
+    if (!selectedElement || selectedElement.source === 'theme' || !Number.isFinite(value)) return;
     const next = { ...selectedElement.layout, [key]: value };
 
     next.widthPercent = clamp(next.widthPercent, 5, 100 - next.xPercent);
@@ -635,13 +751,16 @@ export function SlideLayoutEditor({
         id: 'clipboard-primary',
         type: 'text',
         name: 'Primary Text Copy',
+        groupId: element.groupId,
         text: element.text,
         layout: { ...element.layout },
         format: { ...element.format },
         opacity: element.opacity,
       };
     }
-    const rawElement = selected.slide.elements?.find((candidate) => candidate.id === element.id);
+    const rawElement = element.source === 'theme'
+      ? activeCustomTheme?.templateElements?.find((candidate) => candidate.id === element.sourceElementId)
+      : selected.slide.elements?.find((candidate) => candidate.id === element.id);
     return rawElement ? structuredClone(rawElement) : null;
   };
 
@@ -659,15 +778,22 @@ export function SlideLayoutEditor({
 
   const pasteElement = () => {
     if (!copiedSlideElements.length) return;
-    const pasted = copiedSlideElements.map((source) => {
-      const element = duplicateSlideElement(source);
-      element.name = source.name;
-      return element;
-    });
+    const cloned = cloneSlideElementsWithFreshIds(
+      copiedSlideElements,
+      copiedSlideElements.map((element) => element.id),
+    );
+    const pasted = cloned.elements.map((element) => ({
+      ...element,
+      layout: {
+        ...element.layout,
+        xPercent: clamp(element.layout.xPercent + 2, 0, 100 - element.layout.widthPercent),
+        yPercent: clamp(element.layout.yPercent + 2, 0, 100 - element.layout.heightPercent),
+      },
+    }));
     commit(updateSlide(presentation, selected.slide.id, (slide) => ({
       ...slide,
       elements: [...(slide.elements ?? []), ...pasted],
-      layerOrder: [...normalizedLayerOrder(slide), ...pasted.map((element) => element.id)],
+      layerOrder: [...normalizedLayerOrder(slide), ...cloned.layerOrder],
     })));
     setSelectedElementIds(pasted.map((element) => element.id));
     setSelectedElementId(pasted[pasted.length - 1].id);
@@ -685,8 +811,75 @@ export function SlideLayoutEditor({
     selectOnly(PRIMARY_SLIDE_ELEMENT_ID);
   };
 
+  const copySlideVisual = () => {
+    copiedSlideVisual = {
+      format: { ...resolveSlideFormat(presentation, selected.slide, customThemes) },
+      layout: { ...resolveSlideLayout(presentation, selected.slide, customThemes) },
+      backgroundAssetId: backgroundId ?? null,
+      elements: structuredClone(selected.slide.elements ?? []),
+      layerOrder: normalizedLayerOrder(selected.slide),
+      primaryGroupId: selected.slide.primaryGroupId,
+    };
+    setClipboardRevision((value) => value + 1);
+  };
+
+  const pasteSlideVisual = () => {
+    if (!copiedSlideVisual) return;
+    const cloned = cloneSlideElementsWithFreshIds(
+      copiedSlideVisual.elements,
+      copiedSlideVisual.layerOrder,
+      copiedSlideVisual.primaryGroupId,
+    );
+
+    commit(updateSlide(presentation, selected.slide.id, (slide) => ({
+      ...slide,
+      format: copiedSlideVisual?.format ? structuredClone(copiedSlideVisual.format) : undefined,
+      layout: copiedSlideVisual?.layout ? structuredClone(copiedSlideVisual.layout) : undefined,
+      backgroundAssetId: copiedSlideVisual?.backgroundAssetId,
+      elements: cloned.elements,
+      layerOrder: cloned.layerOrder,
+      primaryGroupId: cloned.primaryGroupId,
+    })));
+    selectOnly(PRIMARY_SLIDE_ELEMENT_ID);
+  };
+
+  const promoteSlideElementsToTheme = () => {
+    if (!activeCustomTheme) return;
+    const localElements = orderedSupplementalElements(selected.slide);
+    const message = localElements.length
+      ? `Move this slide’s ${localElements.length} supplemental element${localElements.length === 1 ? '' : 's'} into the “${activeCustomTheme.name}” Theme template? They will then appear behind Primary Text/local elements on every slide using this Theme.`
+      : `Clear the element template for “${activeCustomTheme.name}”? This slide has no local supplemental elements to promote.`;
+    if (!window.confirm(message)) return;
+
+    const cloned = cloneSlideElementsWithFreshIds(
+      localElements,
+      localElements.map((element) => element.id),
+    );
+
+    onUpdateTheme({
+      ...activeCustomTheme,
+      templateElements: cloned.elements,
+    });
+
+    if (localElements.length) {
+      commit(updateSlide(presentation, selected.slide.id, (slide) => ({
+        ...slide,
+        elements: [],
+        layerOrder: [PRIMARY_SLIDE_ELEMENT_ID],
+        primaryGroupId: undefined,
+      })));
+      selectOnly(PRIMARY_SLIDE_ELEMENT_ID);
+    }
+  };
+
+  const clearThemeTemplate = () => {
+    if (!activeCustomTheme?.templateElements?.length) return;
+    if (!window.confirm(`Clear all reusable template elements from “${activeCustomTheme.name}”? Linked slides will keep their own local elements.`)) return;
+    onUpdateTheme({ ...activeCustomTheme, templateElements: [] });
+  };
+
   const duplicateSelectedElement = () => {
-    if (!selectedElement) return;
+    if (!selectedElement || selectedElement.source === 'theme') return;
     let element: SlideElement;
     if (isPrimary) {
       const format = resolveSlideFormat(presentation, selected.slide, customThemes);
@@ -722,17 +915,57 @@ export function SlideLayoutEditor({
   };
 
   const moveLayer = (direction: -1 | 1) => {
-    if (!selectedElement) return;
+    if (!selectedElement || selectedElement.source === 'theme') return;
     commit(updateSlide(presentation, selected.slide.id, (slide) => ({
       ...slide,
       layerOrder: nextLayerOrder(slide, selectedElement.id, direction),
     })));
   };
 
+  const groupSelection = () => {
+    const ids = editableSelectedElements.map((element) => element.id);
+    if (ids.length < 2) return;
+    const groupId = `element-group-${crypto.randomUUID()}`;
+
+    commit(updateSlide(presentation, selected.slide.id, (slide) => ({
+      ...slide,
+      primaryGroupId: ids.includes(PRIMARY_SLIDE_ELEMENT_ID) ? groupId : slide.primaryGroupId,
+      elements: (slide.elements ?? []).map((element) =>
+        ids.includes(element.id) ? { ...element, groupId } : element,
+      ),
+    })));
+    setSelectedElementIds(ids);
+  };
+
+  const ungroupSelection = () => {
+    const groupIds = new Set(
+      editableSelectedElements
+        .map((element) => element.groupId)
+        .filter((groupId): groupId is string => Boolean(groupId)),
+    );
+    if (!groupIds.size) return;
+
+    commit(updateSlide(presentation, selected.slide.id, (slide) => ({
+      ...slide,
+      primaryGroupId: slide.primaryGroupId && groupIds.has(slide.primaryGroupId)
+        ? undefined
+        : slide.primaryGroupId,
+      elements: (slide.elements ?? []).map((element) =>
+        element.groupId && groupIds.has(element.groupId)
+          ? { ...element, groupId: undefined }
+          : element,
+      ),
+    })));
+  };
+
   const alignSelection = (
     mode: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom',
   ) => {
-    const targets = selectedElements.length ? selectedElements : selectedElement ? [selectedElement] : [];
+    const targets = editableSelectedElements.length
+      ? editableSelectedElements
+      : selectedElement && selectedElement.source !== 'theme'
+        ? [selectedElement]
+        : [];
     if (!targets.length) return;
 
     const minLeft = Math.min(...targets.map((element) => element.layout.xPercent));
@@ -760,7 +993,7 @@ export function SlideLayoutEditor({
   };
 
   const distributeSelection = (axis: 'horizontal' | 'vertical') => {
-    const targets = [...selectedElements];
+    const targets = [...editableSelectedElements];
     if (targets.length < 3) return;
 
     if (axis === 'horizontal') {
@@ -998,7 +1231,7 @@ export function SlideLayoutEditor({
           <Icon name="grid" />
           <div>
             <strong>SLIDE ELEMENTS</strong>
-            <span>16:9 canvas · multiple text and image elements · drag, resize and reorder</span>
+            <span>16:9 canvas · text, image, shape and grouped elements · drag, resize, reuse and reorder</span>
           </div>
         </div>
         <div className="layoutHeaderActions">
@@ -1007,8 +1240,10 @@ export function SlideLayoutEditor({
           <button className="layoutAddElement" type="button" onClick={addText}>＋ Text</button>
           <button className="layoutAddElement" type="button" onClick={addImage}>＋ Image</button>
           <button className="layoutAddElement" type="button" onClick={addShape}>＋ Shape</button>
-          <button type="button" disabled={!selectedElement} onClick={copySelectedElement}>Copy</button>
-          <button type="button" disabled={!copiedSlideElements.length} onClick={pasteElement}>Paste</button>
+          <button type="button" disabled={!selectedElement} onClick={copySelectedElement}>Copy Element</button>
+          <button type="button" disabled={!copiedSlideElements.length} onClick={pasteElement}>Paste Element</button>
+          <button type="button" onClick={copySlideVisual}>Copy Slide Layout</button>
+          <button type="button" disabled={!copiedSlideVisual} onClick={pasteSlideVisual}>Paste Slide Layout</button>
           <label>
             <input
               type="checkbox"
@@ -1080,10 +1315,12 @@ export function SlideLayoutEditor({
                   }
                 } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
                   event.preventDefault();
-                  copySelectedElement();
+                  if (event.shiftKey) copySlideVisual();
+                  else copySelectedElement();
                 } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') {
                   event.preventDefault();
-                  pasteElement();
+                  if (event.shiftKey) pasteSlideVisual();
+                  else pasteElement();
                 } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'x') {
                   event.preventDefault();
                   cutSelectedElement();
@@ -1130,7 +1367,7 @@ export function SlideLayoutEditor({
 
                 return (
                   <div
-                    className={`layoutElementFrame ${selectedNow ? 'isSelected' : ''} ${activeNow ? 'isActive' : ''} type-${element.type}`}
+                    className={`layoutElementFrame ${selectedNow ? 'isSelected' : ''} ${activeNow ? 'isActive' : ''} ${element.source === 'theme' ? 'isThemeTemplate' : ''} type-${element.type}`}
                     key={element.id}
                     style={elementStyle}
                     onPointerDown={(event) => beginGesture(event, element, 'move')}
@@ -1182,7 +1419,7 @@ export function SlideLayoutEditor({
                       />
                     )}
 
-                    {activeNow ? (
+                    {activeNow && element.source !== 'theme' ? (
                       <>
                         <i className="layoutHandle handle-nw" onPointerDown={(event) => beginGesture(event, element, 'nw')} />
                         <i className="layoutHandle handle-ne" onPointerDown={(event) => beginGesture(event, element, 'ne')} />
@@ -1192,6 +1429,8 @@ export function SlideLayoutEditor({
                           {element.type === 'text' ? 'TEXT' : element.type === 'image' ? 'IMAGE' : 'SHAPE'} · {resolvedElementName(element)}
                         </span>
                       </>
+                    ) : element.source === 'theme' && activeNow ? (
+                      <span className="layoutBoxTag themeBoxTag">THEME · {resolvedElementName(element)}</span>
                     ) : null}
                   </div>
                 );
@@ -1199,7 +1438,7 @@ export function SlideLayoutEditor({
             </div>
           </div>
           <div className="layoutCanvasHint">
-            Drag = move · corners = resize · Shift/Ctrl/Cmd-click = multi-select · snapping uses safe-area, centre and element edges · Ctrl/Cmd+C/V = copy/paste
+            Drag = move · grouped elements move together · Ctrl/Cmd/Shift-click = multi-select · Ctrl/Cmd+C/V = elements · Ctrl/Cmd+Shift+C/V = slide layout
           </div>
         </main>
 
@@ -1225,7 +1464,13 @@ export function SlideLayoutEditor({
                   <strong>{resolvedElementName(element)}</strong>
                   <small>{element.type === 'text' ? element.text.replace(/\n/g, ' / ') : element.name}</small>
                 </div>
-                {element.id === PRIMARY_SLIDE_ELEMENT_ID ? <em>PRIMARY</em> : null}
+                {element.id === PRIMARY_SLIDE_ELEMENT_ID ? (
+                  <em>PRIMARY</em>
+                ) : element.source === 'theme' ? (
+                  <em>THEME</em>
+                ) : element.groupId ? (
+                  <em>GROUP</em>
+                ) : null}
               </button>
             ))}
           </div>
@@ -1236,27 +1481,43 @@ export function SlideLayoutEditor({
               {selectionCount} selected · Ctrl/Cmd/Shift-click Layers or canvas to multi-select
             </span>
             <div className="alignToolGrid">
-              <button type="button" onClick={() => alignSelection('left')}>Left</button>
-              <button type="button" onClick={() => alignSelection('hcenter')}>H Centre</button>
-              <button type="button" onClick={() => alignSelection('right')}>Right</button>
-              <button type="button" onClick={() => alignSelection('top')}>Top</button>
-              <button type="button" onClick={() => alignSelection('vcenter')}>V Centre</button>
-              <button type="button" onClick={() => alignSelection('bottom')}>Bottom</button>
+              <button type="button" disabled={!editableSelectionCount} onClick={() => alignSelection('left')}>Left</button>
+              <button type="button" disabled={!editableSelectionCount} onClick={() => alignSelection('hcenter')}>H Centre</button>
+              <button type="button" disabled={!editableSelectionCount} onClick={() => alignSelection('right')}>Right</button>
+              <button type="button" disabled={!editableSelectionCount} onClick={() => alignSelection('top')}>Top</button>
+              <button type="button" disabled={!editableSelectionCount} onClick={() => alignSelection('vcenter')}>V Centre</button>
+              <button type="button" disabled={!editableSelectionCount} onClick={() => alignSelection('bottom')}>Bottom</button>
             </div>
             <div className="distributeToolGrid">
               <button
                 type="button"
-                disabled={selectionCount < 3}
+                disabled={editableSelectionCount < 3}
                 onClick={() => distributeSelection('horizontal')}
               >
                 Distribute H
               </button>
               <button
                 type="button"
-                disabled={selectionCount < 3}
+                disabled={editableSelectionCount < 3}
                 onClick={() => distributeSelection('vertical')}
               >
                 Distribute V
+              </button>
+            </div>
+            <div className="groupToolGrid">
+              <button
+                type="button"
+                disabled={editableSelectionCount < 2}
+                onClick={groupSelection}
+              >
+                Group
+              </button>
+              <button
+                type="button"
+                disabled={!editableSelectedElements.some((element) => element.groupId)}
+                onClick={ungroupSelection}
+              >
+                Ungroup
               </button>
             </div>
             <small>
@@ -1264,8 +1525,39 @@ export function SlideLayoutEditor({
             </small>
           </section>
 
+          <section className="elementInspectorSection themeTemplateTools">
+            <strong>THEME TEMPLATE</strong>
+            {activeCustomTheme ? (
+              <>
+                <span>
+                  {activeCustomTheme.templateElements?.length ?? 0} inherited template element{(activeCustomTheme.templateElements?.length ?? 0) === 1 ? '' : 's'} · rendered behind local slide elements
+                </span>
+                <button type="button" onClick={promoteSlideElementsToTheme}>
+                  {selected.slide.elements?.length ? 'Promote Local Elements to Theme' : 'Clear / Replace Theme Template'}
+                </button>
+                <button
+                  type="button"
+                  disabled={!activeCustomTheme.templateElements?.length}
+                  onClick={clearThemeTemplate}
+                >
+                  Clear Theme Template
+                </button>
+              </>
+            ) : (
+              <span>Apply or create a custom Theme before promoting reusable slide elements.</span>
+            )}
+          </section>
+
           {selectedElement ? (
             <>
+              {isThemeTemplate ? (
+                <section className="elementInspectorSection themeElementLocked">
+                  <strong>INHERITED THEME ELEMENT</strong>
+                  <span>This layer is shared by every slide using the Theme. Copy it and paste to create an editable local version.</span>
+                  <button type="button" onClick={copySelectedElement}>Copy Theme Element</button>
+                </section>
+              ) : null}
+              <fieldset className="elementInspectorFieldset" disabled={isThemeTemplate}>
               <section className="elementInspectorSection elementIdentity">
                 <strong>SELECTED ELEMENT</strong>
                 {isPrimary ? (
@@ -1542,6 +1834,7 @@ export function SlideLayoutEditor({
                   </button>
                 </section>
               ) : null}
+              </fieldset>
             </>
           ) : null}
         </aside>

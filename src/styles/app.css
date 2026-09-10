@@ -1374,3 +1374,29 @@ kbd {
 .elementField input[type=number]:focus{border-color:#4d83aa}
 .layoutHeaderActions{flex-wrap:wrap;justify-content:flex-end}
 .multiElementEditor .layoutEditorHeader{height:auto;min-height:38px;padding-top:4px;padding-bottom:4px}
+
+
+/* v0.5.10 slide layout templates + persistent grouping */
+.layoutElementFrame.isThemeTemplate{border-style:dashed;outline-color:rgba(157,126,194,.5);cursor:default}
+.layoutElementFrame.isThemeTemplate.isSelected{border-color:#8f73ad;background:rgba(74,51,96,.08)}
+.layoutElementFrame.isThemeTemplate.isActive{box-shadow:0 0 0 1px rgba(143,115,173,.35)}
+.themeBoxTag{background:#66507f}
+.layoutLayerList button em{min-width:max-content}
+.layoutLayerList button:has(em:last-child){position:relative}
+.elementInspectorFieldset{min-width:0;margin:0;padding:0;border:0}
+.elementInspectorFieldset:disabled{opacity:.52}
+.themeElementLocked{background:#211a29}
+.themeElementLocked>strong{color:#aa91c2}
+.themeElementLocked>span{display:block;color:#81718f;font-size:6px;line-height:1.35}
+.themeElementLocked>button,.themeTemplateTools button,.groupToolGrid button{height:23px;border:1px solid #453d4e;border-radius:2px;background:#29222f;color:#aa98b8;cursor:pointer;font-size:6.2px}
+.themeElementLocked>button{width:100%;margin-top:6px}
+.themeElementLocked>button:hover,.themeTemplateTools button:hover:not(:disabled){background:#392d44;color:#fff}
+.themeTemplateTools{background:#191720}
+.themeTemplateTools>span{display:block;margin-bottom:6px;color:#756b80;font-size:6px;line-height:1.35}
+.themeTemplateTools>button{width:100%;margin-top:4px}
+.themeTemplateTools>button:disabled{opacity:.3;cursor:not-allowed}
+.groupToolGrid{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:4px}
+.groupToolGrid button{border-color:#3b4850;background:#222c32;color:#91a2ad}
+.groupToolGrid button:hover:not(:disabled){background:#30404a;color:#fff}
+.groupToolGrid button:disabled{opacity:.3;cursor:not-allowed}
+.layoutLayerList button em{padding:2px 3px;border-radius:2px;background:#2b2234}
