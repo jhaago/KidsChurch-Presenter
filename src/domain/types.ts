@@ -71,10 +71,28 @@ export const DEFAULT_SCREEN_ASSIGNMENTS: Record<ScreenKind, ScreenAssignment> = 
   },
 };
 
+export type TextAlignment = 'left' | 'center' | 'right';
+export type VerticalAlignment = 'top' | 'middle' | 'bottom';
+
+export interface SlideTextFormat {
+  fontFamily: string;
+  fontSizeVw: number;
+  fontWeight: number;
+  lineHeight: number;
+  textAlign: TextAlignment;
+  verticalAlign: VerticalAlignment;
+  textColor: string;
+  shadow: boolean;
+  uppercase: boolean;
+  marginPercent: number;
+}
+
 export interface Slide {
   id: string;
   text: string;
   notes?: string;
+  format?: Partial<SlideTextFormat>;
+  backgroundAssetId?: string | null;
 }
 
 export interface SlideGroup {
@@ -89,6 +107,9 @@ export interface Presentation {
   title: string;
   category: 'song' | 'slides' | 'scripture' | 'timer';
   groups: SlideGroup[];
+  themeId?: string;
+  format?: Partial<SlideTextFormat>;
+  backgroundAssetId?: string;
 }
 
 export interface SongLyricCue {
@@ -182,6 +203,7 @@ export interface LiveSlideState {
   slideId: string;
   arrangementEntryId?: string;
   text: string;
+  format?: SlideTextFormat;
 }
 
 export interface LiveMediaState {

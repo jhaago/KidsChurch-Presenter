@@ -5,6 +5,7 @@ import {
   effectiveArrangement,
   occurrenceLabel,
 } from '../domain/songArrangement';
+import { resolveBackgroundAssetId, resolveSlideFormat } from '../domain/themes';
 import type { MediaAsset, OutputState, PlaylistItem, Presentation, Slide, Song } from '../domain/types';
 import { PresentationEditorPanel } from './PresentationEditorPanel';
 import { SongArrangementEditor } from './SongArrangementEditor';
@@ -248,6 +249,7 @@ export function SlideWorkspace({
           />
         ) : viewMode === 'edit' && presentation ? (
           <PresentationEditorPanel
+            availableAssets={availableAssets}
             isSongPresentation={Boolean(song)}
             onChange={onChangePresentation}
             presentation={presentation}
@@ -296,6 +298,21 @@ export function SlideWorkspace({
                         ? output.slide.arrangementEntryId === arrangementEntryId ||
                           (!output.slide.arrangementEntryId && selectedArrangementEntryId === arrangementEntryId)
                         : true);
+                    const format = resolveSlideFormat(presentation, slide);
+                    const backgroundId = resolveBackgroundAssetId(presentation, slide);
+                    const background = backgroundId
+                      ? availableAssets.find((asset) => asset.id === backgroundId)
+                      : undefined;
+                    const alignItems = format.textAlign === 'left'
+                      ? 'flex-start'
+                      : format.textAlign === 'right'
+                        ? 'flex-end'
+                        : 'center';
+                    const justifyContent = format.verticalAlign === 'top'
+                      ? 'flex-start'
+                      : format.verticalAlign === 'bottom'
+                        ? 'flex-end'
+                        : 'center';
                     return (
                       <button
                         aria-label={`${label}, slide ${sequence}${live ? ', live' : ''}`}
@@ -308,7 +325,27 @@ export function SlideWorkspace({
                         type="button"
                       >
                         <span className="slideSurface">
-                          <span className="thumbnailText">
+                          {background?.fileUrl && background.kind === 'still' ? (
+                            <img className="thumbnailBackground" src={background.fileUrl} alt="" />
+                          ) : background?.fileUrl && background.kind === 'motion' ? (
+                            <video className="thumbnailBackground" src={background.fileUrl} muted loop autoPlay playsInline />
+                          ) : null}
+                          <span
+                            className="thumbnailText"
+                            style={{
+                              inset: `${Math.max(4, format.marginPercent * 0.7)}% ${Math.max(4, format.marginPercent * 0.7)}%`,
+                              alignItems,
+                              justifyContent,
+                              color: format.textColor,
+                              fontFamily: format.fontFamily,
+                              fontWeight: format.fontWeight,
+                              lineHeight: format.lineHeight,
+                              textAlign: format.textAlign,
+                              textShadow: format.shadow ? '0 1px 3px #000' : 'none',
+                              textTransform: format.uppercase ? 'uppercase' : 'none',
+                              fontSize: `clamp(7px, ${Math.max(0.55, format.fontSizeVw * 0.16)}vw, 14px)`,
+                            }}
+                          >
                             {slide.text.split('\n').map((line, lineIndex) => (
                               <span key={`${key}:${slide.id}:${lineIndex}`}>{line}</span>
                             ))}

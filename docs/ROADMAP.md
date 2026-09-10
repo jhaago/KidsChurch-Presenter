@@ -224,10 +224,31 @@ Status: implemented in source.
 - source-group deletion sanitizes arrangement/cue references
 - Song duplication remaps arrangement/cue occurrence IDs
 
+## v0.5.5 — Editing history + formatting foundation
+
+Status: implemented in source.
+
+- Presentation Editor undo/redo
+- Ctrl/Cmd+Z, Ctrl/Cmd+Y and Shift+Cmd+Z shortcuts
+- coalesced typing history
+- built-in Theme presets
+- presentation-wide font / size / weight / line-height controls
+- horizontal and vertical text alignment
+- text colour / shadow / uppercase / safe-area margin
+- ordinary-presentation still/motion background assignment
+- per-slide format overrides
+- per-slide background inheritance / replacement / explicit none
+- format-aware thumbnails
+- Audience output uses resolved saved formatting
+- live formatting refresh for the currently-live slide
+- Song Setup remains the default Song-background owner
+
 ### Next v0.5 passes
 
-- undo/redo
-- themes / text formatting baseline
+- expand undo/redo history across Song Setup / Arrangement / Timing changes
+- richer text boxes and multi-element slide layouts
+- drag-based positioning / resize
+- user-created named Themes
 - more ProPresenter-like thumbnail behaviour
 
 ## v0.6 — Bible and timers

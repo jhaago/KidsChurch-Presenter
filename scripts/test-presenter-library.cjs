@@ -18,12 +18,20 @@ async function main() {
         id: 'p1',
         title: 'Editable Slides',
         category: 'slides',
+        themeId: 'clean',
+        format: { fontSizeVw: 5.2, textColor: '#ffeeaa' },
+        backgroundAssetId: 'bg-main',
         groups: [
           {
             id: 'g1',
             name: 'Group',
             type: 'generic',
-            slides: [{ id: 's1', text: 'Hello' }],
+            slides: [{
+              id: 's1',
+              text: 'Hello',
+              format: { textAlign: 'left', uppercase: true },
+              backgroundAssetId: null,
+            }],
           },
         ],
       },
@@ -66,6 +74,11 @@ async function main() {
   loaded = await store.load();
   assert.equal(loaded.data.presentations[0].title, 'Editable Slides');
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].text, 'Hello');
+  assert.equal(loaded.data.presentations[0].themeId, 'clean');
+  assert.equal(loaded.data.presentations[0].format.fontSizeVw, 5.2);
+  assert.equal(loaded.data.presentations[0].backgroundAssetId, 'bg-main');
+  assert.equal(loaded.data.presentations[0].groups[0].slides[0].format.textAlign, 'left');
+  assert.equal(loaded.data.presentations[0].groups[0].slides[0].backgroundAssetId, null);
   assert.equal(loaded.data.playlists.length, 2);
   assert.equal(loaded.data.playlists[0].serviceDate, '2026-09-13');
   assert.equal(loaded.data.activePlaylistId, 'service-next');

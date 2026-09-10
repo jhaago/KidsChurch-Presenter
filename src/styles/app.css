@@ -1129,3 +1129,49 @@ kbd {
   .arrangementSequenceRow{grid-template-columns:23px 4px minmax(100px,1fr)}
   .arrangementRowActions{grid-column:3}
 }
+
+
+/* v0.5.5 editing history + formatting foundation */
+.editorHeaderActions{display:flex;align-items:center;gap:4px}
+.editorHeaderActions button{height:25px;padding:0 7px;border:1px solid #3b4349;border-radius:2px;background:#252b30;color:#959ea5;cursor:pointer;font-size:7px}
+.editorHeaderActions button:hover:not(:disabled){background:#30373d;color:#fff}
+.editorHeaderActions button:disabled{opacity:.3;cursor:not-allowed}
+.presentationFormatPanel{margin:0 8px 8px;border:1px solid #31383e;background:#181d21}
+.presentationFormatPanel>header{min-height:34px;padding:5px 7px;border-bottom:1px solid #2e353a;background:#1e2429;display:flex;align-items:center;justify-content:space-between}
+.presentationFormatPanel>header>div{display:flex;align-items:center;gap:6px}
+.presentationFormatPanel>header svg{width:13px;height:13px;color:#7397b2}
+.presentationFormatPanel>header strong{display:block;color:#c5cbd0;font-size:8px;letter-spacing:.08em}
+.presentationFormatPanel>header span{display:block;margin-top:1px;color:#68737b;font-size:6.5px}
+.presentationFormatPanel>header>small{padding:3px 5px;border:1px solid #3b4650;border-radius:2px;background:#20272c;color:#8fa4b4;font-size:6.5px}
+.presentationThemeGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:7px;border-bottom:1px solid #2c3338}
+.presentationThemeGrid label,.formatControls label,.slideFormatBody label,.slideFormatControls label{display:flex;flex-direction:column;gap:3px}
+.presentationThemeGrid label>span,.formatControls label>span,.slideFormatBody label>span,.slideFormatControls label>span{color:#6c767e;font-size:6px;font-weight:800;letter-spacing:.08em}
+.presentationThemeGrid select,.formatControls select,.formatControls input[type=number],.slideFormatBody select,.slideFormatControls select,.slideFormatControls input[type=number]{height:25px;padding:0 5px;border:1px solid #394148;border-radius:2px;background:#111417;color:#bfc5ca;font-size:7px;outline:none}
+.presentationThemeGrid select:focus,.formatControls select:focus,.formatControls input:focus,.slideFormatBody select:focus,.slideFormatControls select:focus,.slideFormatControls input:focus{border-color:#4b7fa6}
+.presentationThemeGrid select:disabled{opacity:.45}
+.presentationThemeGrid small{color:#626c74;font-size:6px;line-height:1.25}
+.formatControls{display:grid;grid-template-columns:minmax(160px,1.6fr) repeat(6,minmax(66px,.7fr)) 72px 72px auto;gap:5px;padding:7px;align-items:end}
+.formatControls .formatColorInput,.slideFormatControls .formatColorInput{width:100%;height:25px;padding:2px;border:1px solid #394148;border-radius:2px;background:#111417}
+.formatToggle,.slideFormatToggle{align-items:center!important;justify-content:flex-end}
+.formatToggle input,.slideFormatToggle input{width:16px;height:16px;accent-color:#4f87b2}
+.resetFormatButton{height:25px;padding:0 7px;border:1px solid #4a4540;border-radius:2px;background:#282522;color:#a8998d;cursor:pointer;font-size:6.5px}
+.resetFormatButton:hover{background:#34302c;color:#ddd0c5}
+.presentationEditSlide{grid-template-columns:26px minmax(180px,1.4fr) minmax(140px,.8fr) 50px}
+.editSlideFormat{grid-column:2/-1;border-top:1px solid #2b3237;padding-top:4px}
+.editSlideFormat summary{cursor:pointer;color:#72808a;font-size:6.5px;font-weight:800;letter-spacing:.06em;user-select:none}
+.editSlideFormat[open] summary{margin-bottom:5px;color:#9aa6af}
+.slideFormatBody{display:grid;grid-template-columns:150px minmax(180px,1fr);gap:6px;padding:6px;border:1px solid #2d3439;background:#121619}
+.slideFormatControls{grid-column:1/-1;display:grid;grid-template-columns:80px 90px 90px 80px 80px 80px;gap:5px;align-items:end}
+.thumbnailBackground{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.thumbnailText{z-index:1}
+@media(max-width:1350px){
+  .formatControls{grid-template-columns:repeat(5,minmax(80px,1fr))}
+  .formatFont{grid-column:span 2}
+  .slideFormatControls{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:1050px){
+  .presentationThemeGrid{grid-template-columns:1fr}
+  .formatControls{grid-template-columns:repeat(3,1fr)}
+  .slideFormatBody{grid-template-columns:1fr}
+  .editSlideFormat{grid-column:2}
+}

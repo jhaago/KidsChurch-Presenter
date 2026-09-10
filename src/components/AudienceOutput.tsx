@@ -1,4 +1,5 @@
-import type { OutputState } from '../domain/types';
+import type { CSSProperties } from 'react';
+import type { OutputState, SlideTextFormat } from '../domain/types';
 
 interface AudienceOutputProps {
   output: OutputState;
@@ -30,6 +31,35 @@ function MediaLayer({ output, preview }: { output: OutputState; preview: boolean
   return <div className="audienceMediaFallback" />;
 }
 
+function liveTextStyle(format: SlideTextFormat | undefined, preview: boolean): CSSProperties | undefined {
+  if (!format) return undefined;
+
+  const alignItems =
+    format.textAlign === 'left' ? 'flex-start' :
+    format.textAlign === 'right' ? 'flex-end' :
+    'center';
+  const justifyContent =
+    format.verticalAlign === 'top' ? 'flex-start' :
+    format.verticalAlign === 'bottom' ? 'flex-end' :
+    'center';
+
+  return {
+    inset: `${format.marginPercent}%`,
+    alignItems,
+    justifyContent,
+    color: format.textColor,
+    fontFamily: format.fontFamily,
+    fontSize: preview
+      ? `clamp(7px, ${Math.max(0.5, format.fontSizeVw * 0.17)}vw, 16px)`
+      : `clamp(24px, ${format.fontSizeVw}vw, 150px)`,
+    fontWeight: format.fontWeight,
+    lineHeight: format.lineHeight,
+    textAlign: format.textAlign,
+    textShadow: format.shadow ? '0 3px 14px rgba(0,0,0,.8)' : 'none',
+    textTransform: format.uppercase ? 'uppercase' : 'none',
+  };
+}
+
 export function AudienceOutput({ output, preview = false }: AudienceOutputProps) {
   const classes = [preview ? 'preview' : 'audienceCanvas', output.media ? 'hasMedia' : '']
     .filter(Boolean)
@@ -52,7 +82,10 @@ export function AudienceOutput({ output, preview = false }: AudienceOutputProps)
     <div className={classes}>
       <MediaLayer output={output} preview={preview} />
       {output.slide ? (
-        <div className={preview ? 'previewText' : 'audienceText'}>
+        <div
+          className={preview ? 'previewText' : 'audienceText'}
+          style={liveTextStyle(output.slide.format, preview)}
+        >
           {output.slide.text.split('\n').map((line, index) => (
             <span key={`${output.slide?.slideId}-${index}`}>{line}</span>
           ))}

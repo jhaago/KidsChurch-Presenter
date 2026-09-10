@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.5.4-alpha.1 — Song Arrangements**
+**v0.5.5-alpha.1 — Editing History + Formatting Foundation**
 
 Implemented in source:
 
@@ -102,6 +102,17 @@ Implemented in source:
 - arrangement edits clear stale timing cues with an explicit warning
 - deleting source groups sanitizes stale arrangement/cue references
 - duplicated Songs receive independent arrangement IDs and remapped cue occurrence IDs
+- Presentation Editor undo/redo with Ctrl/Cmd+Z, Ctrl/Cmd+Y and Shift+Cmd+Z
+- typing edits are coalesced into useful undo steps rather than one character per history entry
+- reusable built-in presentation Theme presets
+- presentation-wide font, size, weight, line-height, alignment, vertical position, colour, shadow, uppercase and margin controls
+- presentation-wide still/motion background assignment
+- optional per-slide text-format overrides
+- optional per-slide background override, including explicit No Background
+- slide thumbnails reflect resolved formatting and local still/motion backgrounds
+- Audience output renders the saved resolved format rather than a hard-coded text style
+- live slide formatting updates when the currently-live slide is edited
+- Song Setup remains the owner of the default Song background; individual lyric slides can override it
 
 ## Run on macOS or Windows
 
@@ -222,6 +233,24 @@ The current editor supports:
 Changes autosave after a short debounce. The desktop process owns the saved JSON file and keeps the previous successful save as a backup. If the primary library file is unreadable on launch, Presenter attempts to recover the backup.
 
 The built-in demo service is now only the first-run seed. After the first successful save, the editable saved library becomes the source of truth.
+
+## Presentation formatting and undo/redo
+
+The Presentation Editor now has an application-level editing history for presentation changes.
+
+- **Ctrl/Cmd+Z** — Undo
+- **Ctrl/Cmd+Y** — Redo
+- **Shift+Cmd+Z** — Redo on macOS
+- Undo/Redo buttons are also available in the editor header
+- continuous typing in the same field is grouped into a sensible history step
+
+The first Theme/formatting foundation is also implemented. A presentation can choose a reusable built-in Theme and then apply presentation-wide overrides for font family, size, weight, line height, horizontal alignment, vertical position, text colour, shadow, uppercase and safe-area margin.
+
+Still or motion backgrounds can be assigned to ordinary presentations. Songs continue to use **Song Setup** for their default background so there is only one clear owner for that setting.
+
+Each individual slide can optionally override the presentation text format and/or background. A slide can inherit the presentation/Song background, choose another still/motion resource, or explicitly choose **No Background**.
+
+Formatting is saved in the presenter library and resolved into the live Audience state. Slide thumbnails use the same resolved formatting rules so the operator sees a useful approximation before triggering the slide.
 
 ## Song Arrangements
 

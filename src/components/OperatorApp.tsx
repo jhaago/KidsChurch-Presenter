@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { useSongTransport } from '../audio/useSongTransport';
 import { arrangedSlides, sanitizeSongForPresentation } from '../domain/songArrangement';
+import { resolveBackgroundAssetId, resolveSlideFormat } from '../domain/themes';
 import {
   createBlankPresentation,
   createBlankService,
@@ -290,9 +291,15 @@ export function OperatorApp() {
       : currentIndex >= 0
         ? sourceSlides[currentIndex + 1] ?? null
         : null;
-    const background = song?.playbackMode !== 'lyrics-video' && song?.backgroundAssetId
-      ? allMediaAssets.find((asset) => asset.id === song.backgroundAssetId)
+    const presentationBackgroundId = resolveBackgroundAssetId(presentation, slide);
+    const backgroundId = slide.backgroundAssetId === null
+      ? undefined
+      : presentationBackgroundId ??
+        (song?.playbackMode !== 'lyrics-video' ? song?.backgroundAssetId : undefined);
+    const background = backgroundId
+      ? allMediaAssets.find((asset) => asset.id === backgroundId)
       : undefined;
+    const format = resolveSlideFormat(presentation, slide);
 
     setOutput((current) => ({
       ...current,
@@ -302,6 +309,7 @@ export function OperatorApp() {
         slideId: slide.id,
         arrangementEntryId: currentOccurrence?.arrangementEntryId,
         text: slide.text,
+        format,
       },
       media: background ? liveMediaFromAsset(background, 'background') : current.media,
       black: false,
@@ -430,13 +438,29 @@ export function OperatorApp() {
       ? allSlides(updatedPresentation).find((slide) => slide.id === output.slide?.slideId)
       : undefined;
     if (liveSlide) {
+      const liveBackgroundId = resolveBackgroundAssetId(updatedPresentation, liveSlide);
+      const linkedLiveSong = songs.find((song) => song.presentationId === updatedPresentation.id);
+      const effectiveBackgroundId = liveSlide.backgroundAssetId === null
+        ? undefined
+        : liveBackgroundId ??
+          (linkedLiveSong?.playbackMode !== 'lyrics-video' ? linkedLiveSong?.backgroundAssetId : undefined);
+      const liveBackground = effectiveBackgroundId
+        ? allMediaAssets.find((asset) => asset.id === effectiveBackgroundId)
+        : undefined;
+
       setOutput((current) => ({
         ...current,
         slide: current.slide ? {
           ...current.slide,
           presentationTitle: updatedPresentation.title,
           text: liveSlide.text,
+          format: resolveSlideFormat(updatedPresentation, liveSlide),
         } : null,
+        media: liveBackground
+          ? liveMediaFromAsset(liveBackground, 'background')
+          : current.media?.playbackRole === 'background'
+            ? null
+            : current.media,
       }));
     }
 
@@ -473,7 +497,7 @@ export function OperatorApp() {
         notes: currentSlide?.notes ?? null,
       };
     });
-  }, [output.slide, presentations, songs]);
+  }, [allMediaAssets, output.slide, presentations, songs]);
 
   const updateSong = useCallback((updatedSong: Song) => {
     const previous = songs.find((song) => song.id === updatedSong.id);
