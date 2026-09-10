@@ -155,11 +155,27 @@ export interface Slide {
   backgroundAssetId?: string | null;
 }
 
+export type PresentationCueColor = 'blue' | 'green' | 'amber' | 'red' | 'purple' | 'slate';
+
+export interface PresentationCueAction {
+  id: string;
+  type: 'media' | 'audio';
+  assetId: string;
+}
+
+export interface PresentationCue {
+  id: string;
+  title: string;
+  color?: PresentationCueColor;
+  actions: PresentationCueAction[];
+}
+
 export interface SlideGroup {
   id: string;
   name: string;
   type: SlideGroupType;
   slides: Slide[];
+  cues?: PresentationCue[];
 }
 
 export interface Presentation {
