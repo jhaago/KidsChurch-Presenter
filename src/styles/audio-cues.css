@@ -1,0 +1,233 @@
+.audioCuePanel {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 210px minmax(390px, 1fr) minmax(285px, .82fr);
+  overflow: hidden;
+  background: #15181b;
+}
+
+.audioCueLibrary,
+.audioCueControls,
+.audioSongTransport {
+  min-width: 0;
+  min-height: 0;
+  padding: 7px 9px;
+  border-right: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.audioSongTransport { border-right: 0; }
+
+.audioCueLibrary {
+  display: flex;
+  flex-direction: column;
+  background: #191c1f;
+}
+
+.audioCueLibrary > header {
+  flex: 0 0 22px;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  color: #a8afb6;
+  font-size: 8px;
+  letter-spacing: .09em;
+}
+
+.audioCueLibrary > header svg { width: 13px; height: 13px; }
+.audioCueLibrary > header span { color: #697078; font-size: 9px; }
+
+.audioCueAssetList {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.audioCueAssetList > button {
+  flex: 0 0 25px;
+  min-width: 0;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  color: #aeb4ba;
+  text-align: left;
+  cursor: pointer;
+}
+
+.audioCueAssetList > button:hover { background: #25292d; }
+.audioCueAssetList > button.isSelected { background: #285b87; color: #fff; }
+.audioCueAssetList > button.isActive { box-shadow: inset 3px 0 0 var(--live); }
+.audioCueAssetList > button svg { width: 12px; height: 12px; }
+.audioCueAssetList > button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.audioCueAssetList > button b { color: #ff8d8d; font-size: 7px; letter-spacing: .08em; }
+.audioCueEmpty { padding: 12px 4px; color: #6c737a; font-size: 9px; }
+
+.audioCueControls,
+.audioSongTransport {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #171a1d;
+}
+
+.audioCueTitle {
+  min-height: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.audioCueTitle > div { min-width: 0; }
+.audioCueTitle small { display: block; color: #676f77; font-size: 7px; font-weight: 750; letter-spacing: .12em; }
+.audioCueTitle strong { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #d8dce0; font-size: 11px; }
+.audioCueTitle > span { flex: 0 0 auto; color: #8fa6b9; font-size: 7px; font-weight: 800; letter-spacing: .1em; }
+
+.audioCueTransportButtons,
+.audioCueTrimRow,
+.audioCueStemRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.audioCueTransportButtons button,
+.audioCueTrimRow button,
+.audioCueStemRow button,
+.songTrimRow button {
+  min-height: 25px;
+  padding: 0 8px;
+  border: 1px solid #373c42;
+  border-radius: 3px;
+  background: #24282c;
+  color: #bfc4c9;
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.audioCueTransportButtons button:hover,
+.audioCueTrimRow button:hover,
+.songTrimRow button:hover { background: #2d3237; color: #fff; }
+.audioCueTransportButtons button:disabled,
+.audioCueTrimRow button:disabled { opacity: .45; cursor: default; }
+.audioCueTransportButtons button.isPrimary,
+.audioCueTrimRow button.audioCueApply { border-color: #3877aa; background: #285b87; color: #fff; }
+
+.audioCueLoop {
+  min-height: 25px;
+  padding: 0 7px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #34393f;
+  border-radius: 3px;
+  color: #aeb4ba;
+  font-size: 9px;
+  cursor: pointer;
+}
+.audioCueLoop input { margin: 0; accent-color: #4a9be2; }
+
+.audioCueTrimRow { flex-wrap: nowrap; }
+.audioCueTrimRow label {
+  min-height: 25px;
+  width: 89px;
+  padding: 0 5px;
+  border: 1px solid #33383e;
+  border-radius: 3px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  background: #1c2023;
+}
+.audioCueTrimRow label span { color: #7b838b; font-size: 7px; font-weight: 800; }
+.audioCueTrimRow input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #e1e4e7;
+  font-size: 9px;
+}
+
+.audioCueSeek {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 42px minmax(80px, 1fr) 42px;
+  align-items: center;
+  gap: 6px;
+  color: #858d94;
+  font-size: 8px;
+}
+.audioCueSeek input { min-width: 0; width: 100%; accent-color: #4a9be2; }
+.audioCueSeek span:last-child { text-align: right; }
+.audioCueError,
+.audioCueNotice {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #d9b06c;
+  font-size: 8px;
+}
+.audioCueError { color: #f08c8c; }
+.audioSongEmpty { margin: 9px 0 0; color: #6d747b; font-size: 9px; line-height: 1.4; }
+
+.audioCueStemRow {
+  overflow-x: auto;
+  padding-bottom: 1px;
+}
+.audioCueStemRow button {
+  flex: 0 0 auto;
+  min-height: 21px;
+  padding: 0 5px;
+  color: #7f878e;
+  font-size: 7px;
+}
+.audioCueStemRow button.isEnabled { color: #bce6c8; border-color: #376a48; background: #203b29; }
+
+.songTrimSection { grid-column: 1 / -1; }
+.songTrimRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.songTrimRow label {
+  min-height: 32px;
+  min-width: 150px;
+  padding: 0 8px;
+  border: 1px solid #34393f;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1b1e21;
+}
+.songTrimRow label > span { color: #808991; font-size: 8px; font-weight: 800; letter-spacing: .08em; }
+.songTrimRow label > small { color: #687078; font-size: 8px; }
+.songTrimRow input {
+  width: 80px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #e1e5e8;
+  font-size: 11px;
+}
+
+@media (max-width: 1180px) {
+  .audioCuePanel { grid-template-columns: 170px minmax(330px, 1fr) minmax(250px, .72fr); }
+  .audioCueTrimRow button { padding: 0 5px; }
+}
