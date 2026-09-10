@@ -58,11 +58,15 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function finiteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 function songTrim(song: Song, sourceDurationMs: number) {
   if (sourceDurationMs <= 1) return { startMs: 0, endMs: sourceDurationMs, durationMs: sourceDurationMs };
-  const requestedStart = Number.isFinite(song.audio.trimStartMs) ? song.audio.trimStartMs ?? 0 : 0;
+  const requestedStart = finiteNumber(song.audio.trimStartMs) ? song.audio.trimStartMs : 0;
   const startMs = clamp(Math.max(0, requestedStart), 0, sourceDurationMs - 1);
-  const requestedEnd = Number.isFinite(song.audio.trimEndMs) ? song.audio.trimEndMs ?? sourceDurationMs : sourceDurationMs;
+  const requestedEnd = finiteNumber(song.audio.trimEndMs) ? song.audio.trimEndMs : sourceDurationMs;
   const endMs = clamp(requestedEnd, startMs + 1, sourceDurationMs);
   return { startMs, endMs, durationMs: endMs - startMs };
 }
@@ -123,7 +127,6 @@ export function useSongTransport(assets: MediaAsset[]) {
   const activeSongRef = useRef<Song | null>(null);
   const startOffsetMsRef = useRef(0);
   const scheduledStartTimeRef = useRef(0);
-  const sourceTrimStartMsRef = useRef(0);
 
   const updateState = useCallback((patch: Partial<SongTransportState>) => {
     setState((current) => {
@@ -218,7 +221,6 @@ export function useSongTransport(assets: MediaAsset[]) {
       activeSourcesRef.current.set(track.key, { source, gain });
     }
 
-    sourceTrimStartMsRef.current = trim.startMs;
     startOffsetMsRef.current = logicalPositionMs;
     scheduledStartTimeRef.current = startAt;
   }, [ensureContext, stopSources]);
@@ -285,7 +287,6 @@ export function useSongTransport(assets: MediaAsset[]) {
         const lastCue = song.lyricCues.reduce((latest, cue) => Math.max(latest, cue.timeMs), 0);
         const durationMs = Math.max(lastCue + 10000, 300000);
         await ensureContext();
-        sourceTrimStartMsRef.current = 0;
         startOffsetMsRef.current = 0;
         scheduledStartTimeRef.current = audioContextRef.current?.currentTime ?? 0;
         updateState({
@@ -353,7 +354,6 @@ export function useSongTransport(assets: MediaAsset[]) {
 
   const stop = useCallback(() => {
     stopSources();
-    sourceTrimStartMsRef.current = 0;
     startOffsetMsRef.current = 0;
     scheduledStartTimeRef.current = 0;
     updateState({
