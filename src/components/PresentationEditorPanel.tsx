@@ -90,10 +90,11 @@ export function PresentationEditorPanel({
 
   const commit = (next: Presentation, mergeKey?: string) => {
     const now = Date.now();
+    const lastMerge = lastMergeRef.current;
     const merge =
       Boolean(mergeKey) &&
-      lastMergeRef.current?.key === mergeKey &&
-      now - lastMergeRef.current.at < 750;
+      lastMerge?.key === mergeKey &&
+      Boolean(lastMerge && now - lastMerge.at < 750);
 
     if (!merge) {
       pastRef.current.push(structuredClone(presentation));
