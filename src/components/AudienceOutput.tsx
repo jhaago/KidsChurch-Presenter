@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { OutputState, SlideBoxLayout, SlideTextFormat } from '../domain/types';
+import type { LiveSlideElement, OutputState, SlideBoxLayout, SlideTextFormat } from '../domain/types';
 
 interface AudienceOutputProps {
   output: OutputState;
@@ -68,6 +68,53 @@ function liveTextStyle(
   };
 }
 
+function SlideElementLayer({
+  element,
+  index,
+  preview,
+}: {
+  element: LiveSlideElement;
+  index: number;
+  preview: boolean;
+}) {
+  const zIndex = 2 + index;
+
+  if (element.type === 'image') {
+    if (!element.fileUrl) return null;
+    return (
+      <img
+        className="audienceSlideImageElement"
+        src={element.fileUrl}
+        alt=""
+        style={{
+          left: `${element.layout.xPercent}%`,
+          top: `${element.layout.yPercent}%`,
+          width: `${element.layout.widthPercent}%`,
+          height: `${element.layout.heightPercent}%`,
+          objectFit: element.fit,
+          opacity: element.opacity,
+          zIndex,
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={preview ? 'previewText audienceSlideTextElement' : 'audienceText audienceSlideTextElement'}
+      style={{
+        ...liveTextStyle(element.format, element.layout, preview),
+        opacity: element.opacity,
+        zIndex,
+      }}
+    >
+      {element.text.split('\n').map((line, lineIndex) => (
+        <span key={`${element.id}-${lineIndex}`}>{line}</span>
+      ))}
+    </div>
+  );
+}
+
 export function AudienceOutput({ output, preview = false }: AudienceOutputProps) {
   const classes = [preview ? 'preview' : 'audienceCanvas', output.media ? 'hasMedia' : '']
     .filter(Boolean)
@@ -90,14 +137,27 @@ export function AudienceOutput({ output, preview = false }: AudienceOutputProps)
     <div className={classes}>
       <MediaLayer output={output} preview={preview} />
       {output.slide ? (
-        <div
-          className={preview ? 'previewText' : 'audienceText'}
-          style={liveTextStyle(output.slide.format, output.slide.layout, preview)}
-        >
-          {output.slide.text.split('\n').map((line, index) => (
-            <span key={`${output.slide?.slideId}-${index}`}>{line}</span>
-          ))}
-        </div>
+        output.slide.elements?.length ? (
+          <>
+            {output.slide.elements.map((element, index) => (
+              <SlideElementLayer
+                element={element}
+                index={index}
+                key={element.id}
+                preview={preview}
+              />
+            ))}
+          </>
+        ) : (
+          <div
+            className={preview ? 'previewText' : 'audienceText'}
+            style={liveTextStyle(output.slide.format, output.slide.layout, preview)}
+          >
+            {output.slide.text.split('\n').map((line, index) => (
+              <span key={`${output.slide?.slideId}-${index}`}>{line}</span>
+            ))}
+          </div>
+        )
       ) : preview && !hasAnyOutput ? (
         <div className="noOut">No Slide Output</div>
       ) : null}

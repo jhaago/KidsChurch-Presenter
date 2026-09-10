@@ -90,7 +90,29 @@ export function duplicatePresentationResource(source: Presentation) {
       slides: group.slides.map((slide) => {
         const slideId = newId('slide');
         slideIdMap.set(slide.id, slideId);
-        return { ...slide, id: slideId };
+
+        const elementIdMap = new Map<string, string>();
+        const elements = slide.elements?.map((element) => {
+          const elementId = newId('element');
+          elementIdMap.set(element.id, elementId);
+          return {
+            ...structuredClone(element),
+            id: elementId,
+          };
+        });
+
+        const layerOrder = slide.layerOrder?.map((layerId) =>
+          layerId === '__primary__'
+            ? layerId
+            : elementIdMap.get(layerId) ?? layerId,
+        );
+
+        return {
+          ...structuredClone(slide),
+          id: slideId,
+          elements,
+          layerOrder,
+        };
       }),
     };
   });

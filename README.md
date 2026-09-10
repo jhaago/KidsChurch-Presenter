@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.5.7-alpha.1 — User-Created Reusable Themes**
+**v0.5.8-alpha.1 — Multi-Element Slide Editor**
 
 Implemented in source:
 
@@ -136,6 +136,26 @@ Implemented in source:
 - deleting a custom Theme preserves linked Presentation appearance by baking its resolved style/layout locally
 - custom Themes persist in the presenter library with backward compatibility for older saved data
 - currently-live slides re-resolve immediately when a linked custom Theme changes
+- real ordered slide-element stack
+- legacy Primary Text remains the Stage / Song / Auto-Lyrics source of truth
+- add multiple independent text boxes to any slide
+- add still-image elements from indexed resource folders
+- drag and resize every element independently on the 16:9 canvas
+- select elements either directly on the canvas or from a Layers list
+- bring elements forward / send them backward
+- duplicate text or image elements
+- delete supplemental elements while protecting Primary Text
+- per-element names for operator clarity
+- per-element X/Y/Width/Height geometry
+- per-element text font, size, weight, line height, alignment, vertical alignment, colour, shadow and uppercase
+- per-element opacity
+- image Contain vs Cover/Crop fit modes
+- Ctrl/Cmd+D duplicates the selected element in Layout mode
+- Delete/Backspace removes supplemental elements in Layout mode
+- thumbnails render the complete element stack
+- Audience output renders the complete element stack in saved layer order
+- copied Presentations receive fresh supplemental-element IDs and remapped layer order
+- old single-text presentations remain backward compatible without migration
 
 ## Run on macOS or Windows
 
@@ -256,6 +276,36 @@ The current editor supports:
 Changes autosave after a short debounce. The desktop process owns the saved JSON file and keeps the previous successful save as a backup. If the primary library file is unreadable on launch, Presenter attempts to recover the backup.
 
 The built-in demo service is now only the first-run seed. After the first successful save, the editable saved library becomes the source of truth.
+
+## Multi-element slide editor
+
+The **Layout** workspace now edits an ordered stack of slide elements rather than only one text box.
+
+Every slide still has a protected **Primary Text** element. That element is backed by the existing `slide.text` field and remains the wording used by Songs, Stage CURRENT/NEXT, lyric timing and Auto Lyrics. This preserves the existing presentation/song architecture.
+
+Additional slide elements can be added without changing the Primary Text:
+
+- **Text** — independent text content and formatting
+- **Image** — still-image resources from indexed local/OneDrive resource folders
+
+The right-side **Layers** list represents the actual front-to-back element order. Elements can be selected on the canvas or in Layers, moved forward/back, duplicated or deleted. Primary Text can be reordered or duplicated, but cannot be deleted.
+
+Each element has its own percentage-based X/Y/Width/Height geometry. Text elements can independently set font, size, weight, line height, horizontal/vertical alignment, colour, shadow, uppercase and opacity. Image elements support resource selection, Contain vs Cover/Crop, geometry and opacity.
+
+Useful Layout shortcuts:
+
+- **Arrow keys** — move selected element 0.5%
+- **Shift+Arrow** — move selected element 2%
+- **Ctrl/Cmd+D** — duplicate selected element
+- **Delete / Backspace** — delete supplemental selected element
+- **Ctrl/Cmd+Z** — undo
+- **Ctrl/Cmd+Y** or **Shift+Cmd+Z** — redo
+
+The saved Audience state now contains a resolved ordered element stack, so Audience output and operator thumbnails use the same element geometry, styles and layer order.
+
+Backward compatibility is automatic. Slides created before v0.5.8 have no stored element list; Presenter synthesizes their existing Primary Text element at runtime and they continue rendering as before.
+
+Custom Themes currently define the inherited Primary Text/default Presentation appearance. Supplemental elements are slide-specific in this pass rather than becoming part of a Theme automatically.
 
 ## User-created reusable Themes
 

@@ -1277,3 +1277,71 @@ kbd {
   .customThemeActions>div:nth-child(2){justify-content:flex-start}
   .customThemeActions>small{grid-column:1}
 }
+
+
+/* v0.5.8 multi-element slide editor */
+.audienceSlideImageElement{position:absolute;display:block;pointer-events:none}
+.audienceSlideTextElement{box-sizing:border-box}
+.audienceMessage{z-index:100}
+.audienceBlackout{z-index:200}
+.thumbnailSlideElementImage{position:absolute;display:block;pointer-events:none}
+.multiElementEditor .layoutEditorBody{grid-template-columns:175px minmax(430px,1fr) 285px}
+.layoutHeaderActions .layoutAddElement{border-color:#42677f;background:#203746;color:#b6cfdf}
+.layoutHeaderActions .layoutAddElement:hover{background:#2a4c63;color:#fff}
+.layoutElementFrame{position:absolute;box-sizing:border-box;border:1px solid transparent;cursor:move;touch-action:none}
+.layoutElementFrame:hover{border-color:rgba(111,166,201,.48)}
+.layoutElementFrame.isSelected{border:2px solid #58a4d5;background:rgba(24,57,79,.08)}
+.layoutElementFrame.type-image.isSelected{background:rgba(24,57,79,.03)}
+.layoutElementText{position:absolute;inset:0;box-sizing:border-box;padding:.55cqw;display:flex;flex-direction:column;overflow:hidden;pointer-events:none}
+.layoutElementText>div{width:100%;display:flex;flex-direction:column;gap:.2em;overflow:hidden}
+.layoutElementText span{display:block;max-width:100%}
+.layoutElementImage{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;user-select:none}
+.layoutElementImageMissing{position:absolute;inset:0;display:grid;place-items:center;border:1px dashed rgba(255,255,255,.35);background:rgba(30,36,40,.65);color:#83909a;font-size:7px;pointer-events:none}
+.multiElementInspector{max-height:650px;overflow:auto}
+.layoutLayerList{padding:5px;border-bottom:1px solid #2b3237;display:grid;gap:3px}
+.layoutLayerList button{width:100%;min-height:34px;padding:4px;border:1px solid #30383e;border-radius:2px;background:#191e22;color:#88939b;display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:5px;align-items:center;text-align:left;cursor:pointer}
+.layoutLayerList button:hover{background:#22292e}
+.layoutLayerList button.isSelected{border-color:#4d83aa;background:#203746;color:#dce9f1}
+.layoutLayerList button>span{display:grid;place-items:center;height:22px;border-radius:2px;background:#252d33;color:#7ca5c0;font-size:6px;font-weight:900}
+.layoutLayerList button>div{min-width:0}
+.layoutLayerList button strong{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:7px}
+.layoutLayerList button small{display:block;margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#626e76;font-size:6px}
+.layoutLayerList button.isSelected small{color:#9eb5c4}
+.layoutLayerList button em{font-style:normal;color:#8e79b1;font-size:5.5px;font-weight:800}
+.elementInspectorSection{padding:7px;border-bottom:1px solid #2b3237}
+.elementInspectorSection>strong{display:block;margin-bottom:6px;color:#8e99a1;font-size:6.5px;letter-spacing:.08em}
+.elementIdentity>input,.elementField select,.elementTextControls select,.elementTextControls input[type=number],.elementTextEditor{width:100%;box-sizing:border-box;border:1px solid #394148;border-radius:2px;background:#101316;color:#c7ccd0;outline:none}
+.elementIdentity>input{height:25px;padding:0 5px;font-size:7px}
+.primaryElementName{height:25px;padding:0 6px;border:1px solid #30383e;border-radius:2px;background:#171c20;color:#aab2b8;display:flex;align-items:center;font-size:7px}
+.elementActionRow{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:5px}
+.elementActionRow button,.elementResetButton{height:23px;border:1px solid #394148;border-radius:2px;background:#252c31;color:#919ba2;cursor:pointer;font-size:6.5px}
+.elementActionRow button:hover:not(:disabled),.elementResetButton:hover{background:#343c42;color:#fff}
+.elementActionRow button:disabled{opacity:.3;cursor:not-allowed}
+.elementActionRow button.danger{border-color:#50373b;color:#b77d84}
+.elementTextEditor{min-height:72px;padding:6px;resize:vertical;font:7px/1.35 system-ui,sans-serif}
+.elementTextEditor:focus,.elementIdentity>input:focus,.elementField select:focus,.elementTextControls select:focus,.elementTextControls input:focus{border-color:#4d83aa}
+.elementTextControls{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
+.elementTextControls label,.elementField{display:flex;flex-direction:column;gap:3px}
+.elementTextControls .wide{grid-column:1/-1}
+.elementTextControls label>span,.elementField>span{color:#68737b;font-size:5.8px;font-weight:800;letter-spacing:.06em}
+.elementTextControls select,.elementTextControls input[type=number],.elementField select{height:24px;padding:0 4px;font-size:6.5px}
+.elementTextControls input[type=color]{width:100%;height:24px;padding:2px;border:1px solid #394148;border-radius:2px;background:#101316}
+.elementCheck{justify-content:flex-end}
+.elementCheck input{width:16px;height:16px;accent-color:#4d83aa}
+.elementResetButton{width:100%;margin-top:6px}
+.elementField{margin-top:6px}
+.elementField input[type=range],.elementOpacityRange{width:100%;accent-color:#4d83aa}
+.elementOpacityValue{display:block;margin-top:3px;color:#8d989f;font-size:6.5px;text-align:right}
+.multiElementInspector .layoutGeometry{padding:0;border:0}
+.multiElementInspector .layoutQuickActions{padding:6px 0 0;border:0}
+.multiElementInspector .layoutInheritance{padding:7px}
+@media(max-width:1280px){
+  .multiElementEditor .layoutEditorBody{grid-template-columns:145px minmax(380px,1fr) 245px}
+}
+@media(max-width:1080px){
+  .multiElementEditor .layoutEditorBody{grid-template-columns:130px minmax(340px,1fr)}
+  .multiElementInspector{grid-column:1/-1;max-height:none;border-left:0;border-top:1px solid #30373d;display:block}
+  .layoutLayerList{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+.editElementBadge{grid-column:1/-1;padding:3px 4px;border:1px solid #3b344c;border-radius:2px;background:#201b29;color:#9684b0;font-size:5.8px;font-weight:800;letter-spacing:.06em;text-align:center}

@@ -282,11 +282,36 @@ Status: implemented in source.
 - live Audience slide refresh when a linked Theme changes
 - backward-compatible loading of pre-theme presenter libraries
 
+## v0.5.8 — Multi-element slide editor
+
+Status: implemented in source.
+
+- ordered slide-element model with protected legacy Primary Text
+- multiple independent supplemental text elements
+- still-image elements from indexed resource assets
+- direct canvas selection / drag / resize
+- Layers inspector
+- forward/back layer ordering
+- duplicate and delete controls
+- per-element naming
+- per-element percentage geometry
+- independent supplemental-text formatting
+- per-element opacity
+- image Contain / Cover fit
+- keyboard duplicate/delete/nudge shortcuts
+- full element-stack thumbnail rendering
+- full element-stack Audience rendering
+- live slide refresh when elements are edited
+- duplicated Presentations remap element IDs and layer order
+- persistence coverage for text/image elements and layer order
+- automatic backward compatibility for pre-element slides
+
 ### Next v0.5 passes
 
-- richer text boxes and multi-element slide layouts
-- duplicate/add text or image elements
-- drag ordering and layer controls
+- shape elements and basic fills/borders
+- richer multi-element Theme templates
+- copy/paste elements between slides
+- alignment/distribution tools and snapping
 - expand undo/redo history across Song Setup / Arrangement / Timing changes
 - more ProPresenter-like thumbnail behaviour
 

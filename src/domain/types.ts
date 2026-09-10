@@ -102,12 +102,38 @@ export interface PresentationTheme {
   layout?: SlideBoxLayout;
 }
 
+export type SlideImageFit = 'contain' | 'cover';
+
+export interface SlideTextElement {
+  id: string;
+  type: 'text';
+  name: string;
+  text: string;
+  layout: SlideBoxLayout;
+  format?: Partial<SlideTextFormat>;
+  opacity?: number;
+}
+
+export interface SlideImageElement {
+  id: string;
+  type: 'image';
+  name: string;
+  assetId?: string;
+  layout: SlideBoxLayout;
+  fit: SlideImageFit;
+  opacity?: number;
+}
+
+export type SlideElement = SlideTextElement | SlideImageElement;
+
 export interface Slide {
   id: string;
   text: string;
   notes?: string;
   format?: Partial<SlideTextFormat>;
   layout?: Partial<SlideBoxLayout>;
+  elements?: SlideElement[];
+  layerOrder?: string[];
   backgroundAssetId?: string | null;
 }
 
@@ -215,6 +241,29 @@ export interface MediaAsset {
   extension?: string;
 }
 
+export interface LiveTextSlideElement {
+  id: string;
+  type: 'text';
+  name: string;
+  text: string;
+  layout: SlideBoxLayout;
+  format: SlideTextFormat;
+  opacity: number;
+}
+
+export interface LiveImageSlideElement {
+  id: string;
+  type: 'image';
+  name: string;
+  assetId?: string;
+  fileUrl?: string;
+  layout: SlideBoxLayout;
+  fit: SlideImageFit;
+  opacity: number;
+}
+
+export type LiveSlideElement = LiveTextSlideElement | LiveImageSlideElement;
+
 export interface LiveSlideState {
   presentationId: string;
   presentationTitle: string;
@@ -223,6 +272,7 @@ export interface LiveSlideState {
   text: string;
   format?: SlideTextFormat;
   layout?: SlideBoxLayout;
+  elements?: LiveSlideElement[];
 }
 
 export interface LiveMediaState {

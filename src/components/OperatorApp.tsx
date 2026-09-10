@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { useSongTransport } from '../audio/useSongTransport';
 import { arrangedSlides, sanitizeSongForPresentation } from '../domain/songArrangement';
+import { resolveSlideElements } from '../domain/slideElements';
 import { resolveBackgroundAssetId, resolveSlideFormat, resolveSlideLayout } from '../domain/themes';
 import {
   createBlankPresentation,
@@ -250,9 +251,16 @@ export function OperatorApp() {
         ...current.slide,
         format: resolveSlideFormat(livePresentation, liveSlide, customThemes),
         layout: resolveSlideLayout(livePresentation, liveSlide, customThemes),
+        elements: resolveSlideElements(
+          livePresentation,
+          liveSlide,
+          customThemes,
+          allMediaAssets,
+        ),
       } : null,
     }));
   }, [
+    allMediaAssets,
     customThemes,
     presentations,
     output.slide?.presentationId,
@@ -330,6 +338,12 @@ export function OperatorApp() {
       : undefined;
     const format = resolveSlideFormat(presentation, slide, customThemes);
     const layout = resolveSlideLayout(presentation, slide, customThemes);
+    const elements = resolveSlideElements(
+      presentation,
+      slide,
+      customThemes,
+      allMediaAssets,
+    );
 
     setOutput((current) => ({
       ...current,
@@ -341,6 +355,7 @@ export function OperatorApp() {
         text: slide.text,
         format,
         layout,
+        elements,
       },
       media: background ? liveMediaFromAsset(background, 'background') : current.media,
       black: false,
@@ -487,6 +502,12 @@ export function OperatorApp() {
           text: liveSlide.text,
           format: resolveSlideFormat(updatedPresentation, liveSlide, customThemes),
           layout: resolveSlideLayout(updatedPresentation, liveSlide, customThemes),
+          elements: resolveSlideElements(
+            updatedPresentation,
+            liveSlide,
+            customThemes,
+            allMediaAssets,
+          ),
         } : null,
         media: liveBackground
           ? liveMediaFromAsset(liveBackground, 'background')
@@ -554,10 +575,16 @@ export function OperatorApp() {
           ...current.slide,
           format: resolveSlideFormat(livePresentation, liveSlide, nextThemes),
           layout: resolveSlideLayout(livePresentation, liveSlide, nextThemes),
+          elements: resolveSlideElements(
+            livePresentation,
+            liveSlide,
+            nextThemes,
+            allMediaAssets,
+          ),
         } : null,
       }));
     }
-  }, [customThemes, output.slide, presentations]);
+  }, [allMediaAssets, customThemes, output.slide, presentations]);
 
   const deleteCustomTheme = useCallback((themeId: string) => {
     const theme = customThemes.find((candidate) => candidate.id === themeId);
@@ -590,10 +617,16 @@ export function OperatorApp() {
           ...current.slide,
           format: resolveSlideFormat(livePresentation, liveSlide, nextThemes),
           layout: resolveSlideLayout(livePresentation, liveSlide, nextThemes),
+          elements: resolveSlideElements(
+            livePresentation,
+            liveSlide,
+            nextThemes,
+            allMediaAssets,
+          ),
         } : null,
       }));
     }
-  }, [customThemes, output.slide, presentations]);
+  }, [allMediaAssets, customThemes, output.slide, presentations]);
 
   const updateSong = useCallback((updatedSong: Song) => {
     const previous = songs.find((song) => song.id === updatedSong.id);

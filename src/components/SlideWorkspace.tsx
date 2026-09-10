@@ -5,7 +5,8 @@ import {
   effectiveArrangement,
   occurrenceLabel,
 } from '../domain/songArrangement';
-import { resolveBackgroundAssetId, resolveSlideFormat, resolveSlideLayout } from '../domain/themes';
+import { resolveSlideElements } from '../domain/slideElements';
+import { resolveBackgroundAssetId } from '../domain/themes';
 import type { MediaAsset, OutputState, PlaylistItem, Presentation, PresentationTheme, Slide, Song } from '../domain/types';
 import { PresentationEditorPanel } from './PresentationEditorPanel';
 import { SlideLayoutEditor } from './SlideLayoutEditor';
@@ -336,22 +337,19 @@ export function SlideWorkspace({
                         ? output.slide.arrangementEntryId === arrangementEntryId ||
                           (!output.slide.arrangementEntryId && selectedArrangementEntryId === arrangementEntryId)
                         : true);
-                    const format = resolveSlideFormat(presentation, slide, customThemes);
-                    const layout = resolveSlideLayout(presentation, slide, customThemes);
-                    const backgroundId = resolveBackgroundAssetId(presentation, slide);
+                    const elements = resolveSlideElements(
+                      presentation,
+                      slide,
+                      customThemes,
+                      availableAssets,
+                    );
+                    const resolvedBackgroundId = resolveBackgroundAssetId(presentation, slide);
+                    const backgroundId = slide.backgroundAssetId === null
+                      ? undefined
+                      : resolvedBackgroundId ?? song?.backgroundAssetId;
                     const background = backgroundId
                       ? availableAssets.find((asset) => asset.id === backgroundId)
                       : undefined;
-                    const alignItems = format.textAlign === 'left'
-                      ? 'flex-start'
-                      : format.textAlign === 'right'
-                        ? 'flex-end'
-                        : 'center';
-                    const justifyContent = format.verticalAlign === 'top'
-                      ? 'flex-start'
-                      : format.verticalAlign === 'bottom'
-                        ? 'flex-end'
-                        : 'center';
                     return (
                       <button
                         aria-label={`${label}, slide ${sequence}${live ? ', live' : ''}`}
@@ -369,30 +367,69 @@ export function SlideWorkspace({
                           ) : background?.fileUrl && background.kind === 'motion' ? (
                             <video className="thumbnailBackground" src={background.fileUrl} muted loop autoPlay playsInline />
                           ) : null}
-                          <span
-                            className="thumbnailText"
-                            style={{
-                              inset: 'auto',
-                              left: `${layout.xPercent}%`,
-                              top: `${layout.yPercent}%`,
-                              width: `${layout.widthPercent}%`,
-                              height: `${layout.heightPercent}%`,
-                              alignItems,
-                              justifyContent,
-                              color: format.textColor,
-                              fontFamily: format.fontFamily,
-                              fontWeight: format.fontWeight,
-                              lineHeight: format.lineHeight,
-                              textAlign: format.textAlign,
-                              textShadow: format.shadow ? '0 1px 3px #000' : 'none',
-                              textTransform: format.uppercase ? 'uppercase' : 'none',
-                              fontSize: `clamp(7px, ${Math.max(0.55, format.fontSizeVw * 0.16)}vw, 14px)`,
-                            }}
-                          >
-                            {slide.text.split('\n').map((line, lineIndex) => (
-                              <span key={`${key}:${slide.id}:${lineIndex}`}>{line}</span>
-                            ))}
-                          </span>
+                          {elements.map((element, elementIndex) => {
+                            if (element.type === 'image') {
+                              if (!element.fileUrl) return null;
+                              return (
+                                <img
+                                  className="thumbnailSlideElementImage"
+                                  key={element.id}
+                                  src={element.fileUrl}
+                                  alt=""
+                                  style={{
+                                    left: `${element.layout.xPercent}%`,
+                                    top: `${element.layout.yPercent}%`,
+                                    width: `${element.layout.widthPercent}%`,
+                                    height: `${element.layout.heightPercent}%`,
+                                    objectFit: element.fit,
+                                    opacity: element.opacity,
+                                    zIndex: elementIndex + 1,
+                                  }}
+                                />
+                              );
+                            }
+
+                            const alignItems = element.format.textAlign === 'left'
+                              ? 'flex-start'
+                              : element.format.textAlign === 'right'
+                                ? 'flex-end'
+                                : 'center';
+                            const justifyContent = element.format.verticalAlign === 'top'
+                              ? 'flex-start'
+                              : element.format.verticalAlign === 'bottom'
+                                ? 'flex-end'
+                                : 'center';
+
+                            return (
+                              <span
+                                className="thumbnailText"
+                                key={element.id}
+                                style={{
+                                  inset: 'auto',
+                                  left: `${element.layout.xPercent}%`,
+                                  top: `${element.layout.yPercent}%`,
+                                  width: `${element.layout.widthPercent}%`,
+                                  height: `${element.layout.heightPercent}%`,
+                                  alignItems,
+                                  justifyContent,
+                                  color: element.format.textColor,
+                                  fontFamily: element.format.fontFamily,
+                                  fontWeight: element.format.fontWeight,
+                                  lineHeight: element.format.lineHeight,
+                                  textAlign: element.format.textAlign,
+                                  textShadow: element.format.shadow ? '0 1px 3px #000' : 'none',
+                                  textTransform: element.format.uppercase ? 'uppercase' : 'none',
+                                  fontSize: `clamp(7px, ${Math.max(0.55, element.format.fontSizeVw * 0.16)}vw, 14px)`,
+                                  opacity: element.opacity,
+                                  zIndex: elementIndex + 1,
+                                }}
+                              >
+                                {element.text.split('\n').map((line, lineIndex) => (
+                                  <span key={`${element.id}:${lineIndex}`}>{line}</span>
+                                ))}
+                              </span>
+                            );
+                          })}
                         </span>
                         <span className="slideOrdinal">{sequence}</span>
                         {live ? <span className="liveFlag">LIVE</span> : null}

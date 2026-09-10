@@ -32,6 +32,27 @@ async function main() {
               text: 'Hello',
               format: { textAlign: 'left', uppercase: true },
               layout: { xPercent: 18, yPercent: 20, widthPercent: 64, heightPercent: 30 },
+              elements: [
+                {
+                  id: 'el-text-1',
+                  type: 'text',
+                  name: 'Reference',
+                  text: 'John 3:16',
+                  layout: { xPercent: 68, yPercent: 82, widthPercent: 26, heightPercent: 10 },
+                  format: { fontSizeVw: 2.8, textAlign: 'right' },
+                  opacity: 0.9,
+                },
+                {
+                  id: 'el-image-1',
+                  type: 'image',
+                  name: 'Logo',
+                  assetId: 'image-logo',
+                  layout: { xPercent: 4, yPercent: 5, widthPercent: 15, heightPercent: 15 },
+                  fit: 'contain',
+                  opacity: 0.8,
+                },
+              ],
+              layerOrder: ['el-image-1', '__primary__', 'el-text-1'],
               backgroundAssetId: null,
             }],
           },
@@ -103,10 +124,17 @@ async function main() {
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].format.textAlign, 'left');
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].layout.xPercent, 18);
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].backgroundAssetId, null);
+  assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements.length, 2);
+  assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements[0].text, 'John 3:16');
+  assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements[1].assetId, 'image-logo');
+  assert.deepEqual(
+    loaded.data.presentations[0].groups[0].slides[0].layerOrder,
+    ['el-image-1', '__primary__', 'el-text-1'],
+  );
   assert.equal(loaded.data.customThemes.length, 1);
   assert.equal(loaded.data.customThemes[0].name, 'Kids Song');
   assert.equal(loaded.data.customThemes[0].layout.yPercent, 55);
-    assert.equal(loaded.data.playlists.length, 2);
+  assert.equal(loaded.data.playlists.length, 2);
   assert.equal(loaded.data.playlists[0].serviceDate, '2026-09-13');
   assert.equal(loaded.data.activePlaylistId, 'service-next');
   assert.equal(loaded.data.songs[0].arrangement.length, 2);

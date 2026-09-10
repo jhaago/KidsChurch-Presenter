@@ -569,7 +569,7 @@ export function PresentationEditorPanel({
                   <article className="presentationEditSlide" key={slide.id}>
                     <div className="editSlideOrdinal">{slideIndex + 1}</div>
                     <label className="editSlideText">
-                      <span>SLIDE TEXT</span>
+                      <span>PRIMARY SLIDE TEXT</span>
                       <textarea
                         value={slide.text}
                         onChange={(event) =>
@@ -594,6 +594,9 @@ export function PresentationEditorPanel({
                       />
                     </label>
                     <div className="editSlideActions">
+                      {(slide.elements?.length ?? 0) > 0 ? (
+                        <span className="editElementBadge">{slide.elements!.length} EXTRA ELEMENT{slide.elements!.length === 1 ? '' : 'S'} · LAYOUT</span>
+                      ) : null}
                       <button
                         type="button"
                         title="Move slide up"
@@ -632,7 +635,7 @@ export function PresentationEditorPanel({
                     </div>
 
                     <details className="editSlideFormat">
-                      <summary>Slide Format / Background {hasCustomFormat || slide.backgroundAssetId !== undefined ? '• OVERRIDE' : ''}</summary>
+                      <summary>Primary Text Format / Background {hasCustomFormat || slide.backgroundAssetId !== undefined ? '• OVERRIDE' : ''}</summary>
                       <div className="slideFormatBody">
                         <label className="slideFormatToggle">
                           <span>CUSTOM TEXT FORMAT</span>
