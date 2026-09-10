@@ -54,6 +54,19 @@ function dbToGain(db: number) {
   return 10 ** (db / 20);
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function songTrim(song: Song, sourceDurationMs: number) {
+  if (sourceDurationMs <= 1) return { startMs: 0, endMs: sourceDurationMs, durationMs: sourceDurationMs };
+  const requestedStart = Number.isFinite(song.audio.trimStartMs) ? song.audio.trimStartMs ?? 0 : 0;
+  const startMs = clamp(Math.max(0, requestedStart), 0, sourceDurationMs - 1);
+  const requestedEnd = Number.isFinite(song.audio.trimEndMs) ? song.audio.trimEndMs ?? sourceDurationMs : sourceDurationMs;
+  const endMs = clamp(requestedEnd, startMs + 1, sourceDurationMs);
+  return { startMs, endMs, durationMs: endMs - startMs };
+}
+
 function buildTrackPlan(song: Song, assets: MediaAsset[]): TrackPlan[] {
   if (song.audio.mode === 'single-track') {
     if (!song.audio.singleTrackAssetId) {
@@ -110,6 +123,7 @@ export function useSongTransport(assets: MediaAsset[]) {
   const activeSongRef = useRef<Song | null>(null);
   const startOffsetMsRef = useRef(0);
   const scheduledStartTimeRef = useRef(0);
+  const sourceTrimStartMsRef = useRef(0);
 
   const updateState = useCallback((patch: Partial<SongTransportState>) => {
     setState((current) => {
@@ -165,7 +179,12 @@ export function useSongTransport(assets: MediaAsset[]) {
     return buffer;
   }, [ensureContext]);
 
-  const scheduleFrom = useCallback(async (song: Song, positionMs: number, plan: TrackPlan[], buffers: Map<string, AudioBuffer>) => {
+  const scheduleFrom = useCallback(async (
+    song: Song,
+    positionMs: number,
+    plan: TrackPlan[],
+    buffers: Map<string, AudioBuffer>,
+  ) => {
     const context = await ensureContext();
     stopSources();
 
@@ -173,12 +192,17 @@ export function useSongTransport(assets: MediaAsset[]) {
     if (!master) throw new Error('Audio output is not ready.');
     master.gain.setValueAtTime(dbToGain(song.audio.masterGainDb), context.currentTime);
 
+    const sourceDurations = [...buffers.values()].map((buffer) => buffer.duration * 1000);
+    const sourceDurationMs = sourceDurations.length ? Math.max(...sourceDurations) : 0;
+    const trim = songTrim(song, sourceDurationMs);
+    const logicalPositionMs = clamp(positionMs, 0, trim.durationMs);
+    const sourceOffsetMs = trim.startMs + logicalPositionMs;
+    const logicalRemainingMs = Math.max(0, trim.durationMs - logicalPositionMs);
     const startAt = context.currentTime + 0.075;
-    const offsetSeconds = Math.max(0, positionMs / 1000);
 
     for (const track of plan) {
       const buffer = buffers.get(track.asset.id);
-      if (!buffer || offsetSeconds >= buffer.duration) continue;
+      if (!buffer || sourceOffsetMs >= buffer.duration * 1000 || logicalRemainingMs <= 0) continue;
 
       const source = context.createBufferSource();
       const gain = context.createGain();
@@ -186,11 +210,16 @@ export function useSongTransport(assets: MediaAsset[]) {
       gain.gain.setValueAtTime(track.enabled ? dbToGain(track.gainDb) : 0, context.currentTime);
       source.connect(gain);
       gain.connect(master);
-      source.start(startAt, offsetSeconds);
+
+      const availableMs = Math.max(0, buffer.duration * 1000 - sourceOffsetMs);
+      const playForMs = Math.min(logicalRemainingMs, availableMs);
+      if (playForMs <= 0) continue;
+      source.start(startAt, sourceOffsetMs / 1000, playForMs / 1000);
       activeSourcesRef.current.set(track.key, { source, gain });
     }
 
-    startOffsetMsRef.current = positionMs;
+    sourceTrimStartMsRef.current = trim.startMs;
+    startOffsetMsRef.current = logicalPositionMs;
     scheduledStartTimeRef.current = startAt;
   }, [ensureContext, stopSources]);
 
@@ -229,6 +258,7 @@ export function useSongTransport(assets: MediaAsset[]) {
         if (buffer) buffers.set(track.asset.id, buffer);
       }
       await scheduleFrom(song, stateRef.current.positionMs, plan, buffers);
+      activeSongRef.current = song;
       updateState({ status: 'playing', error: null, stemEnabled: runtimeStemState(plan) });
       return true;
     }
@@ -255,6 +285,7 @@ export function useSongTransport(assets: MediaAsset[]) {
         const lastCue = song.lyricCues.reduce((latest, cue) => Math.max(latest, cue.timeMs), 0);
         const durationMs = Math.max(lastCue + 10000, 300000);
         await ensureContext();
+        sourceTrimStartMsRef.current = 0;
         startOffsetMsRef.current = 0;
         scheduledStartTimeRef.current = audioContextRef.current?.currentTime ?? 0;
         updateState({
@@ -268,10 +299,11 @@ export function useSongTransport(assets: MediaAsset[]) {
       }
 
       const buffers = await loadBuffersForPlan(plan);
-      const durations = [...buffers.values()].map((buffer) => buffer.duration * 1000);
-      const durationMs = Math.max(...durations);
-      const shortest = Math.min(...durations);
-      const warning = durationMs - shortest > 250
+      const sourceDurations = [...buffers.values()].map((buffer) => buffer.duration * 1000);
+      const sourceDurationMs = Math.max(...sourceDurations);
+      const shortest = Math.min(...sourceDurations);
+      const trim = songTrim(song, sourceDurationMs);
+      const warning = sourceDurationMs - shortest > 250
         ? 'Stem durations differ by more than 250 ms. Re-export stems from the same start and end points.'
         : null;
 
@@ -279,7 +311,7 @@ export function useSongTransport(assets: MediaAsset[]) {
       updateState({
         status: 'playing',
         positionMs: 0,
-        durationMs,
+        durationMs: trim.durationMs,
         loadedTrackCount: plan.length,
         stemEnabled: runtimeStemState(plan),
         warning,
@@ -321,6 +353,7 @@ export function useSongTransport(assets: MediaAsset[]) {
 
   const stop = useCallback(() => {
     stopSources();
+    sourceTrimStartMsRef.current = 0;
     startOffsetMsRef.current = 0;
     scheduledStartTimeRef.current = 0;
     updateState({
