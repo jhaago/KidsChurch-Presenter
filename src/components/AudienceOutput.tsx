@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { getMediaPlaybackSettings } from '../domain/mediaPlayback';
 import type { LiveSlideElement, OutputState, SlideBoxLayout, SlideTextFormat } from '../domain/types';
 
 interface AudienceOutputProps {
@@ -15,15 +16,57 @@ function MediaLayer({ output, preview }: { output: OutputState; preview: boolean
   }
 
   if (media.fileUrl && (media.kind === 'motion' || media.kind === 'video')) {
+    const playback = getMediaPlaybackSettings(media.id);
+    const trimStartSeconds = Math.max(0, (playback.trimStartMs ?? 0) / 1000);
+    const trimEndSeconds = playback.trimEndMs ? playback.trimEndMs / 1000 : undefined;
+    const shouldLoop = playback.loop ?? media.loop ?? media.kind === 'motion';
+    const needsManualLoop = shouldLoop && (trimStartSeconds > 0 || trimEndSeconds !== undefined);
+    const playbackKey = [
+      media.id,
+      trimStartSeconds.toFixed(3),
+      trimEndSeconds?.toFixed(3) ?? 'end',
+      shouldLoop ? 'loop' : 'once',
+    ].join(':');
+
     return (
       <video
+        key={playbackKey}
         className="audienceMediaElement"
         src={media.fileUrl}
         autoPlay
-        loop={media.loop ?? media.kind === 'motion'}
+        loop={shouldLoop && !needsManualLoop}
         muted={preview ? true : (media.muted ?? media.kind !== 'video')}
         playsInline
         preload={preview ? 'metadata' : 'auto'}
+        onLoadedMetadata={(event) => {
+          const video = event.currentTarget;
+          if (trimStartSeconds > 0 && Number.isFinite(video.duration) && video.duration > 0) {
+            video.currentTime = Math.min(trimStartSeconds, Math.max(0, video.duration - 0.05));
+          }
+          void video.play().catch(() => undefined);
+        }}
+        onTimeUpdate={(event) => {
+          if (trimEndSeconds === undefined) return;
+          const video = event.currentTarget;
+          const actualEnd = Number.isFinite(video.duration) && video.duration > 0
+            ? Math.min(trimEndSeconds, video.duration)
+            : trimEndSeconds;
+          if (video.currentTime < actualEnd - 0.025) return;
+
+          if (shouldLoop) {
+            video.currentTime = Math.min(trimStartSeconds, Math.max(0, actualEnd - 0.05));
+            void video.play().catch(() => undefined);
+          } else {
+            video.pause();
+            video.currentTime = actualEnd;
+          }
+        }}
+        onEnded={(event) => {
+          if (!needsManualLoop) return;
+          const video = event.currentTarget;
+          video.currentTime = trimStartSeconds;
+          void video.play().catch(() => undefined);
+        }}
       />
     );
   }
