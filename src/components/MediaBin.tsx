@@ -9,6 +9,7 @@ import type {
   Song,
 } from '../domain/types';
 import { Icon } from './ui/Icon';
+import { MediaPlaybackEditor } from './MediaPlaybackEditor';
 
 export type MediaBinTab = 'Media' | 'Audio' | 'Stage' | 'Timers';
 
@@ -177,6 +178,7 @@ export function MediaBin({
   onTriggerMedia,
 }: MediaBinProps) {
   const [filter, setFilter] = useState<'all' | 'backgrounds' | string>('all');
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const visualAssets = useMemo(() => assets.filter((asset) => asset.kind !== 'audio'), [assets]);
   const audioCount = assets.length - visualAssets.length;
 
@@ -187,6 +189,19 @@ export function MediaBin({
   }, [filter, visualAssets]);
 
   const backgrounds = visualAssets.filter((asset) => asset.kind === 'still' || asset.kind === 'motion').length;
+  const selectedAsset = useMemo(() => {
+    const explicitlySelected = selectedAssetId
+      ? visualAssets.find((asset) => asset.id === selectedAssetId)
+      : undefined;
+    if (explicitlySelected) return explicitlySelected;
+    return output.media
+      ? visualAssets.find((asset) => asset.id === output.media?.id)
+      : undefined;
+  }, [output.media, selectedAssetId, visualAssets]);
+  const selectedAssetIsLive = Boolean(selectedAsset && output.media?.id === selectedAsset.id);
+  const selectedAssetDefaultLoop = selectedAssetIsLive
+    ? Boolean(output.media?.loop)
+    : selectedAsset?.kind === 'motion';
 
   return (
     <section className="mediaBin" aria-label="Media bin">
@@ -227,8 +242,18 @@ export function MediaBin({
             <div className="mediaAssetStrip">
               {visibleAssets.length ? visibleAssets.map((asset) => {
                 const live = output.media?.id === asset.id;
+                const selected = selectedAsset?.id === asset.id;
                 return (
-                  <button className={`mediaAsset ${live ? 'isLive' : ''}`} key={asset.id} onClick={() => onTriggerMedia(asset)} type="button" title={asset.relativePath || asset.title}>
+                  <button
+                    className={`mediaAsset ${live ? 'isLive' : ''} ${selected ? 'isSelected' : ''}`}
+                    key={asset.id}
+                    onClick={() => {
+                      setSelectedAssetId(asset.id);
+                      onTriggerMedia(asset);
+                    }}
+                    type="button"
+                    title={asset.relativePath || asset.title}
+                  >
                     <AssetArtwork asset={asset} live={live} />
                     <span className="assetName">{asset.title}</span>
                     <small>{asset.kind.toUpperCase()}{asset.sourceLabel ? ' · ' + asset.sourceLabel : ''}</small>
@@ -242,6 +267,12 @@ export function MediaBin({
                 </div>
               )}
             </div>
+            <MediaPlaybackEditor
+              asset={selectedAsset}
+              defaultLoop={selectedAssetDefaultLoop}
+              isLive={selectedAssetIsLive}
+              onRetrigger={onTriggerMedia}
+            />
           </>
         ) : activeTab === 'Audio' ? (
           <AudioTransportTab
