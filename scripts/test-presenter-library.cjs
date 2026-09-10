@@ -20,6 +20,7 @@ async function main() {
         category: 'slides',
         themeId: 'clean',
         format: { fontSizeVw: 5.2, textColor: '#ffeeaa' },
+        layout: { xPercent: 10, yPercent: 15, widthPercent: 80, heightPercent: 60 },
         backgroundAssetId: 'bg-main',
         groups: [
           {
@@ -30,6 +31,7 @@ async function main() {
               id: 's1',
               text: 'Hello',
               format: { textAlign: 'left', uppercase: true },
+              layout: { xPercent: 18, yPercent: 20, widthPercent: 64, heightPercent: 30 },
               backgroundAssetId: null,
             }],
           },
@@ -77,7 +79,9 @@ async function main() {
   assert.equal(loaded.data.presentations[0].themeId, 'clean');
   assert.equal(loaded.data.presentations[0].format.fontSizeVw, 5.2);
   assert.equal(loaded.data.presentations[0].backgroundAssetId, 'bg-main');
+  assert.equal(loaded.data.presentations[0].layout.widthPercent, 80);
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].format.textAlign, 'left');
+  assert.equal(loaded.data.presentations[0].groups[0].slides[0].layout.xPercent, 18);
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].backgroundAssetId, null);
   assert.equal(loaded.data.playlists.length, 2);
   assert.equal(loaded.data.playlists[0].serviceDate, '2026-09-13');

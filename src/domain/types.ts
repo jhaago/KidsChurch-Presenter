@@ -74,6 +74,13 @@ export const DEFAULT_SCREEN_ASSIGNMENTS: Record<ScreenKind, ScreenAssignment> = 
 export type TextAlignment = 'left' | 'center' | 'right';
 export type VerticalAlignment = 'top' | 'middle' | 'bottom';
 
+export interface SlideBoxLayout {
+  xPercent: number;
+  yPercent: number;
+  widthPercent: number;
+  heightPercent: number;
+}
+
 export interface SlideTextFormat {
   fontFamily: string;
   fontSizeVw: number;
@@ -92,6 +99,7 @@ export interface Slide {
   text: string;
   notes?: string;
   format?: Partial<SlideTextFormat>;
+  layout?: Partial<SlideBoxLayout>;
   backgroundAssetId?: string | null;
 }
 
@@ -109,6 +117,7 @@ export interface Presentation {
   groups: SlideGroup[];
   themeId?: string;
   format?: Partial<SlideTextFormat>;
+  layout?: Partial<SlideBoxLayout>;
   backgroundAssetId?: string;
 }
 
@@ -204,6 +213,7 @@ export interface LiveSlideState {
   arrangementEntryId?: string;
   text: string;
   format?: SlideTextFormat;
+  layout?: SlideBoxLayout;
 }
 
 export interface LiveMediaState {

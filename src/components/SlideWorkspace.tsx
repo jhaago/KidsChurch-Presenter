@@ -5,9 +5,10 @@ import {
   effectiveArrangement,
   occurrenceLabel,
 } from '../domain/songArrangement';
-import { resolveBackgroundAssetId, resolveSlideFormat } from '../domain/themes';
+import { resolveBackgroundAssetId, resolveSlideFormat, resolveSlideLayout } from '../domain/themes';
 import type { MediaAsset, OutputState, PlaylistItem, Presentation, Slide, Song } from '../domain/types';
 import { PresentationEditorPanel } from './PresentationEditorPanel';
+import { SlideLayoutEditor } from './SlideLayoutEditor';
 import { SongArrangementEditor } from './SongArrangementEditor';
 import { SongSetupPanel } from './SongSetupPanel';
 import { SongTimingEditor } from './SongTimingEditor';
@@ -84,7 +85,7 @@ export function SlideWorkspace({
   onTriggerMedia,
   onTriggerLyricsVideo,
 }: SlideWorkspaceProps) {
-  const [viewMode, setViewMode] = useState<'slides' | 'edit' | 'arrange' | 'timing'>('slides');
+  const [viewMode, setViewMode] = useState<'slides' | 'edit' | 'layout' | 'arrange' | 'timing'>('slides');
 
   useEffect(() => {
     setViewMode('slides');
@@ -165,6 +166,19 @@ export function SlideWorkspace({
               {viewMode === 'edit' ? 'Done Editing' : 'Edit'}
             </button>
           ) : null}
+          {presentation ? (
+            <button
+              className={viewMode === 'layout' ? 'isActive' : ''}
+              type="button"
+              onClick={() => {
+                onStopTimingSong();
+                setViewMode((current) => current === 'layout' ? 'slides' : 'layout');
+              }}
+            >
+              <Icon name="grid" />
+              {viewMode === 'layout' ? 'Done Layout' : 'Layout'}
+            </button>
+          ) : null}
           {song && presentation ? (
             <button
               className={viewMode === 'arrange' ? 'isActive' : ''}
@@ -193,20 +207,22 @@ export function SlideWorkspace({
             <span>
               {viewMode === 'edit'
                 ? 'Editor'
-                : viewMode === 'arrange'
-                  ? 'Arrangement Editor'
-                  : viewMode === 'timing'
-                    ? 'Timing Editor'
-                    : song
-                      ? 'Song + Slide View'
-                      : 'Slide View'}
+                : viewMode === 'layout'
+                  ? 'Visual Layout'
+                  : viewMode === 'arrange'
+                    ? 'Arrangement Editor'
+                    : viewMode === 'timing'
+                      ? 'Timing Editor'
+                      : song
+                        ? 'Song + Slide View'
+                        : 'Slide View'}
             </span>
           </div>
         </div>
       </header>
 
       <div className="workspaceScroll">
-        {song ? (
+        {song && viewMode !== 'layout' ? (
           <>
             <SongSetupPanel
               assets={availableAssets}
@@ -228,7 +244,16 @@ export function SlideWorkspace({
           </>
         ) : null}
 
-        {viewMode === 'timing' && song && presentation ? (
+        {viewMode === 'layout' && presentation ? (
+          <SlideLayoutEditor
+            availableAssets={availableAssets}
+            defaultBackgroundAssetId={song?.backgroundAssetId}
+            onChange={onChangePresentation}
+            onSelectSlide={(slideId) => onSelectSlide(slideId)}
+            presentation={presentation}
+            selectedSlideId={selectedSlideId}
+          />
+        ) : viewMode === 'timing' && song && presentation ? (
           <SongTimingEditor
             getPositionMs={getTimingPositionMs}
             onChangeSong={onChangeSong}
@@ -299,6 +324,7 @@ export function SlideWorkspace({
                           (!output.slide.arrangementEntryId && selectedArrangementEntryId === arrangementEntryId)
                         : true);
                     const format = resolveSlideFormat(presentation, slide);
+                    const layout = resolveSlideLayout(presentation, slide);
                     const backgroundId = resolveBackgroundAssetId(presentation, slide);
                     const background = backgroundId
                       ? availableAssets.find((asset) => asset.id === backgroundId)
@@ -333,7 +359,11 @@ export function SlideWorkspace({
                           <span
                             className="thumbnailText"
                             style={{
-                              inset: `${Math.max(4, format.marginPercent * 0.7)}% ${Math.max(4, format.marginPercent * 0.7)}%`,
+                              inset: 'auto',
+                              left: `${layout.xPercent}%`,
+                              top: `${layout.yPercent}%`,
+                              width: `${layout.widthPercent}%`,
+                              height: `${layout.heightPercent}%`,
                               alignItems,
                               justifyContent,
                               color: format.textColor,

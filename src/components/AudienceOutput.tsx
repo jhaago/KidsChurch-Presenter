@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { OutputState, SlideTextFormat } from '../domain/types';
+import type { OutputState, SlideBoxLayout, SlideTextFormat } from '../domain/types';
 
 interface AudienceOutputProps {
   output: OutputState;
@@ -31,7 +31,11 @@ function MediaLayer({ output, preview }: { output: OutputState; preview: boolean
   return <div className="audienceMediaFallback" />;
 }
 
-function liveTextStyle(format: SlideTextFormat | undefined, preview: boolean): CSSProperties | undefined {
+function liveTextStyle(
+  format: SlideTextFormat | undefined,
+  layout: SlideBoxLayout | undefined,
+  preview: boolean,
+): CSSProperties | undefined {
   if (!format) return undefined;
 
   const alignItems =
@@ -44,7 +48,11 @@ function liveTextStyle(format: SlideTextFormat | undefined, preview: boolean): C
     'center';
 
   return {
-    inset: `${format.marginPercent}%`,
+    inset: layout ? 'auto' : `${format.marginPercent}%`,
+    left: layout ? `${layout.xPercent}%` : undefined,
+    top: layout ? `${layout.yPercent}%` : undefined,
+    width: layout ? `${layout.widthPercent}%` : undefined,
+    height: layout ? `${layout.heightPercent}%` : undefined,
     alignItems,
     justifyContent,
     color: format.textColor,
@@ -84,7 +92,7 @@ export function AudienceOutput({ output, preview = false }: AudienceOutputProps)
       {output.slide ? (
         <div
           className={preview ? 'previewText' : 'audienceText'}
-          style={liveTextStyle(output.slide.format, preview)}
+          style={liveTextStyle(output.slide.format, output.slide.layout, preview)}
         >
           {output.slide.text.split('\n').map((line, index) => (
             <span key={`${output.slide?.slideId}-${index}`}>{line}</span>

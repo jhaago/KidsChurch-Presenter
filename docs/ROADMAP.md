@@ -243,12 +243,35 @@ Status: implemented in source.
 - live formatting refresh for the currently-live slide
 - Song Setup remains the default Song-background owner
 
+## v0.5.6 — Visual slide layout editor
+
+Status: implemented in source.
+
+- dedicated 16:9 Layout workspace
+- one editable primary text box per slide
+- drag-to-position
+- four-corner resizing
+- percentage-based resolution-independent geometry
+- presentation-level layout inheritance
+- per-slide layout overrides
+- promote current slide box to Presentation default
+- reset slide / Presentation layout controls
+- precise numeric X/Y/W/H controls
+- arrow-key fine/coarse nudging
+- optional safe-area and centre guides
+- local Layout undo/redo
+- layout-aware thumbnails
+- Audience output uses resolved box geometry
+- backward-compatible derivation from legacy margin settings
+- editing controls no longer leak Left/Right keys into live navigation
+
 ### Next v0.5 passes
 
-- expand undo/redo history across Song Setup / Arrangement / Timing changes
-- richer text boxes and multi-element slide layouts
-- drag-based positioning / resize
 - user-created named Themes
+- richer text boxes and multi-element slide layouts
+- duplicate/add text or image elements
+- drag ordering and layer controls
+- expand undo/redo history across Song Setup / Arrangement / Timing changes
 - more ProPresenter-like thumbnail behaviour
 
 ## v0.6 — Bible and timers

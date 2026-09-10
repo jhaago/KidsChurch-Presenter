@@ -1,4 +1,4 @@
-import type { Presentation, Slide, SlideTextFormat } from './types';
+import type { Presentation, Slide, SlideBoxLayout, SlideTextFormat } from './types';
 
 export interface PresentationThemePreset {
   id: string;
@@ -6,6 +6,13 @@ export interface PresentationThemePreset {
   description: string;
   format: SlideTextFormat;
 }
+
+export const DEFAULT_SLIDE_LAYOUT: SlideBoxLayout = {
+  xPercent: 12,
+  yPercent: 12,
+  widthPercent: 76,
+  heightPercent: 76,
+};
 
 export const DEFAULT_SLIDE_FORMAT: SlideTextFormat = {
   fontFamily: 'Arial, Helvetica, sans-serif',
@@ -108,4 +115,39 @@ export function withTheme(presentation: Presentation, themeId: string): Presenta
 export function resolveBackgroundAssetId(presentation: Presentation, slide?: Slide) {
   if (slide?.backgroundAssetId === null) return undefined;
   return slide?.backgroundAssetId ?? presentation.backgroundAssetId;
+}
+
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function resolveSlideLayout(presentation: Presentation, slide?: Slide): SlideBoxLayout {
+  const format = resolveSlideFormat(presentation, slide);
+  const margin = clamp(format.marginPercent, 0, 40);
+  const derived: SlideBoxLayout = {
+    xPercent: margin,
+    yPercent: margin,
+    widthPercent: Math.max(10, 100 - margin * 2),
+    heightPercent: Math.max(8, 100 - margin * 2),
+  };
+
+  const merged = {
+    ...DEFAULT_SLIDE_LAYOUT,
+    ...derived,
+    ...presentation.layout,
+    ...slide?.layout,
+  };
+
+  const widthPercent = clamp(merged.widthPercent, 10, 100);
+  const heightPercent = clamp(merged.heightPercent, 8, 100);
+  const xPercent = clamp(merged.xPercent, 0, Math.max(0, 100 - widthPercent));
+  const yPercent = clamp(merged.yPercent, 0, Math.max(0, 100 - heightPercent));
+
+  return {
+    xPercent,
+    yPercent,
+    widthPercent: Math.min(widthPercent, 100 - xPercent),
+    heightPercent: Math.min(heightPercent, 100 - yPercent),
+  };
 }

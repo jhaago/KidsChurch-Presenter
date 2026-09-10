@@ -200,7 +200,7 @@ export function PresentationEditorPanel({
   void historyRevision;
 
   return (
-    <section className="presentationEditor">
+    <section className="presentationEditor" data-presenter-editor="true">
       <header className="presentationEditorHeader">
         <div>
           <Icon name="presentation" />

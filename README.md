@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.5.5-alpha.1 — Editing History + Formatting Foundation**
+**v0.5.6-alpha.1 — Visual Slide Layout Editor**
 
 Implemented in source:
 
@@ -113,6 +113,19 @@ Implemented in source:
 - Audience output renders the saved resolved format rather than a hard-coded text style
 - live slide formatting updates when the currently-live slide is edited
 - Song Setup remains the owner of the default Song background; individual lyric slides can override it
+- dedicated 16:9 visual Slide Layout mode
+- drag text boxes directly on the slide canvas
+- resize from four corner handles
+- percentage-based x/y/width/height geometry, independent of output resolution
+- per-slide layout overrides with presentation-level inheritance
+- apply a slide box layout to the whole presentation
+- reset slide or presentation layout back to inherited defaults
+- numeric geometry controls for precise positioning
+- arrow-key nudging (0.5%) and Shift+Arrow coarse nudging (2%)
+- optional 10% safe-area guide and centre crosshairs
+- layout-specific undo/redo during visual editing
+- slide thumbnails and Audience output use the same resolved box geometry
+- editor input/arrow keys no longer accidentally trigger live slide navigation
 
 ## Run on macOS or Windows
 
@@ -233,6 +246,36 @@ The current editor supports:
 Changes autosave after a short debounce. The desktop process owns the saved JSON file and keeps the previous successful save as a backup. If the primary library file is unreadable on launch, Presenter attempts to recover the backup.
 
 The built-in demo service is now only the first-run seed. After the first successful save, the editable saved library becomes the source of truth.
+
+## Visual slide layout editor
+
+Choose **Layout** in any Presentation or Song lyrics workspace to open a dedicated 16:9 editing canvas.
+
+The first visual-layout pass supports one primary text box per slide. Its geometry is stored as percentages of the slide rather than pixels:
+
+```text
+X / Y / Width / Height
+0–100% of the 16:9 canvas
+```
+
+This keeps the same composition on a laptop preview, 1080p TV, 4K projector, or other Audience resolution.
+
+The canvas supports:
+
+- drag the text box to reposition it
+- resize from any corner
+- Arrow keys to nudge by 0.5%
+- Shift+Arrow to nudge by 2%
+- direct numeric X/Y/W/H entry
+- centre horizontally / vertically
+- optional 10% safe-area and centre guides
+- Undo / Redo
+
+Layout follows the same inheritance model as formatting. A slide normally inherits the Presentation layout. Moving or resizing it creates a slide-specific override. **Apply This Box to Presentation** promotes the current geometry to the Presentation default; individual slides can then override it where required.
+
+Older saved Presentations remain compatible. If they do not contain explicit box geometry, Presenter derives the initial box from the existing Theme/margin settings.
+
+Audience output and slide thumbnails resolve the same saved box geometry, so the visual editor is not just a mock preview.
 
 ## Presentation formatting and undo/redo
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { useSongTransport } from '../audio/useSongTransport';
 import { arrangedSlides, sanitizeSongForPresentation } from '../domain/songArrangement';
-import { resolveBackgroundAssetId, resolveSlideFormat } from '../domain/themes';
+import { resolveBackgroundAssetId, resolveSlideFormat, resolveSlideLayout } from '../domain/themes';
 import {
   createBlankPresentation,
   createBlankService,
@@ -300,6 +300,7 @@ export function OperatorApp() {
       ? allMediaAssets.find((asset) => asset.id === backgroundId)
       : undefined;
     const format = resolveSlideFormat(presentation, slide);
+    const layout = resolveSlideLayout(presentation, slide);
 
     setOutput((current) => ({
       ...current,
@@ -310,6 +311,7 @@ export function OperatorApp() {
         arrangementEntryId: currentOccurrence?.arrangementEntryId,
         text: slide.text,
         format,
+        layout,
       },
       media: background ? liveMediaFromAsset(background, 'background') : current.media,
       black: false,
@@ -455,6 +457,7 @@ export function OperatorApp() {
           presentationTitle: updatedPresentation.title,
           text: liveSlide.text,
           format: resolveSlideFormat(updatedPresentation, liveSlide),
+          layout: resolveSlideLayout(updatedPresentation, liveSlide),
         } : null,
         media: liveBackground
           ? liveMediaFromAsset(liveBackground, 'background')
@@ -896,6 +899,16 @@ export function OperatorApp() {
         return;
       }
       if (searchOpen) return;
+
+      const target = event.target as HTMLElement | null;
+      const isEditingControl = Boolean(
+        target &&
+        (
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
+          target.closest('[data-presenter-editor="true"]')
+        )
+      );
+      if (isEditingControl && !/^F(?:1|2|3|4|5|6|12)$/.test(event.key)) return;
 
       if (event.key === 'ArrowRight') {
         event.preventDefault();
