@@ -389,6 +389,28 @@ export function SlideWorkspace({
                               );
                             }
 
+                            if (element.type === 'shape') {
+                              return (
+                                <span
+                                  className="thumbnailSlideElementShape"
+                                  key={element.id}
+                                  style={{
+                                    left: `${element.layout.xPercent}%`,
+                                    top: `${element.layout.yPercent}%`,
+                                    width: `${element.layout.widthPercent}%`,
+                                    height: `${element.layout.heightPercent}%`,
+                                    backgroundColor: element.fillColor,
+                                    borderColor: element.borderColor,
+                                    borderStyle: element.borderWidth > 0 ? 'solid' : 'none',
+                                    borderWidth: Math.max(0.5, element.borderWidth * 0.25),
+                                    borderRadius: element.shape === 'ellipse' ? '50%' : 0,
+                                    opacity: element.opacity,
+                                    zIndex: elementIndex + 1,
+                                  }}
+                                />
+                              );
+                            }
+
                             const alignItems = element.format.textAlign === 'left'
                               ? 'flex-start'
                               : element.format.textAlign === 'right'

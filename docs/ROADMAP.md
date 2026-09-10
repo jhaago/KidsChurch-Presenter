@@ -306,12 +306,33 @@ Status: implemented in source.
 - persistence coverage for text/image elements and layer order
 - automatic backward compatibility for pre-element slides
 
+## v0.5.9 — Editor productivity tools
+
+Status: implemented in source.
+
+- internal element clipboard across slides/Presentations for the running app session
+- copy / paste / cut keyboard shortcuts
+- multi-element selection from canvas or Layers
+- grouped keyboard nudging
+- left / centre / right / top / middle / bottom alignment
+- single-selection alignment to slide bounds
+- multi-selection alignment to combined bounds
+- horizontal / vertical distribution for 3+ elements
+- snapping to slide edges / 10% safe area / centre
+- snapping to nearby element edges and centres
+- temporary visual snap guides
+- separate Snap and Guides toggles
+- Rectangle and Ellipse elements
+- shape fill / border / opacity controls
+- shapes share normal layering / duplication / clipboard / Audience rendering
+- multi-delete protects Primary Text
+
 ### Next v0.5 passes
 
-- shape elements and basic fills/borders
 - richer multi-element Theme templates
-- copy/paste elements between slides
-- alignment/distribution tools and snapping
+- copy/paste complete slide layouts
+- group/ungroup elements
+- optional rotation
 - expand undo/redo history across Song Setup / Arrangement / Timing changes
 - more ProPresenter-like thumbnail behaviour
 

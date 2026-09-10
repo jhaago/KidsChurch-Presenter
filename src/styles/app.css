@@ -1345,3 +1345,32 @@ kbd {
 }
 
 .editElementBadge{grid-column:1/-1;padding:3px 4px;border:1px solid #3b344c;border-radius:2px;background:#201b29;color:#9684b0;font-size:5.8px;font-weight:800;letter-spacing:.06em;text-align:center}
+
+
+/* v0.5.9 editor productivity tools */
+.audienceSlideShapeElement{position:absolute;box-sizing:border-box;pointer-events:none}
+.thumbnailSlideElementShape{position:absolute;box-sizing:border-box;pointer-events:none}
+.layoutElementFrame.isSelected{outline:1px dashed rgba(127,191,232,.75);outline-offset:2px}
+.layoutElementFrame.isActive{border-color:#58a4d5;outline-style:solid;outline-color:rgba(88,164,213,.45)}
+.layoutLayerList button.isSelected{border-color:#456e8b;background:#1d3040}
+.layoutLayerList button.isActive{box-shadow:inset 3px 0 #67a7d0;background:#25445a}
+.layoutElementShape{position:absolute;inset:0;box-sizing:border-box;pointer-events:none}
+.layoutSnapGuide{position:absolute;z-index:90;pointer-events:none;background:#59b7ed;box-shadow:0 0 4px rgba(89,183,237,.7)}
+.layoutSnapGuide.vertical{top:0;bottom:0;width:1px;transform:translateX(-.5px)}
+.layoutSnapGuide.horizontal{left:0;right:0;height:1px;transform:translateY(-.5px)}
+.selectionTools{background:#161d22}
+.selectionCount{display:block;margin:-2px 0 6px;color:#6e7d87;font-size:6px;line-height:1.3}
+.alignToolGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+.distributeToolGrid{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:4px}
+.alignToolGrid button,.distributeToolGrid button{height:22px;padding:0 3px;border:1px solid #39434a;border-radius:2px;background:#232b30;color:#8f9aa2;cursor:pointer;font-size:6px}
+.alignToolGrid button:hover:not(:disabled),.distributeToolGrid button:hover:not(:disabled){background:#334049;color:#fff}
+.distributeToolGrid button:disabled{opacity:.3;cursor:not-allowed}
+.selectionTools>small{display:block;margin-top:5px;color:#5f6b73;font-size:5.8px;line-height:1.3}
+.shapeColorGrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
+.shapeColorGrid label{display:flex;flex-direction:column;gap:3px}
+.shapeColorGrid span{color:#68737b;font-size:5.8px;font-weight:800;letter-spacing:.06em}
+.shapeColorGrid input[type=color]{width:100%;height:26px;padding:2px;border:1px solid #394148;border-radius:2px;background:#101316}
+.elementField input[type=number]{height:24px;box-sizing:border-box;padding:0 5px;border:1px solid #394148;border-radius:2px;background:#101316;color:#c7ccd0;font-size:6.5px;outline:none}
+.elementField input[type=number]:focus{border-color:#4d83aa}
+.layoutHeaderActions{flex-wrap:wrap;justify-content:flex-end}
+.multiElementEditor .layoutEditorHeader{height:auto;min-height:38px;padding-top:4px;padding-bottom:4px}

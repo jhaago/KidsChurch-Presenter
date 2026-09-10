@@ -103,6 +103,7 @@ export interface PresentationTheme {
 }
 
 export type SlideImageFit = 'contain' | 'cover';
+export type SlideShapeKind = 'rectangle' | 'ellipse';
 
 export interface SlideTextElement {
   id: string;
@@ -124,7 +125,19 @@ export interface SlideImageElement {
   opacity?: number;
 }
 
-export type SlideElement = SlideTextElement | SlideImageElement;
+export interface SlideShapeElement {
+  id: string;
+  type: 'shape';
+  name: string;
+  shape: SlideShapeKind;
+  layout: SlideBoxLayout;
+  fillColor: string;
+  borderColor: string;
+  borderWidth: number;
+  opacity?: number;
+}
+
+export type SlideElement = SlideTextElement | SlideImageElement | SlideShapeElement;
 
 export interface Slide {
   id: string;
@@ -262,7 +275,19 @@ export interface LiveImageSlideElement {
   opacity: number;
 }
 
-export type LiveSlideElement = LiveTextSlideElement | LiveImageSlideElement;
+export interface LiveShapeSlideElement {
+  id: string;
+  type: 'shape';
+  name: string;
+  shape: SlideShapeKind;
+  layout: SlideBoxLayout;
+  fillColor: string;
+  borderColor: string;
+  borderWidth: number;
+  opacity: number;
+}
+
+export type LiveSlideElement = LiveTextSlideElement | LiveImageSlideElement | LiveShapeSlideElement;
 
 export interface LiveSlideState {
   presentationId: string;

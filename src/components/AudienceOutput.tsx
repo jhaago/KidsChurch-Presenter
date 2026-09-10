@@ -99,6 +99,27 @@ function SlideElementLayer({
     );
   }
 
+  if (element.type === 'shape') {
+    return (
+      <div
+        className="audienceSlideShapeElement"
+        style={{
+          left: `${element.layout.xPercent}%`,
+          top: `${element.layout.yPercent}%`,
+          width: `${element.layout.widthPercent}%`,
+          height: `${element.layout.heightPercent}%`,
+          backgroundColor: element.fillColor,
+          borderColor: element.borderColor,
+          borderStyle: element.borderWidth > 0 ? 'solid' : 'none',
+          borderWidth: element.borderWidth,
+          borderRadius: element.shape === 'ellipse' ? '50%' : 0,
+          opacity: element.opacity,
+          zIndex,
+        }}
+      />
+    );
+  }
+
   return (
     <div
       className={preview ? 'previewText audienceSlideTextElement' : 'audienceText audienceSlideTextElement'}

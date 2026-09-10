@@ -8,6 +8,7 @@ import {
 import {
   PRIMARY_SLIDE_ELEMENT_ID,
   createImageElement,
+  createShapeElement,
   createTextElement,
   duplicateSlideElement,
   normalizedLayerOrder,
@@ -145,6 +146,38 @@ function resolvedElementName(element: LiveSlideElement) {
   return element.id === PRIMARY_SLIDE_ELEMENT_ID ? 'Primary Text' : element.name;
 }
 
+let copiedSlideElements: SlideElement[] = [];
+
+function snapNearest(value: number, candidates: number[], threshold = 0.8) {
+  let best: { value: number; delta: number } | null = null;
+  for (const candidate of candidates) {
+    const delta = candidate - value;
+    if (Math.abs(delta) <= threshold && (!best || Math.abs(delta) < Math.abs(best.delta))) {
+      best = { value: candidate, delta };
+    }
+  }
+  return best;
+}
+
+function elementSnapCandidates(elements: LiveSlideElement[], excludeId: string) {
+  const x = [0, 10, 50, 90, 100];
+  const y = [0, 10, 50, 90, 100];
+  for (const element of elements) {
+    if (element.id === excludeId) continue;
+    x.push(
+      element.layout.xPercent,
+      element.layout.xPercent + element.layout.widthPercent / 2,
+      element.layout.xPercent + element.layout.widthPercent,
+    );
+    y.push(
+      element.layout.yPercent,
+      element.layout.yPercent + element.layout.heightPercent / 2,
+      element.layout.yPercent + element.layout.heightPercent,
+    );
+  }
+  return { x, y };
+}
+
 export function SlideLayoutEditor({
   presentation,
   selectedSlideId,
@@ -160,8 +193,12 @@ export function SlideLayoutEditor({
   const futureRef = useRef<Presentation[]>([]);
   const lastMergeRef = useRef<{ key: string; at: number } | null>(null);
   const [historyRevision, setHistoryRevision] = useState(0);
+  const [clipboardRevision, setClipboardRevision] = useState(0);
   const [showSafeArea, setShowSafeArea] = useState(true);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [snapGuides, setSnapGuides] = useState<{ x?: number; y?: number }>({});
   const [selectedElementId, setSelectedElementId] = useState(PRIMARY_SLIDE_ELEMENT_ID);
+  const [selectedElementIds, setSelectedElementIds] = useState<string[]>([PRIMARY_SLIDE_ELEMENT_ID]);
 
   const slides = useMemo(() => flattenSlides(presentation), [presentation]);
   const selected = slides.find((item) => item.slide.id === selectedSlideId) ?? slides[0];
@@ -172,6 +209,8 @@ export function SlideLayoutEditor({
     lastMergeRef.current = null;
     dragRef.current = null;
     setSelectedElementId(PRIMARY_SLIDE_ELEMENT_ID);
+    setSelectedElementIds([PRIMARY_SLIDE_ELEMENT_ID]);
+    setSnapGuides({});
     setHistoryRevision((value) => value + 1);
   }, [presentation.id]);
 
@@ -180,7 +219,9 @@ export function SlideLayoutEditor({
   }, [onSelectSlide, selectedSlideId, slides]);
 
   useEffect(() => {
-    setSelectedElementId(PRIMARY_SLIDE_ELEMENT_ID);
+    selectOnly(PRIMARY_SLIDE_ELEMENT_ID);
+    setSelectedElementIds([PRIMARY_SLIDE_ELEMENT_ID]);
+    setSnapGuides({});
   }, [selected?.slide.id]);
 
   if (!selected) {
@@ -201,6 +242,9 @@ export function SlideLayoutEditor({
     resolvedElements.find((element) => element.id === selectedElementId) ??
     resolvedElements.find((element) => element.id === PRIMARY_SLIDE_ELEMENT_ID) ??
     resolvedElements[0];
+  const selectedElements = resolvedElements.filter((element) =>
+    selectedElementIds.includes(element.id),
+  );
   const selectedRawElement =
     selectedElement?.id === PRIMARY_SLIDE_ELEMENT_ID
       ? undefined
@@ -219,9 +263,33 @@ export function SlideLayoutEditor({
   const hasPresentationLayout = Boolean(presentation.layout);
   const canUndo = pastRef.current.length > 0;
   const canRedo = futureRef.current.length > 0;
+  const selectionCount = selectedElements.length;
+  const removableSelectionCount = selectedElementIds.filter((id) => id !== PRIMARY_SLIDE_ELEMENT_ID).length;
   const isPrimary = selectedElement?.id === PRIMARY_SLIDE_ELEMENT_ID;
   const layout = selectedElement?.layout ?? resolveSlideLayout(presentation, selected.slide, customThemes);
   void historyRevision;
+  void clipboardRevision;
+
+  const selectOnly = (elementId: string) => {
+    setSelectedElementId(elementId);
+    setSelectedElementIds([elementId]);
+  };
+
+  const toggleSelection = (elementId: string) => {
+    setSelectedElementIds((current) => {
+      if (current.includes(elementId)) {
+        if (current.length === 1) {
+          setSelectedElementId(elementId);
+          return current;
+        }
+        const next = current.filter((id) => id !== elementId);
+        setSelectedElementId(next[next.length - 1]);
+        return next;
+      }
+      setSelectedElementId(elementId);
+      return [...current, elementId];
+    });
+  };
 
   const commit = (next: Presentation, mergeKey?: string) => {
     const now = Date.now();
@@ -255,6 +323,42 @@ export function SlideLayoutEditor({
     lastMergeRef.current = null;
     setHistoryRevision((value) => value + 1);
     onChange(next);
+  };
+
+  const applyElementLayouts = (
+    layouts: Map<string, SlideBoxLayout>,
+    mergeKey?: string,
+  ) => {
+    commit(
+      updateSlide(presentation, selected.slide.id, (slide) => {
+        let nextSlide = { ...slide };
+        const primaryLayout = layouts.get(PRIMARY_SLIDE_ELEMENT_ID);
+        if (primaryLayout) {
+          nextSlide.layout = {
+            xPercent: rounded(primaryLayout.xPercent),
+            yPercent: rounded(primaryLayout.yPercent),
+            widthPercent: rounded(primaryLayout.widthPercent),
+            heightPercent: rounded(primaryLayout.heightPercent),
+          };
+        }
+        nextSlide.elements = (nextSlide.elements ?? []).map((element) => {
+          const nextLayout = layouts.get(element.id);
+          return nextLayout
+            ? {
+                ...element,
+                layout: {
+                  xPercent: rounded(nextLayout.xPercent),
+                  yPercent: rounded(nextLayout.yPercent),
+                  widthPercent: rounded(nextLayout.widthPercent),
+                  heightPercent: rounded(nextLayout.heightPercent),
+                },
+              }
+            : element;
+        });
+        return nextSlide;
+      }),
+      mergeKey,
+    );
   };
 
   const setElementLayout = (
@@ -312,7 +416,16 @@ export function SlideLayoutEditor({
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    setSelectedElementId(element.id);
+    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+      toggleSelection(element.id);
+      return;
+    }
+    if (!selectedElementIds.includes(element.id)) {
+      selectOnly(element.id);
+    } else {
+      setSelectedElementId(element.id);
+    }
+    setSnapGuides({});
     event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = {
       pointerId: event.pointerId,
@@ -355,6 +468,74 @@ export function SlideLayoutEditor({
       if (drag.handle.includes('s')) bottom = clamp(bottom + dy, top + 5, 100);
     }
 
+    if (snapEnabled) {
+      const candidates = elementSnapCandidates(resolvedElements, drag.elementId);
+      let guideX: number | undefined;
+      let guideY: number | undefined;
+
+      if (drag.handle === 'move') {
+        const width = right - left;
+        const height = bottom - top;
+        const xAnchors = [left, left + width / 2, right];
+        const yAnchors = [top, top + height / 2, bottom];
+
+        let bestX: { value: number; delta: number } | null = null;
+        for (const anchor of xAnchors) {
+          const snapped = snapNearest(anchor, candidates.x);
+          if (snapped && (!bestX || Math.abs(snapped.delta) < Math.abs(bestX.delta))) bestX = snapped;
+        }
+        if (bestX) {
+          left = clamp(left + bestX.delta, 0, 100 - width);
+          right = left + width;
+          guideX = bestX.value;
+        }
+
+        let bestY: { value: number; delta: number } | null = null;
+        for (const anchor of yAnchors) {
+          const snapped = snapNearest(anchor, candidates.y);
+          if (snapped && (!bestY || Math.abs(snapped.delta) < Math.abs(bestY.delta))) bestY = snapped;
+        }
+        if (bestY) {
+          top = clamp(top + bestY.delta, 0, 100 - height);
+          bottom = top + height;
+          guideY = bestY.value;
+        }
+      } else {
+        if (drag.handle.includes('w')) {
+          const snapped = snapNearest(left, candidates.x);
+          if (snapped) {
+            left = clamp(snapped.value, 0, right - 5);
+            guideX = snapped.value;
+          }
+        }
+        if (drag.handle.includes('e')) {
+          const snapped = snapNearest(right, candidates.x);
+          if (snapped) {
+            right = clamp(snapped.value, left + 5, 100);
+            guideX = snapped.value;
+          }
+        }
+        if (drag.handle.includes('n')) {
+          const snapped = snapNearest(top, candidates.y);
+          if (snapped) {
+            top = clamp(snapped.value, 0, bottom - 5);
+            guideY = snapped.value;
+          }
+        }
+        if (drag.handle.includes('s')) {
+          const snapped = snapNearest(bottom, candidates.y);
+          if (snapped) {
+            bottom = clamp(snapped.value, top + 5, 100);
+            guideY = snapped.value;
+          }
+        }
+      }
+
+      setSnapGuides({ x: guideX, y: guideY });
+    } else {
+      setSnapGuides({});
+    }
+
     setLayoutWithoutHistory(drag.startPresentation, drag.elementId, {
       xPercent: left,
       yPercent: top,
@@ -367,6 +548,7 @@ export function SlideLayoutEditor({
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     dragRef.current = null;
+    setSnapGuides({});
     pastRef.current.push(drag.startPresentation);
     if (pastRef.current.length > 60) pastRef.current.shift();
     futureRef.current = [];
@@ -374,20 +556,30 @@ export function SlideLayoutEditor({
   };
 
   const nudge = (dx: number, dy: number) => {
-    if (!selectedElement) return;
-    setElementLayout(selectedElement.id, {
-      ...selectedElement.layout,
-      xPercent: clamp(
-        selectedElement.layout.xPercent + dx,
-        0,
-        100 - selectedElement.layout.widthPercent,
-      ),
-      yPercent: clamp(
-        selectedElement.layout.yPercent + dy,
-        0,
-        100 - selectedElement.layout.heightPercent,
-      ),
-    }, `layout-nudge:${selectedElement.id}`);
+    const targets = selectedElements.length
+      ? selectedElements
+      : selectedElement
+        ? [selectedElement]
+        : [];
+    if (!targets.length) return;
+
+    const layouts = new Map<string, SlideBoxLayout>();
+    for (const element of targets) {
+      layouts.set(element.id, {
+        ...element.layout,
+        xPercent: clamp(
+          element.layout.xPercent + dx,
+          0,
+          100 - element.layout.widthPercent,
+        ),
+        yPercent: clamp(
+          element.layout.yPercent + dy,
+          0,
+          100 - element.layout.heightPercent,
+        ),
+      });
+    }
+    applyElementLayouts(layouts, `layout-nudge:${selectedElementIds.join(':')}`);
   };
 
   const setGeometryField = (key: keyof SlideBoxLayout, value: number) => {
@@ -409,7 +601,7 @@ export function SlideLayoutEditor({
       elements: [...(slide.elements ?? []), element],
       layerOrder: [...normalizedLayerOrder(slide), element.id],
     })));
-    setSelectedElementId(element.id);
+    selectOnly(element.id);
   };
 
   const addImage = () => {
@@ -424,7 +616,73 @@ export function SlideLayoutEditor({
       elements: [...(slide.elements ?? []), element],
       layerOrder: [...normalizedLayerOrder(slide), element.id],
     })));
-    setSelectedElementId(element.id);
+    selectOnly(element.id);
+  };
+
+  const addShape = () => {
+    const element = createShapeElement('rectangle');
+    commit(updateSlide(presentation, selected.slide.id, (slide) => ({
+      ...slide,
+      elements: [...(slide.elements ?? []), element],
+      layerOrder: [...normalizedLayerOrder(slide), element.id],
+    })));
+    selectOnly(element.id);
+  };
+
+  const clipboardElementFromResolved = (element: LiveSlideElement): SlideElement | null => {
+    if (element.id === PRIMARY_SLIDE_ELEMENT_ID && element.type === 'text') {
+      return {
+        id: 'clipboard-primary',
+        type: 'text',
+        name: 'Primary Text Copy',
+        text: element.text,
+        layout: { ...element.layout },
+        format: { ...element.format },
+        opacity: element.opacity,
+      };
+    }
+    const rawElement = selected.slide.elements?.find((candidate) => candidate.id === element.id);
+    return rawElement ? structuredClone(rawElement) : null;
+  };
+
+  const copySelectedElement = () => {
+    const targets = selectedElements.length
+      ? selectedElements
+      : selectedElement
+        ? [selectedElement]
+        : [];
+    copiedSlideElements = targets
+      .map(clipboardElementFromResolved)
+      .filter((element): element is SlideElement => Boolean(element));
+    setClipboardRevision((value) => value + 1);
+  };
+
+  const pasteElement = () => {
+    if (!copiedSlideElements.length) return;
+    const pasted = copiedSlideElements.map((source) => {
+      const element = duplicateSlideElement(source);
+      element.name = source.name;
+      return element;
+    });
+    commit(updateSlide(presentation, selected.slide.id, (slide) => ({
+      ...slide,
+      elements: [...(slide.elements ?? []), ...pasted],
+      layerOrder: [...normalizedLayerOrder(slide), ...pasted.map((element) => element.id)],
+    })));
+    setSelectedElementIds(pasted.map((element) => element.id));
+    setSelectedElementId(pasted[pasted.length - 1].id);
+  };
+
+  const cutSelectedElement = () => {
+    copySelectedElement();
+    const removableIds = selectedElementIds.filter((id) => id !== PRIMARY_SLIDE_ELEMENT_ID);
+    if (!removableIds.length) return;
+    commit(updateSlide(presentation, selected.slide.id, (slide) => ({
+      ...slide,
+      elements: (slide.elements ?? []).filter((element) => !removableIds.includes(element.id)),
+      layerOrder: normalizedLayerOrder(slide).filter((id) => !removableIds.includes(id)),
+    })));
+    selectOnly(PRIMARY_SLIDE_ELEMENT_ID);
   };
 
   const duplicateSelectedElement = () => {
@@ -449,17 +707,18 @@ export function SlideLayoutEditor({
       elements: [...(slide.elements ?? []), element],
       layerOrder: [...normalizedLayerOrder(slide), element.id],
     })));
-    setSelectedElementId(element.id);
+    selectOnly(element.id);
   };
 
   const deleteSelectedElement = () => {
-    if (!selectedElement || isPrimary) return;
+    const removableIds = selectedElementIds.filter((id) => id !== PRIMARY_SLIDE_ELEMENT_ID);
+    if (!removableIds.length) return;
     commit(updateSlide(presentation, selected.slide.id, (slide) => ({
       ...slide,
-      elements: (slide.elements ?? []).filter((element) => element.id !== selectedElement.id),
-      layerOrder: normalizedLayerOrder(slide).filter((id) => id !== selectedElement.id),
+      elements: (slide.elements ?? []).filter((element) => !removableIds.includes(element.id)),
+      layerOrder: normalizedLayerOrder(slide).filter((id) => !removableIds.includes(id)),
     })));
-    setSelectedElementId(PRIMARY_SLIDE_ELEMENT_ID);
+    selectOnly(PRIMARY_SLIDE_ELEMENT_ID);
   };
 
   const moveLayer = (direction: -1 | 1) => {
@@ -468,6 +727,82 @@ export function SlideLayoutEditor({
       ...slide,
       layerOrder: nextLayerOrder(slide, selectedElement.id, direction),
     })));
+  };
+
+  const alignSelection = (
+    mode: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom',
+  ) => {
+    const targets = selectedElements.length ? selectedElements : selectedElement ? [selectedElement] : [];
+    if (!targets.length) return;
+
+    const minLeft = Math.min(...targets.map((element) => element.layout.xPercent));
+    const maxRight = Math.max(...targets.map((element) => element.layout.xPercent + element.layout.widthPercent));
+    const minTop = Math.min(...targets.map((element) => element.layout.yPercent));
+    const maxBottom = Math.max(...targets.map((element) => element.layout.yPercent + element.layout.heightPercent));
+    const targetCenterX = targets.length === 1 ? 50 : (minLeft + maxRight) / 2;
+    const targetCenterY = targets.length === 1 ? 50 : (minTop + maxBottom) / 2;
+    const layouts = new Map<string, SlideBoxLayout>();
+
+    for (const element of targets) {
+      let next = { ...element.layout };
+      if (mode === 'left') next.xPercent = targets.length === 1 ? 0 : minLeft;
+      if (mode === 'hcenter') next.xPercent = targetCenterX - next.widthPercent / 2;
+      if (mode === 'right') next.xPercent = (targets.length === 1 ? 100 : maxRight) - next.widthPercent;
+      if (mode === 'top') next.yPercent = targets.length === 1 ? 0 : minTop;
+      if (mode === 'vcenter') next.yPercent = targetCenterY - next.heightPercent / 2;
+      if (mode === 'bottom') next.yPercent = (targets.length === 1 ? 100 : maxBottom) - next.heightPercent;
+      next.xPercent = clamp(next.xPercent, 0, 100 - next.widthPercent);
+      next.yPercent = clamp(next.yPercent, 0, 100 - next.heightPercent);
+      layouts.set(element.id, next);
+    }
+
+    applyElementLayouts(layouts);
+  };
+
+  const distributeSelection = (axis: 'horizontal' | 'vertical') => {
+    const targets = [...selectedElements];
+    if (targets.length < 3) return;
+
+    if (axis === 'horizontal') {
+      targets.sort((a, b) =>
+        (a.layout.xPercent + a.layout.widthPercent / 2) -
+        (b.layout.xPercent + b.layout.widthPercent / 2),
+      );
+      const firstCenter = targets[0].layout.xPercent + targets[0].layout.widthPercent / 2;
+      const lastCenter =
+        targets[targets.length - 1].layout.xPercent +
+        targets[targets.length - 1].layout.widthPercent / 2;
+      const step = (lastCenter - firstCenter) / (targets.length - 1);
+      const layouts = new Map<string, SlideBoxLayout>();
+      targets.forEach((element, index) => {
+        const center = firstCenter + step * index;
+        layouts.set(element.id, {
+          ...element.layout,
+          xPercent: clamp(center - element.layout.widthPercent / 2, 0, 100 - element.layout.widthPercent),
+        });
+      });
+      applyElementLayouts(layouts);
+      return;
+    }
+
+    targets.sort((a, b) =>
+      (a.layout.yPercent + a.layout.heightPercent / 2) -
+      (b.layout.yPercent + b.layout.heightPercent / 2),
+    );
+    const firstCenter = targets[0].layout.yPercent + targets[0].layout.heightPercent / 2;
+    const lastCenter =
+      targets[targets.length - 1].layout.yPercent +
+      targets[targets.length - 1].layout.heightPercent / 2;
+    const step = (lastCenter - firstCenter) / (targets.length - 1);
+    const layouts = new Map<string, SlideBoxLayout>();
+    targets.forEach((element, index) => {
+      const center = firstCenter + step * index;
+      layouts.set(element.id, {
+        ...element.layout,
+        yPercent: clamp(center - element.layout.heightPercent / 2, 0, 100 - element.layout.heightPercent),
+      });
+    });
+    applyElementLayouts(layouts);
   };
 
   const resetPrimarySlide = () => {
@@ -605,6 +940,41 @@ export function SlideLayoutEditor({
     ));
   };
 
+  const updateShapeKind = (shape: 'rectangle' | 'ellipse') => {
+    if (!selectedElement || selectedElement.type !== 'shape') return;
+    commit(updateSlide(presentation, selected.slide.id, (slide) =>
+      updateExtraElement(slide, selectedElement.id, (element) =>
+        element.type === 'shape' ? { ...element, shape } : element,
+      ),
+    ));
+  };
+
+  const updateShapeColor = (key: 'fillColor' | 'borderColor', value: string) => {
+    if (!selectedElement || selectedElement.type !== 'shape') return;
+    commit(
+      updateSlide(presentation, selected.slide.id, (slide) =>
+        updateExtraElement(slide, selectedElement.id, (element) =>
+          element.type === 'shape' ? { ...element, [key]: value } : element,
+        ),
+      ),
+      `shape-color:${selectedElement.id}:${key}`,
+    );
+  };
+
+  const updateShapeBorderWidth = (borderWidth: number) => {
+    if (!selectedElement || selectedElement.type !== 'shape' || !Number.isFinite(borderWidth)) return;
+    commit(
+      updateSlide(presentation, selected.slide.id, (slide) =>
+        updateExtraElement(slide, selectedElement.id, (element) =>
+          element.type === 'shape'
+            ? { ...element, borderWidth: clamp(borderWidth, 0, 20) }
+            : element,
+        ),
+      ),
+      `shape-border:${selectedElement.id}`,
+    );
+  };
+
   const updateOpacity = (opacity: number) => {
     if (!selectedElement || isPrimary) return;
     commit(
@@ -636,13 +1006,27 @@ export function SlideLayoutEditor({
           <button type="button" disabled={!canRedo} onClick={redo}>↷ Redo</button>
           <button className="layoutAddElement" type="button" onClick={addText}>＋ Text</button>
           <button className="layoutAddElement" type="button" onClick={addImage}>＋ Image</button>
+          <button className="layoutAddElement" type="button" onClick={addShape}>＋ Shape</button>
+          <button type="button" disabled={!selectedElement} onClick={copySelectedElement}>Copy</button>
+          <button type="button" disabled={!copiedSlideElements.length} onClick={pasteElement}>Paste</button>
+          <label>
+            <input
+              type="checkbox"
+              checked={snapEnabled}
+              onChange={(event) => {
+                setSnapEnabled(event.target.checked);
+                if (!event.target.checked) setSnapGuides({});
+              }}
+            />
+            Snap
+          </label>
           <label>
             <input
               type="checkbox"
               checked={showSafeArea}
               onChange={(event) => setShowSafeArea(event.target.checked)}
             />
-            Safe Area
+            Guides
           </label>
         </div>
       </header>
@@ -690,10 +1074,19 @@ export function SlideLayoutEditor({
                   if (event.key === 'ArrowUp') nudge(0, -step);
                   if (event.key === 'ArrowDown') nudge(0, step);
                 } else if (event.key === 'Delete' || event.key === 'Backspace') {
-                  if (!isPrimary) {
+                  if (removableSelectionCount > 0) {
                     event.preventDefault();
                     deleteSelectedElement();
                   }
+                } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
+                  event.preventDefault();
+                  copySelectedElement();
+                } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') {
+                  event.preventDefault();
+                  pasteElement();
+                } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'x') {
+                  event.preventDefault();
+                  cutSelectedElement();
                 } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
                   event.preventDefault();
                   duplicateSelectedElement();
@@ -716,9 +1109,16 @@ export function SlideLayoutEditor({
               )}
 
               {showSafeArea ? <div className="layoutSafeArea" aria-hidden="true" /> : null}
+              {snapGuides.x !== undefined ? (
+                <div className="layoutSnapGuide vertical" style={{ left: `${snapGuides.x}%` }} aria-hidden="true" />
+              ) : null}
+              {snapGuides.y !== undefined ? (
+                <div className="layoutSnapGuide horizontal" style={{ top: `${snapGuides.y}%` }} aria-hidden="true" />
+              ) : null}
 
               {resolvedElements.map((element, elementIndex) => {
-                const selectedNow = selectedElement?.id === element.id;
+                const selectedNow = selectedElementIds.includes(element.id);
+                const activeNow = selectedElement?.id === element.id;
                 const elementStyle = {
                   left: `${element.layout.xPercent}%`,
                   top: `${element.layout.yPercent}%`,
@@ -730,7 +1130,7 @@ export function SlideLayoutEditor({
 
                 return (
                   <div
-                    className={`layoutElementFrame ${selectedNow ? 'isSelected' : ''} type-${element.type}`}
+                    className={`layoutElementFrame ${selectedNow ? 'isSelected' : ''} ${activeNow ? 'isActive' : ''} type-${element.type}`}
                     key={element.id}
                     style={elementStyle}
                     onPointerDown={(event) => beginGesture(event, element, 'move')}
@@ -757,26 +1157,39 @@ export function SlideLayoutEditor({
                           ))}
                         </div>
                       </div>
-                    ) : element.fileUrl ? (
-                      <img
-                        className="layoutElementImage"
-                        src={element.fileUrl}
-                        alt=""
-                        draggable={false}
-                        style={{ objectFit: element.fit }}
-                      />
+                    ) : element.type === 'image' ? (
+                      element.fileUrl ? (
+                        <img
+                          className="layoutElementImage"
+                          src={element.fileUrl}
+                          alt=""
+                          draggable={false}
+                          style={{ objectFit: element.fit }}
+                        />
+                      ) : (
+                        <div className="layoutElementImageMissing">Choose Image</div>
+                      )
                     ) : (
-                      <div className="layoutElementImageMissing">Choose Image</div>
+                      <div
+                        className="layoutElementShape"
+                        style={{
+                          backgroundColor: element.fillColor,
+                          borderColor: element.borderColor,
+                          borderStyle: element.borderWidth > 0 ? 'solid' : 'none',
+                          borderWidth: element.borderWidth,
+                          borderRadius: element.shape === 'ellipse' ? '50%' : 0,
+                        }}
+                      />
                     )}
 
-                    {selectedNow ? (
+                    {activeNow ? (
                       <>
                         <i className="layoutHandle handle-nw" onPointerDown={(event) => beginGesture(event, element, 'nw')} />
                         <i className="layoutHandle handle-ne" onPointerDown={(event) => beginGesture(event, element, 'ne')} />
                         <i className="layoutHandle handle-sw" onPointerDown={(event) => beginGesture(event, element, 'sw')} />
                         <i className="layoutHandle handle-se" onPointerDown={(event) => beginGesture(event, element, 'se')} />
                         <span className="layoutBoxTag">
-                          {element.type === 'text' ? 'TEXT' : 'IMAGE'} · {resolvedElementName(element)}
+                          {element.type === 'text' ? 'TEXT' : element.type === 'image' ? 'IMAGE' : 'SHAPE'} · {resolvedElementName(element)}
                         </span>
                       </>
                     ) : null}
@@ -786,7 +1199,7 @@ export function SlideLayoutEditor({
             </div>
           </div>
           <div className="layoutCanvasHint">
-            Drag = move · corners = resize · Arrow = 0.5% · Shift+Arrow = 2% · Ctrl/Cmd+D = duplicate
+            Drag = move · corners = resize · Shift/Ctrl/Cmd-click = multi-select · snapping uses safe-area, centre and element edges · Ctrl/Cmd+C/V = copy/paste
           </div>
         </main>
 
@@ -799,12 +1212,15 @@ export function SlideLayoutEditor({
           <div className="layoutLayerList">
             {[...resolvedElements].reverse().map((element) => (
               <button
-                className={selectedElement?.id === element.id ? 'isSelected' : ''}
+                className={`${selectedElementIds.includes(element.id) ? 'isSelected' : ''} ${selectedElement?.id === element.id ? 'isActive' : ''}`}
                 key={element.id}
                 type="button"
-                onClick={() => setSelectedElementId(element.id)}
+                onClick={(event) => {
+                  if (event.ctrlKey || event.metaKey || event.shiftKey) toggleSelection(element.id);
+                  else selectOnly(element.id);
+                }}
               >
-                <span>{element.type === 'text' ? 'T' : 'IMG'}</span>
+                <span>{element.type === 'text' ? 'T' : element.type === 'image' ? 'IMG' : 'SHP'}</span>
                 <div>
                   <strong>{resolvedElementName(element)}</strong>
                   <small>{element.type === 'text' ? element.text.replace(/\n/g, ' / ') : element.name}</small>
@@ -813,6 +1229,40 @@ export function SlideLayoutEditor({
               </button>
             ))}
           </div>
+
+          <section className="elementInspectorSection selectionTools">
+            <strong>ALIGN / DISTRIBUTE</strong>
+            <span className="selectionCount">
+              {selectionCount} selected · Ctrl/Cmd/Shift-click Layers or canvas to multi-select
+            </span>
+            <div className="alignToolGrid">
+              <button type="button" onClick={() => alignSelection('left')}>Left</button>
+              <button type="button" onClick={() => alignSelection('hcenter')}>H Centre</button>
+              <button type="button" onClick={() => alignSelection('right')}>Right</button>
+              <button type="button" onClick={() => alignSelection('top')}>Top</button>
+              <button type="button" onClick={() => alignSelection('vcenter')}>V Centre</button>
+              <button type="button" onClick={() => alignSelection('bottom')}>Bottom</button>
+            </div>
+            <div className="distributeToolGrid">
+              <button
+                type="button"
+                disabled={selectionCount < 3}
+                onClick={() => distributeSelection('horizontal')}
+              >
+                Distribute H
+              </button>
+              <button
+                type="button"
+                disabled={selectionCount < 3}
+                onClick={() => distributeSelection('vertical')}
+              >
+                Distribute V
+              </button>
+            </div>
+            <small>
+              One selected element aligns to the slide. Multiple selections align/distribute relative to their combined bounds.
+            </small>
+          </section>
 
           {selectedElement ? (
             <>
@@ -843,13 +1293,15 @@ export function SlideLayoutEditor({
                     Back
                   </button>
                   <button type="button" onClick={duplicateSelectedElement}>Duplicate</button>
+                  <button type="button" onClick={copySelectedElement}>Copy</button>
+                  <button type="button" disabled={!copiedSlideElements.length} onClick={pasteElement}>Paste</button>
                   <button
                     className="danger"
                     type="button"
-                    disabled={isPrimary}
+                    disabled={removableSelectionCount === 0}
                     onClick={deleteSelectedElement}
                   >
-                    Delete
+                    Delete{removableSelectionCount > 1 ? ` ${removableSelectionCount}` : ''}
                   </button>
                 </div>
               </section>
@@ -987,7 +1439,7 @@ export function SlideLayoutEditor({
                     Reset Text Style to Inherited
                   </button>
                 </section>
-              ) : (
+              ) : selectedElement.type === 'image' ? (
                 <section className="elementInspectorSection">
                   <strong>IMAGE</strong>
                   <label className="elementField">
@@ -1010,6 +1462,49 @@ export function SlideLayoutEditor({
                       <option value="contain">Contain</option>
                       <option value="cover">Cover / Crop</option>
                     </select>
+                  </label>
+                </section>
+              ) : (
+                <section className="elementInspectorSection">
+                  <strong>SHAPE</strong>
+                  <label className="elementField">
+                    <span>TYPE</span>
+                    <select
+                      value={selectedElement.shape}
+                      onChange={(event) => updateShapeKind(event.target.value as 'rectangle' | 'ellipse')}
+                    >
+                      <option value="rectangle">Rectangle</option>
+                      <option value="ellipse">Ellipse / Circle</option>
+                    </select>
+                  </label>
+                  <div className="shapeColorGrid">
+                    <label>
+                      <span>FILL</span>
+                      <input
+                        type="color"
+                        value={selectedElement.fillColor}
+                        onChange={(event) => updateShapeColor('fillColor', event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      <span>BORDER</span>
+                      <input
+                        type="color"
+                        value={selectedElement.borderColor}
+                        onChange={(event) => updateShapeColor('borderColor', event.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <label className="elementField">
+                    <span>BORDER WIDTH</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={20}
+                      step={1}
+                      value={selectedElement.borderWidth}
+                      onChange={(event) => updateShapeBorderWidth(Number(event.target.value))}
+                    />
                   </label>
                 </section>
               )}

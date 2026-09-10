@@ -75,17 +75,31 @@ export function resolveSlideElements(
       };
     }
 
-    const asset = element.assetId
-      ? assets.find((candidate) => candidate.id === element.assetId)
-      : undefined;
+    if (element.type === 'image') {
+      const asset = element.assetId
+        ? assets.find((candidate) => candidate.id === element.assetId)
+        : undefined;
+      return {
+        id: element.id,
+        type: 'image',
+        name: element.name,
+        assetId: element.assetId,
+        fileUrl: asset?.fileUrl,
+        layout: clampElementLayout(element.layout),
+        fit: element.fit,
+        opacity: element.opacity ?? 1,
+      };
+    }
+
     return {
       id: element.id,
-      type: 'image',
+      type: 'shape',
       name: element.name,
-      assetId: element.assetId,
-      fileUrl: asset?.fileUrl,
+      shape: element.shape,
       layout: clampElementLayout(element.layout),
-      fit: element.fit,
+      fillColor: element.fillColor,
+      borderColor: element.borderColor,
+      borderWidth: element.borderWidth,
       opacity: element.opacity ?? 1,
     };
   });
@@ -133,6 +147,28 @@ export function createImageElement(
     },
     fit: 'contain',
     opacity: 1,
+  };
+}
+
+export function createShapeElement(
+  shape: 'rectangle' | 'ellipse' = 'rectangle',
+  name = shape === 'ellipse' ? 'Ellipse' : 'Rectangle',
+): Extract<SlideElement, { type: 'shape' }> {
+  return {
+    id: `element-${crypto.randomUUID()}`,
+    type: 'shape',
+    name,
+    shape,
+    layout: {
+      xPercent: 30,
+      yPercent: 30,
+      widthPercent: 40,
+      heightPercent: 24,
+    },
+    fillColor: '#24445b',
+    borderColor: '#ffffff',
+    borderWidth: 0,
+    opacity: 0.75,
   };
 }
 

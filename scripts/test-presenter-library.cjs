@@ -51,8 +51,19 @@ async function main() {
                   fit: 'contain',
                   opacity: 0.8,
                 },
+                {
+                  id: 'el-shape-1',
+                  type: 'shape',
+                  name: 'Lower Third Bar',
+                  shape: 'rectangle',
+                  layout: { xPercent: 8, yPercent: 76, widthPercent: 84, heightPercent: 14 },
+                  fillColor: '#224466',
+                  borderColor: '#ffffff',
+                  borderWidth: 2,
+                  opacity: 0.7,
+                },
               ],
-              layerOrder: ['el-image-1', '__primary__', 'el-text-1'],
+              layerOrder: ['el-image-1', 'el-shape-1', '__primary__', 'el-text-1'],
               backgroundAssetId: null,
             }],
           },
@@ -124,12 +135,14 @@ async function main() {
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].format.textAlign, 'left');
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].layout.xPercent, 18);
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].backgroundAssetId, null);
-  assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements.length, 2);
+  assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements.length, 3);
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements[0].text, 'John 3:16');
   assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements[1].assetId, 'image-logo');
+  assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements[2].shape, 'rectangle');
+  assert.equal(loaded.data.presentations[0].groups[0].slides[0].elements[2].borderWidth, 2);
   assert.deepEqual(
     loaded.data.presentations[0].groups[0].slides[0].layerOrder,
-    ['el-image-1', '__primary__', 'el-text-1'],
+    ['el-image-1', 'el-shape-1', '__primary__', 'el-text-1'],
   );
   assert.equal(loaded.data.customThemes.length, 1);
   assert.equal(loaded.data.customThemes[0].name, 'Kids Song');

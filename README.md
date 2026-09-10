@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.5.8-alpha.1 — Multi-Element Slide Editor**
+**v0.5.9-alpha.1 — Editor Productivity Tools**
 
 Implemented in source:
 
@@ -156,6 +156,20 @@ Implemented in source:
 - Audience output renders the complete element stack in saved layer order
 - copied Presentations receive fresh supplemental-element IDs and remapped layer order
 - old single-text presentations remain backward compatible without migration
+- internal multi-element clipboard for copy/paste between slides and presentations during the current app session
+- Ctrl/Cmd+C, Ctrl/Cmd+V and Ctrl/Cmd+X element shortcuts
+- multi-selection from Layers or canvas with Ctrl/Cmd/Shift-click
+- multi-selected Arrow-key nudging
+- align Left / Horizontal Centre / Right / Top / Vertical Centre / Bottom
+- alignment to the slide for one selection and to combined selection bounds for multiple elements
+- horizontal and vertical distribution for three or more selected elements
+- snapping to slide edges, 10% safe-area guides, slide centre and nearby element edges/centres
+- temporary visual snap guides during drag/resize
+- independent Snap and Guides toggles
+- basic Rectangle and Ellipse shape elements
+- shape fill, border colour, border width and opacity controls
+- shape elements participate in normal layer ordering, duplication, copy/paste, alignment and Audience rendering
+- multi-delete removes supplemental selected elements while Primary Text remains protected
 
 ## Run on macOS or Windows
 
@@ -276,6 +290,52 @@ The current editor supports:
 Changes autosave after a short debounce. The desktop process owns the saved JSON file and keeps the previous successful save as a backup. If the primary library file is unreadable on launch, Presenter attempts to recover the backup.
 
 The built-in demo service is now only the first-run seed. After the first successful save, the editable saved library becomes the source of truth.
+
+## Editor productivity tools
+
+The Layout workspace now includes the first productivity-tool pass for building real slides quickly.
+
+### Copy / paste between slides
+
+Presenter keeps an internal slide-element clipboard for the current application session. Select one or several elements, copy them, choose another slide (or another Presentation), then paste.
+
+- **Ctrl/Cmd+C** — Copy selected element(s)
+- **Ctrl/Cmd+V** — Paste onto the current slide
+- **Ctrl/Cmd+X** — Cut supplemental elements; Primary Text is copied but never removed
+- **Ctrl/Cmd+D** — Duplicate selected active element
+
+Pasted elements receive fresh IDs and remain independent from their originals.
+
+### Multi-selection and alignment
+
+Ctrl/Cmd/Shift-click elements either on the canvas or in **Layers** to build a multi-selection.
+
+With one selected element, Left/Right/Top/Bottom/Centre commands align it to the slide itself. With multiple selected elements, alignment uses the selection's combined bounds.
+
+Three or more selected elements can be distributed evenly by horizontal or vertical centre position.
+
+Arrow-key nudging moves the complete current selection.
+
+### Snapping and guides
+
+**Snap** can be toggled independently from visual **Guides**.
+
+While dragging or resizing, Presenter can snap to:
+
+- slide left/right/top/bottom edges
+- the 10% safe-area lines
+- horizontal/vertical slide centre
+- nearby element left/right/top/bottom edges
+- nearby element horizontal/vertical centres
+
+A temporary guide line appears when a snap target is active.
+
+### Shapes
+
+Slides can now contain basic **Rectangle** and **Ellipse** elements. Shapes use the same element/layer system as Text and Images, with configurable fill colour, border colour, border width, opacity and geometry.
+
+Shapes can be dragged, resized, layered, copied, pasted, duplicated, aligned and distributed like any other supplemental slide element.
+
 
 ## Multi-element slide editor
 
