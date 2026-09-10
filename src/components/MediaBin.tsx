@@ -187,22 +187,27 @@ export function MediaBin({
               onRetrigger={onTriggerMedia}
             />
           </>
-        ) : activeTab === 'Audio' ? (
-          <AudioCuePanel
-            activeSong={activeSong}
-            assets={assets}
-            onPauseSong={onPauseSong}
-            onPlaySong={onPlaySong}
-            onResumeSong={onResumeSong}
-            onSeekSong={onSeekSong}
-            onStopSong={onStopSong}
-            songTransport={songTransport}
-          />
-        ) : activeTab === 'Stage' ? (
+        ) : null}
+
+        <AudioCuePanel
+          activeSong={activeSong}
+          assets={assets}
+          hidden={activeTab !== 'Audio'}
+          onPauseSong={onPauseSong}
+          onPlaySong={onPlaySong}
+          onResumeSong={onResumeSong}
+          onSeekSong={onSeekSong}
+          onStopSong={onStopSong}
+          songTransport={songTransport}
+        />
+
+        {activeTab === 'Stage' ? (
           <PlaceholderTab tab="Stage" detail={`${networkStage.clientCount} tablet${networkStage.clientCount === 1 ? '' : 's'} connected · ${stageOutput.presentationTitle || 'No live presentation'}`} />
-        ) : (
+        ) : null}
+
+        {activeTab === 'Timers' ? (
           <PlaceholderTab tab="Timers" detail="Timer controls will appear here when the timer engine is implemented." />
-        )}
+        ) : null}
       </div>
     </section>
   );
