@@ -11,10 +11,12 @@ import type { MediaAsset, OutputState, PlaylistItem, Presentation, PresentationT
 import { PresentationEditorPanel } from './PresentationEditorPanel';
 import { SlideLayoutEditor } from './SlideLayoutEditor';
 import { SongArrangementEditor } from './SongArrangementEditor';
+import { SongPerformancePanel } from './SongPerformancePanel';
 import { SongSetupPanel } from './SongSetupPanel';
 import { SongTimingEditor } from './SongTimingEditor';
-import { SongTransportPanel } from './SongTransportPanel';
 import { Icon } from './ui/Icon';
+
+type SongWorkspaceMode = 'build' | 'perform';
 
 interface SlideWorkspaceProps {
   selectedItem: PlaylistItem;
@@ -95,11 +97,13 @@ export function SlideWorkspace({
   onTriggerLyricsVideo,
 }: SlideWorkspaceProps) {
   const [viewMode, setViewMode] = useState<'slides' | 'edit' | 'layout' | 'arrange' | 'timing'>('slides');
+  const [songWorkspaceMode, setSongWorkspaceMode] = useState<SongWorkspaceMode>('perform');
 
   useEffect(() => {
     setViewMode('slides');
+    setSongWorkspaceMode(selectedItem.type === 'song' ? 'perform' : 'build');
     onStopTimingSong();
-  }, [selectedItem.id, onStopTimingSong]);
+  }, [selectedItem.id, selectedItem.type, onStopTimingSong]);
 
   const songOccurrences = useMemo(
     () => song && presentation ? effectiveArrangement(song, presentation) : [],
@@ -118,6 +122,26 @@ export function SlideWorkspace({
     ),
     [arrangedSongSlides],
   );
+
+  const enterBuildMode = () => {
+    if (!song) return;
+    if (
+      songTransport.songId === song.id &&
+      (songTransport.status === 'playing' || songTransport.status === 'paused')
+    ) {
+      window.alert('This Song is currently live. Stop the live Song before changing its Build configuration.');
+      return;
+    }
+    onStopTimingSong();
+    setViewMode('slides');
+    setSongWorkspaceMode('build');
+  };
+
+  const enterPerformanceMode = () => {
+    onStopTimingSong();
+    setViewMode('slides');
+    setSongWorkspaceMode('perform');
+  };
 
   const openArrangeMode = () => {
     if (viewMode === 'arrange') {
@@ -154,8 +178,15 @@ export function SlideWorkspace({
         label: group.name,
       })) ?? [];
 
+  const isSongBuild = Boolean(song && songWorkspaceMode === 'build');
+  const isSongPerformance = Boolean(song && songWorkspaceMode === 'perform');
+
   return (
-    <section className="slideWorkspace" aria-label="Slide workspace">
+    <section
+      className={`slideWorkspace ${isSongBuild ? 'songBuildWorkspace' : ''} ${isSongPerformance ? 'songPerformanceWorkspace' : ''}`}
+      aria-label="Slide workspace"
+      data-presenter-editor={isSongBuild ? 'true' : undefined}
+    >
       <header className="workspaceHeader">
         <div className="workspaceIdentity">
           <Icon name={selectedItem.type === 'bible' ? 'bible' : selectedItem.type === 'media' ? 'media' : selectedItem.type === 'song' ? 'audio' : 'presentation'} />
@@ -165,7 +196,28 @@ export function SlideWorkspace({
           </div>
         </div>
         <div className="workspaceHeaderActions">
-          {presentation ? (
+          {song ? (
+            <div className="songWorkspaceModeSwitch" aria-label="Song workspace mode">
+              <button
+                className={songWorkspaceMode === 'build' ? 'isActive isBuild' : ''}
+                type="button"
+                onClick={enterBuildMode}
+              >
+                <Icon name="presentation" />
+                <span><b>BUILD</b><small>Prepare</small></span>
+              </button>
+              <button
+                className={songWorkspaceMode === 'perform' ? 'isActive isPerform' : ''}
+                type="button"
+                onClick={enterPerformanceMode}
+              >
+                <Icon name="audio" />
+                <span><b>PERFORM</b><small>Run Live</small></span>
+              </button>
+            </div>
+          ) : null}
+
+          {presentation && (!song || songWorkspaceMode === 'build') ? (
             <button
               className={viewMode === 'edit' ? 'isActive' : ''}
               type="button"
@@ -175,7 +227,7 @@ export function SlideWorkspace({
               {viewMode === 'edit' ? 'Done Editing' : 'Edit'}
             </button>
           ) : null}
-          {presentation ? (
+          {presentation && (!song || songWorkspaceMode === 'build') ? (
             <button
               className={viewMode === 'layout' ? 'isActive' : ''}
               type="button"
@@ -188,7 +240,7 @@ export function SlideWorkspace({
               {viewMode === 'layout' ? 'Done Layout' : 'Layout'}
             </button>
           ) : null}
-          {song && presentation ? (
+          {song && presentation && songWorkspaceMode === 'build' ? (
             <button
               className={viewMode === 'arrange' ? 'isActive' : ''}
               type="button"
@@ -198,7 +250,7 @@ export function SlideWorkspace({
               {viewMode === 'arrange' ? 'Done Arranging' : 'Arrange'}
             </button>
           ) : null}
-          {song && presentation ? (
+          {song && presentation && songWorkspaceMode === 'build' ? (
             <button
               className={viewMode === 'timing' ? 'isActive' : ''}
               type="button"
@@ -214,43 +266,53 @@ export function SlideWorkspace({
           <div className="workspaceView">
             <Icon name="grid" />
             <span>
-              {viewMode === 'edit'
-                ? 'Editor'
-                : viewMode === 'layout'
-                  ? 'Visual Layout'
-                  : viewMode === 'arrange'
-                    ? 'Arrangement Editor'
-                    : viewMode === 'timing'
-                      ? 'Timing Editor'
-                      : song
-                        ? 'Song + Slide View'
-                        : 'Slide View'}
+              {song
+                ? songWorkspaceMode === 'perform'
+                  ? 'Live Performance'
+                  : viewMode === 'edit'
+                    ? 'Build · Lyrics Editor'
+                    : viewMode === 'layout'
+                      ? 'Build · Visual Layout'
+                      : viewMode === 'arrange'
+                        ? 'Build · Arrangement'
+                        : viewMode === 'timing'
+                          ? 'Build · Timing'
+                          : 'Build · Song Setup'
+                : viewMode === 'edit'
+                  ? 'Editor'
+                  : viewMode === 'layout'
+                    ? 'Visual Layout'
+                    : 'Slide View'}
             </span>
           </div>
         </div>
       </header>
 
       <div className="workspaceScroll">
-        {song && viewMode !== 'layout' ? (
-          <>
-            <SongSetupPanel
-              assets={availableAssets}
-              onChange={onChangeSong}
-              onTriggerLyricsVideo={onTriggerLyricsVideo}
-              song={song}
-            />
-            {viewMode !== 'timing' && viewMode !== 'arrange' ? (
-              <SongTransportPanel
-                onPause={onPauseSong}
-                onPlay={() => onPlaySong(song)}
-                onResume={onResumeSong}
-                onSeek={onSeekSong}
-                onStop={onStopSong}
-                song={song}
-                transport={songTransport}
-              />
-            ) : null}
-          </>
+        {song && songWorkspaceMode === 'build' && viewMode !== 'layout' ? (
+          <SongSetupPanel
+            assets={availableAssets}
+            onChange={onChangeSong}
+            song={song}
+          />
+        ) : null}
+
+        {song && presentation && songWorkspaceMode === 'perform' ? (
+          <SongPerformancePanel
+            assets={availableAssets}
+            onPause={onPauseSong}
+            onPlay={() => onPlaySong(song)}
+            onResume={onResumeSong}
+            onSeek={onSeekSong}
+            onSelectSlide={onSelectSlide}
+            onStop={onStopSong}
+            onTriggerLyricsVideo={onTriggerLyricsVideo}
+            onTriggerSlide={onTriggerSlide}
+            output={output}
+            presentation={presentation}
+            song={song}
+            transport={songTransport}
+          />
         ) : null}
 
         {viewMode === 'layout' && presentation ? (
@@ -295,11 +357,24 @@ export function SlideWorkspace({
             presentation={presentation}
           />
         ) : presentation ? (
-          <div className="slideGroups">
+          <div className={`slideGroups ${isSongBuild ? 'buildSlideGroups' : ''}`}>
+            {isSongBuild ? (
+              <div className="songBuildSelectionBanner">
+                <Icon name="presentation" />
+                <div>
+                  <strong>BUILD PREVIEW</strong>
+                  <span>Clicking lyric slides selects them for preparation only. Audience output will not change until you switch to Perform.</span>
+                </div>
+              </div>
+            ) : null}
             {song?.playbackMode === 'lyrics-video' ? (
               <div className="songFallbackBanner">
                 <Icon name="presentation" />
-                <span>Fallback / alternate lyric slides remain available, but Lyrics Video mode does not advance them automatically.</span>
+                <span>
+                  {isSongBuild
+                    ? 'Fallback lyric slides can be prepared here. The assigned Lyrics Video is triggered only from Perform.'
+                    : 'Fallback / alternate lyric slides remain available, but Lyrics Video mode does not advance them automatically.'}
+                </span>
               </div>
             ) : null}
             {song && songOccurrences.length ? (
@@ -353,12 +428,12 @@ export function SlideWorkspace({
                       : undefined;
                     return (
                       <button
-                        aria-label={`${label}, slide ${sequence}${live ? ', live' : ''}`}
-                        className={`slideThumbnail ${selected ? 'isSelected' : ''} ${live ? 'isLive' : ''}`}
+                        aria-label={`${label}, slide ${sequence}${live ? ', live' : ''}${isSongBuild ? ', build selection only' : ''}`}
+                        className={`slideThumbnail ${selected ? 'isSelected' : ''} ${live ? 'isLive' : ''} ${isSongBuild ? 'isBuildOnly' : ''}`}
                         key={`${key}:${slide.id}`}
                         onClick={() => {
                           onSelectSlide(slide.id, arrangementEntryId);
-                          onTriggerSlide(presentation, slide, arrangementEntryId);
+                          if (!isSongBuild) onTriggerSlide(presentation, slide, arrangementEntryId);
                         }}
                         type="button"
                       >
@@ -456,6 +531,7 @@ export function SlideWorkspace({
                         </span>
                         <span className="slideOrdinal">{sequence}</span>
                         {live ? <span className="liveFlag">LIVE</span> : null}
+                        {isSongBuild ? <span className="buildFlag">BUILD</span> : null}
                       </button>
                     );
                   })}
