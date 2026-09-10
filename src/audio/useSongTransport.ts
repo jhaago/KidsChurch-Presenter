@@ -10,15 +10,20 @@ export type SongTransportStatus =
   | 'ended'
   | 'error';
 
-export interface SongTransportSnapshot {
+interface SongTransportState {
   songId: string | null;
   songTitle: string | null;
   status: SongTransportStatus;
   positionMs: number;
   durationMs: number;
   loadedTrackCount: number;
+  stemEnabled: Record<string, boolean>;
   warning: string | null;
   error: string | null;
+}
+
+export interface SongTransportSnapshot extends SongTransportState {
+  setStemEnabled: (stemId: string, enabled: boolean) => void;
 }
 
 interface TrackPlan {
@@ -33,13 +38,14 @@ interface ActiveSource {
   gain: GainNode;
 }
 
-const INITIAL_STATE: SongTransportSnapshot = {
+const INITIAL_STATE: SongTransportState = {
   songId: null,
   songTitle: null,
   status: 'idle',
   positionMs: 0,
   durationMs: 0,
   loadedTrackCount: 0,
+  stemEnabled: {},
   warning: null,
   error: null,
 };
@@ -85,9 +91,17 @@ function buildTrackPlan(song: Song, assets: MediaAsset[]): TrackPlan[] {
   return [];
 }
 
+function runtimeStemState(plan: TrackPlan[]) {
+  return Object.fromEntries(
+    plan
+      .filter((track) => track.key !== 'single-track')
+      .map((track) => [track.key, track.enabled]),
+  );
+}
+
 export function useSongTransport(assets: MediaAsset[]) {
-  const [state, setState] = useState<SongTransportSnapshot>(INITIAL_STATE);
-  const stateRef = useRef<SongTransportSnapshot>(INITIAL_STATE);
+  const [state, setState] = useState<SongTransportState>(INITIAL_STATE);
+  const stateRef = useRef<SongTransportState>(INITIAL_STATE);
   const audioContextRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
   const bufferCacheRef = useRef(new Map<string, AudioBuffer>());
@@ -97,7 +111,7 @@ export function useSongTransport(assets: MediaAsset[]) {
   const startOffsetMsRef = useRef(0);
   const scheduledStartTimeRef = useRef(0);
 
-  const updateState = useCallback((patch: Partial<SongTransportSnapshot>) => {
+  const updateState = useCallback((patch: Partial<SongTransportState>) => {
     setState((current) => {
       const next = { ...current, ...patch };
       stateRef.current = next;
@@ -215,7 +229,7 @@ export function useSongTransport(assets: MediaAsset[]) {
         if (buffer) buffers.set(track.asset.id, buffer);
       }
       await scheduleFrom(song, stateRef.current.positionMs, plan, buffers);
-      updateState({ status: 'playing', error: null });
+      updateState({ status: 'playing', error: null, stemEnabled: runtimeStemState(plan) });
       return true;
     }
 
@@ -228,6 +242,7 @@ export function useSongTransport(assets: MediaAsset[]) {
       positionMs: 0,
       durationMs: 0,
       loadedTrackCount: 0,
+      stemEnabled: {},
       warning: null,
       error: null,
     });
@@ -246,6 +261,7 @@ export function useSongTransport(assets: MediaAsset[]) {
           status: 'playing',
           durationMs,
           loadedTrackCount: 0,
+          stemEnabled: {},
           warning: 'Clock-only transport: no backing audio is active.',
         });
         return true;
@@ -265,6 +281,7 @@ export function useSongTransport(assets: MediaAsset[]) {
         positionMs: 0,
         durationMs,
         loadedTrackCount: plan.length,
+        stemEnabled: runtimeStemState(plan),
         warning,
         error: null,
       });
@@ -335,14 +352,23 @@ export function useSongTransport(assets: MediaAsset[]) {
   }, [scheduleFrom, updateState]);
 
   const setStemEnabled = useCallback((stemId: string, enabled: boolean) => {
+    const track = trackPlanRef.current.find((candidate) => candidate.key === stemId);
+    if (!track) return;
+
+    track.enabled = enabled;
+    updateState({
+      stemEnabled: {
+        ...stateRef.current.stemEnabled,
+        [stemId]: enabled,
+      },
+    });
+
     const context = audioContextRef.current;
     const node = activeSourcesRef.current.get(stemId);
-    const track = trackPlanRef.current.find((candidate) => candidate.key === stemId);
-    if (!context || !node || !track) return;
-    track.enabled = enabled;
+    if (!context || !node) return;
     node.gain.gain.cancelScheduledValues(context.currentTime);
     node.gain.gain.setTargetAtTime(enabled ? dbToGain(track.gainDb) : 0, context.currentTime, 0.01);
-  }, []);
+  }, [updateState]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -367,7 +393,7 @@ export function useSongTransport(assets: MediaAsset[]) {
   }, [stopSources]);
 
   return {
-    state,
+    state: { ...state, setStemEnabled } satisfies SongTransportSnapshot,
     play,
     restart,
     pause,
