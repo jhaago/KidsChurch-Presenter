@@ -63,7 +63,6 @@ function AudioTransportTab({
   onResumeSong,
   onStopSong,
   onSeekSong,
-  onToggleStem,
 }: {
   audioCount: number;
   activeSong?: Song;
@@ -73,7 +72,6 @@ function AudioTransportTab({
   onResumeSong: () => void;
   onStopSong: () => void;
   onSeekSong: (positionMs: number) => void;
-  onToggleStem: (stemId: string, enabled: boolean) => void;
 }) {
   if (!activeSong) {
     return <PlaceholderTab tab="Audio" detail={`${audioCount} indexed audio asset${audioCount === 1 ? '' : 's'} · start playback from a Song item.`} />;
@@ -81,6 +79,8 @@ function AudioTransportTab({
 
   const playing = transport.status === 'playing';
   const paused = transport.status === 'paused';
+  const active = transport.songId === activeSong.id;
+
   return (
     <div className="audioTransportTab">
       <div className="audioTransportIdentity">
@@ -116,16 +116,24 @@ function AudioTransportTab({
       </div>
       {activeSong.playbackMode === 'slides-stems' ? (
         <div className="audioStemQuickControls">
-          {activeSong.audio.stems.filter((stem) => stem.assetId).map((stem) => (
-            <button
-              className={stem.enabled ? 'isEnabled' : ''}
-              key={stem.id}
-              type="button"
-              onClick={() => onToggleStem(stem.id, !stem.enabled)}
-            >
-              {stem.name} <b>{stem.enabled ? 'ON' : 'OFF'}</b>
-            </button>
-          ))}
+          {activeSong.audio.stems.filter((stem) => stem.assetId).map((stem) => {
+            const enabled = active
+              ? transport.stemEnabled[stem.id] ?? stem.enabled
+              : stem.enabled;
+            return (
+              <button
+                className={enabled ? 'isEnabled' : ''}
+                disabled={!active || (!playing && !paused)}
+                key={stem.id}
+                type="button"
+                onClick={() => transport.setStemEnabled(stem.id, !enabled)}
+                title="Live session only; saved Build defaults are unchanged"
+              >
+                {stem.name} <b>{enabled ? 'ON' : 'OFF'}</b>
+              </button>
+            );
+          })}
+          <span className="audioStemSessionNote">Live mix only · restart resets to saved Build defaults</span>
         </div>
       ) : null}
       {transport.warning ? <span className="audioTransportNotice">{transport.warning}</span> : null}
@@ -165,7 +173,6 @@ export function MediaBin({
   onResumeSong,
   onStopSong,
   onSeekSong,
-  onToggleStem,
   onRescanResources,
   onTriggerMedia,
 }: MediaBinProps) {
@@ -245,7 +252,6 @@ export function MediaBin({
             onResumeSong={onResumeSong}
             onSeekSong={onSeekSong}
             onStopSong={onStopSong}
-            onToggleStem={onToggleStem}
             transport={songTransport}
           />
         ) : activeTab === 'Stage' ? (
