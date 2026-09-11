@@ -16,6 +16,11 @@ function actionSummary(cue: PresentationCue) {
   return labels.join(' + ') || 'NO ACTIONS';
 }
 
+function preloadCueAudio(cue: PresentationCue) {
+  const audioAction = cue.actions.find((action) => action.type === 'audio');
+  if (audioAction) preloadAudioCue(audioAction.assetId);
+}
+
 export function PresentationCueDeck({ group, assets, onTriggerMedia }: PresentationCueDeckProps) {
   const [lastTriggeredId, setLastTriggeredId] = useState<string | null>(null);
   const flashTimerRef = useRef<number | null>(null);
@@ -67,6 +72,8 @@ export function PresentationCueDeck({ group, assets, onTriggerMedia }: Presentat
             className={`presentationCueButton cueColor-${cue.color ?? 'blue'} ${lastTriggeredId === cue.id ? 'isTriggered' : ''}`}
             key={cue.id}
             onClick={() => triggerCue(cue)}
+            onPointerEnter={() => preloadCueAudio(cue)}
+            onFocus={() => preloadCueAudio(cue)}
             type="button"
             disabled={!cue.actions.length}
             title={cue.actions.length ? `Trigger ${actionSummary(cue).toLowerCase()}` : 'This cue has no actions'}
