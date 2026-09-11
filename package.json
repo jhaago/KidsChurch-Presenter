@@ -11,7 +11,7 @@
     "start": "electron .",
     "dist": "npm run build && electron-builder --publish never",
     "dist:win": "npm run build && electron-builder --win nsis --x64 --publish never",
-    "dist:mac": "npm run build && electron-builder --mac dmg --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --universal --publish never",
     "check:electron": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/stage-server.cjs && node --check electron/resource-library.cjs && node --check electron/presenter-library.cjs",
     "check:stage-server": "node scripts/test-stage-server.cjs",
     "check:resources": "node scripts/test-resource-library.cjs",
@@ -68,9 +68,16 @@
       "createStartMenuShortcut": true
     },
     "mac": {
-      "target": "dmg",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
       "category": "public.app-category.productivity",
-      "artifactName": "KidsChurch-Presenter-${version}.${ext}",
+      "artifactName": "KidsChurch-Presenter-${version}-Universal.${ext}",
       "icon": "build/icon.png"
     }
   }
