@@ -45,7 +45,7 @@ export function AudioCuePanel({
   hidden = false,
 }: AudioCuePanelProps) {
   const audioAssets = useMemo(() => assets.filter((asset) => asset.kind === 'audio'), [assets]);
-  const cueTransport = useAudioCueTransport();
+  const cueTransport = useAudioCueTransport(audioAssets);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [loop, setLoop] = useState(false);
   const [trimStart, setTrimStart] = useState('');
