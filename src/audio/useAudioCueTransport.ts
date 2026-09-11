@@ -3,6 +3,8 @@ import { getMediaPlaybackSettings } from '../domain/mediaPlayback';
 import type { MediaAsset } from '../domain/types';
 import {
   AUDIO_CUE_CLEAR_EVENT,
+  AUDIO_CUE_PRELOAD_EVENT,
+  AUDIO_CUE_TRIGGER_EVENT,
   publishAudioCueState,
 } from './audioCueEvents';
 
@@ -43,7 +45,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function useAudioCueTransport() {
+export function useAudioCueTransport(assets: MediaAsset[] = []) {
   const [state, setState] = useState<AudioCueTransportSnapshot>(INITIAL_STATE);
   const stateRef = useRef<AudioCueTransportSnapshot>(INITIAL_STATE);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -102,6 +104,16 @@ export function useAudioCueTransport() {
     bufferCacheRef.current.set(asset.id, buffer);
     return buffer;
   }, [ensureContext]);
+
+  const preload = useCallback(async (asset: MediaAsset) => {
+    if (asset.kind !== 'audio') return false;
+    try {
+      await readAndDecode(asset);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [readAndDecode]);
 
   const currentPositionMs = useCallback(() => {
     const current = stateRef.current;
@@ -271,6 +283,28 @@ export function useAudioCueTransport() {
   }, [stop]);
 
   useEffect(() => {
+    const onTrigger = (event: Event) => {
+      const assetId = (event as CustomEvent<{ assetId?: string }>).detail?.assetId;
+      if (!assetId) return;
+      const asset = assets.find((candidate) => candidate.id === assetId && candidate.kind === 'audio');
+      if (asset) void play(asset);
+    };
+    const onPreload = (event: Event) => {
+      const assetId = (event as CustomEvent<{ assetId?: string }>).detail?.assetId;
+      if (!assetId) return;
+      const asset = assets.find((candidate) => candidate.id === assetId && candidate.kind === 'audio');
+      if (asset) void preload(asset);
+    };
+
+    window.addEventListener(AUDIO_CUE_TRIGGER_EVENT, onTrigger);
+    window.addEventListener(AUDIO_CUE_PRELOAD_EVENT, onPreload);
+    return () => {
+      window.removeEventListener(AUDIO_CUE_TRIGGER_EVENT, onTrigger);
+      window.removeEventListener(AUDIO_CUE_PRELOAD_EVENT, onPreload);
+    };
+  }, [assets, play, preload]);
+
+  useEffect(() => {
     publishAudioCueState(
       state.status === 'loading' || state.status === 'playing' || state.status === 'paused',
     );
@@ -286,6 +320,7 @@ export function useAudioCueTransport() {
   return {
     state,
     play,
+    preload,
     pause,
     resume,
     stop,
