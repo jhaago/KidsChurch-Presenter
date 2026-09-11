@@ -1,0 +1,243 @@
+.presentationCueDeck {
+  min-width: 0;
+  margin: 7px 0 2px;
+  padding: 6px;
+  border: 1px solid #30353a;
+  background: #121518;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 6px;
+  align-items: stretch;
+}
+
+.presentationCueDeckLabel {
+  border-right: 1px solid #30353a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #6e7881;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+.presentationCueDeckLabel svg { width: 14px; height: 14px; }
+
+.presentationCueButtons {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 5px;
+}
+
+.presentationCueButton {
+  position: relative;
+  min-width: 0;
+  min-height: 53px;
+  padding: 7px 8px 6px 11px;
+  border: 1px solid #3a4249;
+  border-radius: 3px;
+  background: #1b2024;
+  color: #d1d6da;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 90ms ease, background 90ms ease, transform 90ms ease;
+}
+.presentationCueButton::before,
+.cueEditorCard::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #477ea9;
+}
+.presentationCueButton:hover { border-color: #6f7880; background: #252b30; }
+.presentationCueButton:active { transform: translateY(1px); }
+.presentationCueButton:disabled { cursor: default; opacity: .48; }
+.presentationCueButton.isTriggered {
+  border-color: #d5e7f7;
+  background: #344858;
+  box-shadow: 0 0 0 1px rgba(213,231,247,.2), 0 0 11px rgba(105,169,219,.25);
+}
+.presentationCueButton .cueNumber {
+  display: block;
+  margin-bottom: 3px;
+  color: #737d86;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+.presentationCueButton strong {
+  display: block;
+  overflow: hidden;
+  color: #e2e5e8;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.presentationCueButton small {
+  display: block;
+  margin-top: 4px;
+  color: #7e8992;
+  font-size: 7px;
+  font-weight: 750;
+  letter-spacing: .08em;
+}
+
+.cueColor-green::before { background: #4d9a6c; }
+.cueColor-amber::before { background: #c18a3f; }
+.cueColor-red::before { background: #b95656; }
+.cueColor-purple::before { background: #8f64b4; }
+.cueColor-slate::before { background: #697984; }
+
+.cueEditorPanel {
+  min-height: 0;
+  padding: 10px;
+  color: #c5c9cd;
+}
+.cueEditorIntro {
+  min-height: 58px;
+  padding: 9px 11px;
+  border: 1px solid #343a40;
+  background: #191d20;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.cueEditorIntroIcon {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #365d7d;
+  border-radius: 4px;
+  background: #1d3447;
+  display: grid;
+  place-items: center;
+  color: #7eb2dc;
+}
+.cueEditorIntroIcon svg { width: 18px; height: 18px; }
+.cueEditorIntro strong { display: block; color: #e0e3e6; font-size: 10px; letter-spacing: .08em; }
+.cueEditorIntro span { display: block; margin-top: 3px; color: #858d95; font-size: 9px; line-height: 1.4; }
+
+.cueEditorGroups { display: flex; flex-direction: column; gap: 10px; margin-top: 9px; }
+.cueEditorGroup {
+  border: 1px solid #30353a;
+  background: #15181b;
+}
+.cueEditorGroup > header {
+  min-height: 39px;
+  padding: 5px 7px 5px 9px;
+  border-bottom: 1px solid #2b3035;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #1a1d20;
+}
+.cueEditorGroup > header small { display: block; color: #68717a; font-size: 6px; font-weight: 800; letter-spacing: .11em; }
+.cueEditorGroup > header strong { display: block; margin-top: 2px; color: #cbd0d4; font-size: 10px; }
+.cueEditorGroup > header button {
+  min-height: 25px;
+  padding: 0 9px;
+  border: 1px solid #406d91;
+  border-radius: 3px;
+  background: #234e70;
+  color: #e4f0f9;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.cueEditorGrid {
+  padding: 7px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 7px;
+}
+.cueEditorCard {
+  position: relative;
+  min-width: 0;
+  padding: 8px 8px 7px 12px;
+  border: 1px solid #343a3f;
+  border-radius: 3px;
+  background: #1b1f22;
+  overflow: hidden;
+}
+.cueEditorCardTop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 75px;
+  gap: 6px;
+}
+.cueEditorCardTop input,
+.cueEditorCardTop select,
+.cueActionField select {
+  min-width: 0;
+  height: 27px;
+  padding: 0 6px;
+  border: 1px solid #373d43;
+  border-radius: 3px;
+  background: #111416;
+  color: #cbd0d4;
+  font: inherit;
+  font-size: 9px;
+  outline: 0;
+}
+.cueEditorCardTop input:focus,
+.cueEditorCardTop select:focus,
+.cueActionField select:focus { border-color: #5288b2; }
+
+.cueActionField {
+  min-width: 0;
+  margin-top: 7px;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+.cueActionField > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #7e8790;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+.cueActionField svg { width: 11px; height: 11px; }
+
+.cueEditorCardFooter {
+  min-height: 28px;
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid #2c3135;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+}
+.cueEditorCardFooter > span { color: #69727a; font-size: 7px; }
+.cueEditorCardFooter > div { display: flex; gap: 4px; }
+.cueEditorCardFooter button {
+  min-width: 27px;
+  height: 23px;
+  padding: 0 6px;
+  border: 1px solid #383e43;
+  border-radius: 3px;
+  background: #252a2e;
+  color: #aeb4b9;
+  cursor: pointer;
+  font-size: 8px;
+}
+.cueEditorCardFooter button:disabled { opacity: .35; cursor: default; }
+.cueEditorCardFooter .cueDeleteButton { color: #d7a1a1; border-color: #593b3b; background: #312222; }
+.cueEditorEmpty { padding: 13px; color: #6d757d; font-size: 9px; }
+
+@media (max-width: 1100px) {
+  .presentationCueDeck { grid-template-columns: 38px minmax(0, 1fr); }
+  .presentationCueButtons { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .cueEditorGrid { grid-template-columns: 1fr; }
+}
