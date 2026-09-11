@@ -1,6 +1,7 @@
 export const AUDIO_CUE_CLEAR_EVENT = 'kidschurch:clear-audio-cues';
 export const AUDIO_CUE_STATE_EVENT = 'kidschurch:audio-cue-state';
 export const AUDIO_CUE_TRIGGER_EVENT = 'kidschurch:trigger-audio-cue';
+export const AUDIO_CUE_PRELOAD_EVENT = 'kidschurch:preload-audio-cue';
 
 export function clearAudioCues() {
   if (typeof window === 'undefined') return;
@@ -10,6 +11,11 @@ export function clearAudioCues() {
 export function triggerAudioCue(assetId: string) {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent(AUDIO_CUE_TRIGGER_EVENT, { detail: { assetId } }));
+}
+
+export function preloadAudioCue(assetId: string) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(AUDIO_CUE_PRELOAD_EVENT, { detail: { assetId } }));
 }
 
 export function publishAudioCueState(active: boolean) {
