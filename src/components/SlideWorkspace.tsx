@@ -8,6 +8,8 @@ import {
 import { resolveSlideElements } from '../domain/slideElements';
 import { resolveBackgroundAssetId } from '../domain/themes';
 import type { MediaAsset, OutputState, PlaylistItem, Presentation, PresentationTheme, Slide, Song } from '../domain/types';
+import { CueEditorPanel } from './CueEditorPanel';
+import { PresentationCueDeck } from './PresentationCueDeck';
 import { PresentationEditorPanel } from './PresentationEditorPanel';
 import { SlideLayoutEditor } from './SlideLayoutEditor';
 import { SongArrangementEditor } from './SongArrangementEditor';
@@ -17,6 +19,7 @@ import { SongTimingEditor } from './SongTimingEditor';
 import { Icon } from './ui/Icon';
 
 type SongWorkspaceMode = 'build' | 'perform';
+type WorkspaceViewMode = 'slides' | 'edit' | 'layout' | 'cues' | 'arrange' | 'timing';
 
 interface SlideWorkspaceProps {
   selectedItem: PlaylistItem;
@@ -96,7 +99,7 @@ export function SlideWorkspace({
   onTriggerMedia,
   onTriggerLyricsVideo,
 }: SlideWorkspaceProps) {
-  const [viewMode, setViewMode] = useState<'slides' | 'edit' | 'layout' | 'arrange' | 'timing'>('slides');
+  const [viewMode, setViewMode] = useState<WorkspaceViewMode>('slides');
   const [songWorkspaceMode, setSongWorkspaceMode] = useState<SongWorkspaceMode>('perform');
 
   useEffect(() => {
@@ -227,6 +230,16 @@ export function SlideWorkspace({
               {viewMode === 'edit' ? 'Done Editing' : 'Edit'}
             </button>
           ) : null}
+          {presentation && !song ? (
+            <button
+              className={viewMode === 'cues' ? 'isActive' : ''}
+              type="button"
+              onClick={() => setViewMode((current) => current === 'cues' ? 'slides' : 'cues')}
+            >
+              <Icon name="interactive" />
+              {viewMode === 'cues' ? 'Done Cues' : 'Cues'}
+            </button>
+          ) : null}
           {presentation && (!song || songWorkspaceMode === 'build') ? (
             <button
               className={viewMode === 'layout' ? 'isActive' : ''}
@@ -282,7 +295,9 @@ export function SlideWorkspace({
                   ? 'Editor'
                   : viewMode === 'layout'
                     ? 'Visual Layout'
-                    : 'Slide View'}
+                    : viewMode === 'cues'
+                      ? 'Cue Editor'
+                      : 'Slide View'}
             </span>
           </div>
         </div>
@@ -325,6 +340,12 @@ export function SlideWorkspace({
             onUpdateTheme={onUpdateTheme}
             presentation={presentation}
             selectedSlideId={selectedSlideId}
+          />
+        ) : viewMode === 'cues' && presentation && !song ? (
+          <CueEditorPanel
+            assets={availableAssets}
+            onChange={onChangePresentation}
+            presentation={presentation}
           />
         ) : viewMode === 'timing' && song && presentation ? (
           <SongTimingEditor
@@ -396,8 +417,18 @@ export function SlideWorkspace({
                 <div className="slideGroupHeader">
                   <span className="groupAccent" />
                   <strong>{label}</strong>
-                  <span>{group.slides.length} slide{group.slides.length === 1 ? '' : 's'}</span>
+                  <span>
+                    {group.slides.length} slide{group.slides.length === 1 ? '' : 's'}
+                    {!song && group.cues?.length ? ` · ${group.cues.length} cue${group.cues.length === 1 ? '' : 's'}` : ''}
+                  </span>
                 </div>
+                {!song ? (
+                  <PresentationCueDeck
+                    assets={availableAssets}
+                    group={group}
+                    onTriggerMedia={onTriggerMedia}
+                  />
+                ) : null}
                 <div className="slideGrid">
                   {group.slides.map((slide) => {
                     const sequence = arrangementEntryId
