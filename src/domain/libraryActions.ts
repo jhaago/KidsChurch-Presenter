@@ -207,6 +207,6 @@ export function duplicateService(source: Playlist): Playlist {
     id: newId('playlist'),
     title: `${source.title} Copy`,
     serviceDate: undefined,
-    items: source.items.map((item) => ({ ...item, id: newId('playlist-item') })),
+    items: source.items.map((item) => ({ ...structuredClone(item), id: newId('playlist-item') })),
   };
 }

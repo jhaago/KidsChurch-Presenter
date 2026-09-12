@@ -8,6 +8,11 @@ import {
 } from '../domain/slideElements';
 import { resolveBackgroundAssetId, resolveSlideFormat, resolveSlideLayout } from '../domain/themes';
 import {
+  clearSongOverride,
+  itemWithSongOverride,
+  songForProgramItem,
+} from '../domain/songProgramOverrides';
+import {
   createBlankPresentation,
   createBlankService,
   createBlankSong,
@@ -71,6 +76,7 @@ export function OperatorApp() {
   const [selectedItemId, setSelectedItemId] = useState('pi-song');
   const [selectedSlideId, setSelectedSlideId] = useState<string | null>('loh-v1-1');
   const [selectedArrangementEntryId, setSelectedArrangementEntryId] = useState<string | null>(null);
+  const [activeSongItemId, setActiveSongItemId] = useState<string | null>(null);
   const [output, setOutput] = useState<OutputState>({ ...EMPTY_OUTPUT_STATE });
   const [stageOutput, setStageOutput] = useState<StageOutputState>({ ...EMPTY_STAGE_OUTPUT_STATE });
   const [activeMediaTab, setActiveMediaTab] = useState<MediaBinTab>('Media');
@@ -122,9 +128,10 @@ export function OperatorApp() {
     () => playlist?.items.find((item) => item.id === selectedItemId) ?? playlist?.items[0],
     [playlist, selectedItemId],
   );
-  const selectedSong = selectedItem?.type === 'song'
-    ? songs.find((song) => song.id === selectedItem.resourceId)
-    : undefined;
+  const selectedSong = useMemo(
+    () => songForProgramItem(selectedItem, songs),
+    [selectedItem, songs],
+  );
   const selectedPresentation = selectedSong
     ? presentations.find((presentation) => presentation.id === selectedSong.presentationId)
     : presentations.find((presentation) => presentation.id === selectedItem?.resourceId);
@@ -142,10 +149,14 @@ export function OperatorApp() {
   );
   const songTransport = useSongTransport(allMediaAssets);
   const timingTransport = useSongTransport(allMediaAssets);
-  const activeSong = useMemo(
-    () => songs.find((song) => song.id === songTransport.state.songId),
-    [songs, songTransport.state.songId],
-  );
+  const activeSong = useMemo(() => {
+    const programItem = activeSongItemId
+      ? playlist.items.find((item) => item.id === activeSongItemId)
+      : undefined;
+    const programSong = songForProgramItem(programItem, songs);
+    if (programSong?.id === songTransport.state.songId) return programSong;
+    return songs.find((song) => song.id === songTransport.state.songId);
+  }, [activeSongItemId, playlist.items, songs, songTransport.state.songId]);
   const lastAutoCueRef = useRef<{ songId: string | null; cueId: string | null }>({
     songId: null,
     cueId: null,
@@ -316,7 +327,11 @@ export function OperatorApp() {
     slide: Slide,
     arrangementEntryId?: string,
   ) => {
-    const song = songs.find((candidate) => candidate.presentationId === presentation.id);
+    const song = selectedSong?.presentationId === presentation.id
+      ? selectedSong
+      : activeSong?.presentationId === presentation.id
+        ? activeSong
+        : songs.find((candidate) => candidate.presentationId === presentation.id);
     const arranged = song ? arrangedSlides(song, presentation) : [];
     const sourceSlides = allSlides(presentation);
     const currentIndex = song
@@ -377,7 +392,7 @@ export function OperatorApp() {
       nextText: nextSlide?.text ?? null,
       notes: slide.notes ?? null,
     });
-  }, [allMediaAssets, customThemes, songs]);
+  }, [activeSong, allMediaAssets, customThemes, selectedSong, songs]);
 
   const triggerMedia = useCallback((asset: MediaAsset) => {
     const playbackRole = asset.kind === 'video' ? 'video' : 'background';
@@ -401,8 +416,12 @@ export function OperatorApp() {
 
   const playSong = useCallback(async (song: Song) => {
     timingTransport.stop();
+    const programItemId = selectedItem?.type === 'song' && selectedItem.resourceId === song.id
+      ? selectedItem.id
+      : null;
     const started = await songTransport.play(song);
     if (!started) return;
+    setActiveSongItemId(programItemId);
 
     const background = song.backgroundAssetId
       ? allMediaAssets.find((asset) => asset.id === song.backgroundAssetId)
@@ -417,7 +436,7 @@ export function OperatorApp() {
       black: false,
       logo: false,
     }));
-  }, [allMediaAssets, songTransport.play, timingTransport.stop]);
+  }, [allMediaAssets, selectedItem, songTransport.play, timingTransport.stop]);
 
   const pauseSong = useCallback(() => songTransport.pause(), [songTransport.pause]);
   const resumeSong = useCallback(() => {
@@ -438,6 +457,7 @@ export function OperatorApp() {
 
   const stopSong = useCallback(() => {
     songTransport.stop();
+    setActiveSongItemId(null);
     setOutput((current) => ({ ...current, audio: null }));
   }, [songTransport.stop]);
 
@@ -446,6 +466,11 @@ export function OperatorApp() {
       presentation.id === updatedPresentation.id,
     );
     const linkedSongBefore = songs.find((song) => song.presentationId === updatedPresentation.id);
+    const linkedOverrideHasCues = playlists.some((service) => service.items.some((item) => {
+      if (item.type !== 'song' || !item.songOverride) return false;
+      const effectiveSong = songForProgramItem(item, songs);
+      return effectiveSong?.presentationId === updatedPresentation.id && effectiveSong.lyricCues.length > 0;
+    }));
     const structureSignature = (presentation?: Presentation) =>
       presentation?.groups
         .map((group) => `${group.id}:${group.slides.map((slide) => slide.id).join(',')}`)
@@ -456,7 +481,7 @@ export function OperatorApp() {
 
     if (
       lyricStructureChanged &&
-      linkedSongBefore?.lyricCues.length &&
+      (linkedSongBefore?.lyricCues.length || linkedOverrideHasCues) &&
       !window.confirm(
         'Changing the lyric section/slide order changes the Song sequence, so the saved Auto Lyrics timing map must be cleared. Continue?',
       )
@@ -476,20 +501,39 @@ export function OperatorApp() {
 
     setPlaylists((current) => current.map((service) => ({
       ...service,
-      items: service.items.map((item) =>
-        item.type !== 'song' && item.resourceId === updatedPresentation.id
+      items: service.items.map((item) => {
+        if (item.type === 'song' && item.songOverride) {
+          const effectiveSong = songForProgramItem(item, songs);
+          if (effectiveSong?.presentationId === updatedPresentation.id) {
+            const sanitized = sanitizeSongForPresentation(effectiveSong, updatedPresentation);
+            return itemWithSongOverride(
+              item,
+              lyricStructureChanged ? { ...sanitized, lyricCues: [] } : sanitized,
+            );
+          }
+        }
+        return item.type !== 'song' && item.resourceId === updatedPresentation.id
           ? { ...item, title: updatedPresentation.title }
-          : item,
-      ),
+          : item;
+      }),
     })));
 
-    const linkedSong = linkedSongBefore;
+    const linkedSong = activeSong?.presentationId === updatedPresentation.id
+      ? activeSong
+      : selectedSong?.presentationId === updatedPresentation.id
+        ? selectedSong
+        : linkedSongBefore;
+
     const liveSlide = output.slide?.presentationId === updatedPresentation.id
       ? allSlides(updatedPresentation).find((slide) => slide.id === output.slide?.slideId)
       : undefined;
     if (liveSlide) {
       const liveBackgroundId = resolveBackgroundAssetId(updatedPresentation, liveSlide);
-      const linkedLiveSong = songs.find((song) => song.presentationId === updatedPresentation.id);
+      const linkedLiveSong = activeSong?.presentationId === updatedPresentation.id
+        ? activeSong
+        : selectedSong?.presentationId === updatedPresentation.id
+          ? selectedSong
+          : songs.find((song) => song.presentationId === updatedPresentation.id);
       const effectiveBackgroundId = liveSlide.backgroundAssetId === null
         ? undefined
         : liveBackgroundId ??
@@ -554,7 +598,7 @@ export function OperatorApp() {
         notes: currentSlide?.notes ?? null,
       };
     });
-  }, [allMediaAssets, customThemes, output.slide, presentations, songs]);
+  }, [activeSong, allMediaAssets, customThemes, output.slide, playlists, presentations, selectedSong, songs]);
 
   const createCustomTheme = useCallback((theme: PresentationTheme) => {
     setCustomThemes((current) => [...current, theme]);
@@ -653,8 +697,15 @@ export function OperatorApp() {
   }, [allMediaAssets, customThemes, output.slide, presentations]);
 
   const updateSong = useCallback((updatedSong: Song) => {
-    const previous = songs.find((song) => song.id === updatedSong.id);
-    if (songTransport.state.songId === updatedSong.id && previous) {
+    const programItem = selectedItem?.type === 'song' && selectedItem.resourceId === updatedSong.id
+      ? selectedItem
+      : undefined;
+    const master = songs.find((song) => song.id === updatedSong.id);
+    const previous = programItem ? songForProgramItem(programItem, songs) : master;
+    const editingLiveSong = songTransport.state.songId === updatedSong.id &&
+      (!activeSongItemId || activeSongItemId === programItem?.id);
+
+    if (editingLiveSong && previous) {
       for (const stem of updatedSong.audio.stems) {
         const oldStem = previous.audio.stems.find((candidate) => candidate.id === stem.id);
         if (oldStem && oldStem.enabled !== stem.enabled) {
@@ -663,29 +714,40 @@ export function OperatorApp() {
       }
     }
 
-    setSongs((current) => current.map((song) => song.id === updatedSong.id ? updatedSong : song));
+    if (programItem) {
+      setPlaylist((current) => ({
+        ...current,
+        items: current.items.map((item) =>
+          item.id === programItem.id ? itemWithSongOverride(item, updatedSong) : item,
+        ),
+      }));
+    } else {
+      setSongs((current) => current.map((song) => song.id === updatedSong.id ? updatedSong : song));
 
-    if (updatedSong.presentationId && previous?.title !== updatedSong.title) {
-      setPresentations((current) => current.map((presentation) =>
-        presentation.id === updatedSong.presentationId
-          ? { ...presentation, title: updatedSong.title }
-          : presentation,
-      ));
+      if (updatedSong.presentationId && master?.title !== updatedSong.title) {
+        setPresentations((current) => current.map((presentation) =>
+          presentation.id === updatedSong.presentationId
+            ? { ...presentation, title: updatedSong.title }
+            : presentation,
+        ));
+      }
+
+      setPlaylists((current) => current.map((service) => ({
+        ...service,
+        items: service.items.map((item) =>
+          item.type === 'song' && item.resourceId === updatedSong.id && !item.songOverride
+            ? { ...item, title: updatedSong.title }
+            : item,
+        ),
+      })));
     }
 
-    setPlaylists((current) => current.map((service) => ({
-      ...service,
-      items: service.items.map((item) =>
-        item.type === 'song' && item.resourceId === updatedSong.id
-          ? { ...item, title: updatedSong.title }
-          : item,
-      ),
-    })));
-
-    setOutput((current) => ({
-      ...current,
-      audio: current.audio?.id === updatedSong.id ? { ...current.audio, title: updatedSong.title } : current.audio,
-    }));
+    if (editingLiveSong) {
+      setOutput((current) => ({
+        ...current,
+        audio: current.audio?.id === updatedSong.id ? { ...current.audio, title: updatedSong.title } : current.audio,
+      }));
+    }
 
     if (selectedSong?.id === updatedSong.id && updatedSong.presentationId) {
       const presentation = presentations.find((candidate) => candidate.id === updatedSong.presentationId);
@@ -702,10 +764,13 @@ export function OperatorApp() {
       }
     }
   }, [
+    activeSongItemId,
     presentations,
     selectedArrangementEntryId,
+    selectedItem,
     selectedSlideId,
     selectedSong?.id,
+    setPlaylist,
     songs,
     songTransport.setStemEnabled,
     songTransport.state.songId,
@@ -921,8 +986,27 @@ export function OperatorApp() {
     setPlaylist((current) => ({ ...current, ...updates }));
   }, [setPlaylist]);
 
+  const resetSongOverride = useCallback((itemId: string) => {
+    const item = playlist.items.find((candidate) => candidate.id === itemId);
+    if (!item || item.type !== 'song' || !item.songOverride) return;
+    if (activeSongItemId === itemId && ['playing', 'paused'].includes(songTransport.state.status)) {
+      window.alert('Stop this Song before resetting its Program-specific setup.');
+      return;
+    }
+    const master = songs.find((song) => song.id === item.resourceId);
+    if (!master) return;
+    if (!window.confirm('Use the Library setup for “' + master.title + '” in this Program? The Program-specific arrangement, audio and timing for this item will be removed.')) return;
+    setPlaylist((current) => ({
+      ...current,
+      items: current.items.map((candidate) =>
+        candidate.id === itemId ? { ...clearSongOverride(candidate), title: master.title } : candidate,
+      ),
+    }));
+  }, [activeSongItemId, playlist.items, setPlaylist, songTransport.state.status, songs]);
+
   const clearAll = useCallback(() => {
     songTransport.stop();
+    setActiveSongItemId(null);
     setOutput({ ...EMPTY_OUTPUT_STATE });
   }, [songTransport.stop]);
   const clearSlide = useCallback(() => setOutput((current) => ({ ...current, slide: null })), []);
@@ -935,6 +1019,7 @@ export function OperatorApp() {
   );
   const clearToLogo = useCallback(() => {
     songTransport.stop();
+    setActiveSongItemId(null);
     setOutput({ ...EMPTY_OUTPUT_STATE, logo: true });
   }, [songTransport.stop]);
   const toggleBlack = useCallback(
@@ -946,7 +1031,9 @@ export function OperatorApp() {
     const transport = songTransport.state;
     if (!transport.songId || transport.status !== 'playing') return;
 
-    const song = songs.find((candidate) => candidate.id === transport.songId);
+    const song = activeSong?.id === transport.songId
+      ? activeSong
+      : songs.find((candidate) => candidate.id === transport.songId);
     if (!song || song.lyricControlMode !== 'auto' || !song.presentationId) return;
 
     if (lastAutoCueRef.current.songId !== song.id) {
@@ -975,6 +1062,7 @@ export function OperatorApp() {
     songTransport.state.positionMs,
     songTransport.state.songId,
     songTransport.state.status,
+    activeSong,
     presentations,
     songs,
     triggerSlide,
@@ -983,6 +1071,7 @@ export function OperatorApp() {
   useEffect(() => {
     if (songTransport.state.status !== 'ended' && songTransport.state.status !== 'error') return;
     const songId = songTransport.state.songId;
+    setActiveSongItemId(null);
     setOutput((current) =>
       current.audio?.id === songId ? { ...current, audio: null } : current,
     );
@@ -1141,6 +1230,7 @@ export function OperatorApp() {
           onDeleteSelected={deleteSelected}
           onMoveServiceItem={moveServiceItem}
           onRemoveServiceItem={removeServiceItem}
+          onResetSongOverride={resetSongOverride}
           onSelectService={selectService}
           onCreateService={createService}
           onDuplicateService={duplicateActiveService}
