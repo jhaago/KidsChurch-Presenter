@@ -23,9 +23,10 @@ jobs:
         with:
           node-version: '22'
       - name: Apply integration edits
-        run: node .github/apply-program-song-overrides.cjs
+        run: node .github/fix-and-run-program-song-overrides.cjs
       - name: Remove one-time integration files
         run: |
+          rm .github/fix-and-run-program-song-overrides.cjs
           rm .github/apply-program-song-overrides.cjs
           rm .github/workflows/apply-program-song-overrides.yml
       - name: Install dependencies
