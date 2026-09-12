@@ -23,6 +23,7 @@ export function programSignature(playlist: Playlist) {
       title: item.title,
       type: item.type,
       resourceId: item.resourceId ?? '',
+      songOverride: item.songOverride ?? null,
     })),
   });
 }

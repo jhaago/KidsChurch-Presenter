@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { arrangedSlides, occurrenceLabel } from '../domain/songArrangement';
 import type { ProgramUpdate } from '../domain/programs';
+import { songForProgramItem } from '../domain/songProgramOverrides';
 import type {
   OutputState,
   Playlist,
@@ -33,6 +34,7 @@ interface LibraryPanelProps {
   onDuplicateSelected: () => void;
   onDeleteSelected: () => void;
   onRemoveServiceItem: (itemId: string) => void;
+  onResetSongOverride: (itemId: string) => void;
   onMoveServiceItem: (itemId: string, direction: -1 | 1) => void;
   onSelectItem: (id: string) => void;
   onSelectService: (playlistId: string) => void;
@@ -74,7 +76,7 @@ function itemTone(item: PlaylistItem, presentations: Presentation[]) {
 
 function isLiveItem(item: PlaylistItem, output: OutputState, songs: Song[]) {
   if (item.type === 'song') {
-    const song = songs.find((candidate) => candidate.id === item.resourceId);
+    const song = songForProgramItem(item, songs);
     return output.slide?.presentationId === song?.presentationId || output.media?.id === song?.lyricsVideoAssetId;
   }
   return output.slide?.presentationId === item.resourceId || output.media?.id === item.resourceId;
@@ -91,7 +93,7 @@ function slideText(slide: Slide) {
 
 function slidesForItem(item: PlaylistItem, presentations: Presentation[], songs: Song[]): CanvasSlide[] {
   if (item.type === 'song') {
-    const song = songs.find((candidate) => candidate.id === item.resourceId);
+    const song = songForProgramItem(item, songs);
     const presentation = song?.presentationId
       ? presentations.find((candidate) => candidate.id === song.presentationId)
       : undefined;
@@ -176,6 +178,7 @@ export function LibraryPanel({
   onDuplicateSelected,
   onDeleteSelected,
   onRemoveServiceItem,
+  onResetSongOverride,
   onMoveServiceItem,
   onSelectItem,
   onSelectService,
@@ -368,11 +371,14 @@ export function LibraryPanel({
                   <Icon name={itemIcons[item.type]} />
                   <span>
                     <strong>{item.title}</strong>
-                    <small>{item.type.replace('-', ' ').toUpperCase()} · {slides.length ? `${slides.length} slides` : 'no slide deck'}</small>
+                    <small>{item.type.replace('-', ' ').toUpperCase()} · {slides.length ? `${slides.length} slides` : 'no slide deck'}{item.type === 'song' && item.songOverride ? ' · PROGRAM OVERRIDE' : ''}</small>
                   </span>
                   {live ? <em>LIVE</em> : null}
                 </button>
                 <div className="serviceCanvasItemActions">
+                  {item.type === 'song' && item.songOverride ? (
+                    <button type="button" title="Discard this Program-specific Song setup" onClick={() => onResetSongOverride(item.id)}>Use Library Setup</button>
+                  ) : null}
                   <button type="button" onClick={() => openEditor(item.id)}>
                     {item.type === 'song' ? 'Open / Perform' : 'Edit'}
                   </button>
