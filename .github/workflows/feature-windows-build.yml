@@ -34,3 +34,5 @@ jobs:
           name: KidsChurch-Presenter-Windows-Service-Canvas
           path: release/*.exe
           if-no-files-found: error
+
+# Temporary branch-only packaging workflow for PC testing.
