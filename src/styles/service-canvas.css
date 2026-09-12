@@ -1,0 +1,731 @@
+/* Full-service running view -------------------------------------------------
+   The left rail is now library-only. The complete service order lives in the
+   centre as a vertically scrolling canvas, while the existing detailed
+   SlideWorkspace is retained as an opt-in editor / performance workspace. */
+
+.operatorMain {
+  position: relative;
+}
+
+.operatorMain > .libraryPanel {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.operatorMain > .slideWorkspace {
+  grid-column: 2;
+  grid-row: 1;
+  display: none;
+}
+
+html.service-editor-open .operatorMain > .slideWorkspace {
+  display: flex;
+}
+
+.operatorMain > .livePanel {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.libraryPanel {
+  display: block;
+  min-height: 0;
+  background: #181b1e;
+}
+
+.libraryTree.libraryManager {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 6px 7px;
+  border-bottom: 0;
+  overflow: hidden;
+}
+
+.libraryTree.libraryManager .panelBar {
+  flex: 0 0 31px;
+}
+
+.backToServiceCanvas {
+  flex: 0 0 auto;
+  width: 100%;
+  margin: 0 0 7px;
+  padding: 8px 9px;
+  border: 1px solid #3d6e96;
+  border-radius: 4px;
+  background: linear-gradient(#2b6698, #24557f);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  text-align: left;
+}
+
+.backToServiceCanvas:hover {
+  background: linear-gradient(#3477ad, #2b6291);
+}
+
+.compactServicesManager {
+  flex: 0 0 auto;
+  margin: 0 0 7px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.compactServicesManager .servicesList {
+  max-height: 112px;
+  overflow: auto;
+}
+
+.compactServicesManager .servicesActions button {
+  min-height: 25px;
+}
+
+.libraryCreateRow {
+  flex: 0 0 auto;
+}
+
+.librarySearchField {
+  flex: 0 0 32px;
+  min-width: 0;
+  margin: 7px 1px 5px;
+  padding: 0 7px;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #33383d;
+  border-radius: 4px;
+  background: #111315;
+  color: #7f8790;
+}
+
+.librarySearchField > svg {
+  width: 14px;
+  height: 14px;
+}
+
+.librarySearchField input {
+  min-width: 0;
+  height: 29px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #d7dade;
+  font-size: 10px;
+}
+
+.librarySearchField input::placeholder {
+  color: #626971;
+}
+
+.librarySearchField button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #777f88;
+  cursor: pointer;
+}
+
+.libraryCategories {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 1px 12px;
+}
+
+.libraryCategory {
+  border-bottom: 1px solid #282c30;
+}
+
+.libraryCategory > summary {
+  min-height: 29px;
+  padding: 0 5px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  color: #949ba3;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  list-style: none;
+  user-select: none;
+}
+
+.libraryCategory > summary::-webkit-details-marker {
+  display: none;
+}
+
+.libraryCategory > summary::before {
+  content: '›';
+  width: 10px;
+  margin-right: 2px;
+  color: #616971;
+  transform: rotate(0deg);
+  transition: transform .12s ease;
+}
+
+.libraryCategory > summary {
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+}
+
+.libraryCategory[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.libraryCategory > summary small {
+  color: #5f6770;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.libraryCategoryBody {
+  padding: 0 0 5px;
+}
+
+.libraryCategoryEmpty {
+  display: block;
+  padding: 7px 8px 9px 22px;
+  color: #626a72;
+  font-size: 9px;
+}
+
+.libraryResourceRow {
+  min-height: 28px;
+  grid-template-columns: 18px minmax(0, 1fr) auto 26px;
+  border-radius: 3px;
+}
+
+.libraryResourceRow:hover {
+  background: #23272b;
+}
+
+.libraryResourceRow > button {
+  width: 23px;
+  height: 23px;
+  border-radius: 3px;
+}
+
+.compactLibrarySummary {
+  flex: 0 0 29px;
+  margin-top: auto;
+  border-top: 1px solid var(--line-soft);
+  background: #17191b;
+}
+
+/* Centre service canvas --------------------------------------------------- */
+
+.serviceCanvasPortal {
+  --canvas-accent: #75818b;
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line-dark);
+  background: #101214;
+  overflow: hidden;
+}
+
+.serviceCanvasHeader {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 9px 12px 8px;
+  border-bottom: 1px solid #30343a;
+  background: linear-gradient(#1e2226, #191c1f);
+  box-shadow: 0 1px 0 rgba(255,255,255,.025) inset;
+}
+
+.serviceCanvasTitleRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 126px;
+  align-items: center;
+  gap: 8px;
+}
+
+.serviceCanvasTitleRow > svg {
+  width: 20px;
+  height: 20px;
+  color: #85909a;
+}
+
+.serviceCanvasTitleRow > div {
+  min-width: 0;
+}
+
+.serviceCanvasTitleRow > div > span {
+  display: block;
+  margin-top: 2px;
+  color: #6e767e;
+  font-size: 8px;
+  letter-spacing: .06em;
+}
+
+.serviceCanvasTitleInput,
+.serviceCanvasDateInput,
+.serviceCanvasDescriptionInput {
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  outline: 0;
+}
+
+.serviceCanvasTitleInput:hover,
+.serviceCanvasTitleInput:focus,
+.serviceCanvasDateInput:hover,
+.serviceCanvasDateInput:focus,
+.serviceCanvasDescriptionInput:hover,
+.serviceCanvasDescriptionInput:focus {
+  border-color: #3a4046;
+  background: #121416;
+}
+
+.serviceCanvasTitleInput {
+  width: 100%;
+  padding: 2px 4px;
+  color: #eceef0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.serviceCanvasDateInput {
+  width: 126px;
+  padding: 5px 6px;
+  color: #aab0b6;
+  font-size: 9px;
+}
+
+.serviceCanvasDescriptionInput {
+  width: calc(100% - 30px);
+  margin: 5px 0 0 30px;
+  padding: 3px 4px;
+  color: #939aa2;
+  font-size: 9px;
+}
+
+.serviceCanvasDescriptionInput::placeholder {
+  color: #565d64;
+}
+
+.serviceNowNext {
+  position: relative;
+  z-index: 5;
+  flex: 0 0 48px;
+  min-width: 0;
+  padding: 6px 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #282c31;
+  background: rgba(20, 23, 26, .98);
+  box-shadow: 0 4px 14px rgba(0,0,0,.2);
+}
+
+.serviceNowNext > i {
+  align-self: stretch;
+  background: #30343a;
+}
+
+.serviceNowNext > div:not(.serviceNowNextActions) {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2px 7px;
+}
+
+.serviceNowNext > div:not(.serviceNowNextActions) > span {
+  color: #6e767f;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+
+.serviceNowNext > div.isLive > span {
+  color: #ff7777;
+}
+
+.serviceNowNext strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #d7dade;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.serviceNowNext small {
+  grid-column: 2;
+  color: #656d75;
+  font-size: 8px;
+}
+
+.serviceNowNextActions {
+  display: flex;
+  gap: 4px;
+}
+
+.serviceNowNextActions button,
+.serviceCanvasItemActions button {
+  min-height: 24px;
+  padding: 0 7px;
+  border: 1px solid #3a3f45;
+  border-radius: 3px;
+  background: #22262a;
+  color: #aab0b6;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.serviceNowNextActions button:hover:not(:disabled),
+.serviceCanvasItemActions button:hover:not(:disabled) {
+  border-color: #59616a;
+  background: #2b3035;
+  color: #fff;
+}
+
+.serviceNowNextActions button:disabled,
+.serviceCanvasItemActions button:disabled {
+  cursor: default;
+  opacity: .34;
+}
+
+.serviceNowNextActions button.danger:hover:not(:disabled),
+.serviceCanvasItemActions button.danger:hover:not(:disabled) {
+  border-color: #884545;
+  background: #4a2527;
+  color: #ffb1b1;
+}
+
+.serviceCanvasScroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 11px 36px;
+  scroll-behavior: smooth;
+}
+
+.serviceCanvasItem {
+  --item-colour: #75818b;
+  margin: 0 0 13px;
+  border: 1px solid #30343a;
+  border-radius: 5px;
+  background: #15181b;
+  box-shadow: 0 3px 8px rgba(0,0,0,.18);
+  overflow: hidden;
+}
+
+.serviceCanvasItem.isSelected {
+  border-color: #3f79a9;
+  box-shadow: 0 0 0 1px rgba(74,155,226,.16), 0 3px 8px rgba(0,0,0,.22);
+}
+
+.serviceCanvasItem.isLive {
+  border-color: #914145;
+  box-shadow: 0 0 0 1px rgba(227,76,76,.2), 0 4px 11px rgba(0,0,0,.26);
+}
+
+.serviceCanvasItem.tone-song { --item-colour: #a772d1; }
+.serviceCanvasItem.tone-media { --item-colour: #4b96d1; }
+.serviceCanvasItem.tone-bible { --item-colour: #4eb795; }
+.serviceCanvasItem.tone-timer { --item-colour: #e0a64b; }
+.serviceCanvasItem.tone-interactive { --item-colour: #d26b7f; }
+.serviceCanvasItem.tone-web-tool { --item-colour: #50aeb4; }
+.serviceCanvasItem.tone-message { --item-colour: #cf7d4e; }
+.serviceCanvasItem.tone-announcement { --item-colour: #769bd8; }
+
+.serviceCanvasItemHeader {
+  min-height: 45px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  border-bottom: 1px solid #292d31;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--item-colour) 12%, #191c1f), #191c1f 28%);
+}
+
+.serviceCanvasItem.isLive .serviceCanvasItemHeader {
+  background: linear-gradient(90deg, rgba(227,76,76,.16), #191c1f 34%);
+}
+
+.serviceCanvasItemIdentity {
+  min-width: 0;
+  padding: 5px 8px 5px 5px;
+  border: 0;
+  background: transparent;
+  display: grid;
+  grid-template-columns: 28px 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.serviceCanvasItemIdentity:hover {
+  background: rgba(255,255,255,.025);
+}
+
+.serviceCanvasItemNumber {
+  color: #626a72;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.serviceCanvasItemIdentity > svg {
+  width: 17px;
+  height: 17px;
+  color: var(--item-colour);
+}
+
+.serviceCanvasItemIdentity > span:nth-of-type(2) {
+  min-width: 0;
+}
+
+.serviceCanvasItemIdentity strong {
+  display: block;
+  overflow: hidden;
+  color: #e0e3e6;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.serviceCanvasItemIdentity small {
+  display: block;
+  margin-top: 2px;
+  color: #686f77;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: .09em;
+}
+
+.serviceCanvasItemIdentity em {
+  padding: 3px 6px;
+  border-radius: 3px;
+  background: var(--live);
+  color: #fff;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+
+.serviceCanvasItemActions {
+  padding: 7px 7px 7px 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.serviceCanvasItemActions button:first-child {
+  min-width: 58px;
+  color: #c2c7cc;
+}
+
+.serviceCanvasItemActions button:not(:first-child) {
+  min-width: 26px;
+  padding: 0 5px;
+  font-size: 10px;
+}
+
+.serviceCanvasGroup {
+  padding: 7px 9px 10px;
+}
+
+.serviceCanvasGroup + .serviceCanvasGroup {
+  padding-top: 2px;
+}
+
+.serviceCanvasGroupLabel {
+  height: 20px;
+  padding: 0 1px 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #8c949c;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.serviceCanvasGroupLabel small {
+  color: #555d65;
+  font-size: 7px;
+}
+
+.serviceCanvasSlideGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+}
+
+.serviceCanvasSlide {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  border: 1px solid #3a3f45;
+  border-radius: 3px;
+  background: #08090a;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,.34);
+  cursor: pointer;
+}
+
+.serviceCanvasSlide:hover {
+  border-color: #747d86;
+  transform: translateY(-1px);
+}
+
+.serviceCanvasSlide.isLive {
+  border-color: var(--live);
+  box-shadow: 0 0 0 2px var(--live-dark), 0 3px 7px rgba(0,0,0,.36);
+}
+
+.serviceCanvasSlideSurface {
+  position: absolute;
+  inset: 0;
+  padding: 9% 8%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 70% 28%, rgba(70,125,169,.25), transparent 28%),
+    linear-gradient(143deg, #0c1722, #171a22 52%, #0d1116);
+  color: #f4f5f6;
+  font-size: clamp(7px, .72vw, 12px);
+  font-weight: 650;
+  line-height: 1.16;
+  text-align: center;
+  text-shadow: 0 1px 3px #000;
+}
+
+.serviceCanvasSlideNumber {
+  position: absolute;
+  z-index: 2;
+  left: 5px;
+  bottom: 4px;
+  min-width: 16px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  background: rgba(0,0,0,.6);
+  color: #aeb4ba;
+  font-size: 7px;
+  font-weight: 750;
+}
+
+.serviceCanvasLiveFlag {
+  position: absolute;
+  z-index: 3;
+  right: 4px;
+  top: 4px;
+  padding: 2px 5px;
+  border-radius: 2px;
+  background: var(--live);
+  color: #fff;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+
+.serviceCanvasNoSlides {
+  width: calc(100% - 18px);
+  min-height: 67px;
+  margin: 9px;
+  padding: 10px 12px;
+  border: 1px dashed #343a40;
+  border-radius: 4px;
+  background: #111315;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8d949b;
+  cursor: pointer;
+  text-align: left;
+}
+
+.serviceCanvasNoSlides:hover {
+  border-color: #505961;
+  background: #171a1d;
+}
+
+.serviceCanvasNoSlides svg {
+  width: 22px;
+  height: 22px;
+  color: var(--item-colour);
+}
+
+.serviceCanvasNoSlides strong,
+.serviceCanvasNoSlides small {
+  display: block;
+}
+
+.serviceCanvasNoSlides strong {
+  color: #c9cdd1;
+  font-size: 10px;
+}
+
+.serviceCanvasNoSlides small {
+  margin-top: 3px;
+  color: #666e76;
+  font-size: 8px;
+}
+
+.serviceCanvasEmpty {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #707981;
+  text-align: center;
+}
+
+.serviceCanvasEmpty svg {
+  width: 34px;
+  height: 34px;
+  color: #4f5860;
+}
+
+.serviceCanvasEmpty strong {
+  color: #b6bcc1;
+  font-size: 12px;
+}
+
+.serviceCanvasEmpty span {
+  max-width: 340px;
+  font-size: 9px;
+}
+
+@media (max-width: 1180px) {
+  .operatorMain {
+    grid-template-columns: 220px minmax(390px, 1fr) 275px;
+  }
+
+  .serviceCanvasSlideGrid {
+    grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  }
+
+  .serviceNowNextActions {
+    display: none;
+  }
+
+  .serviceNowNext {
+    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  }
+}
