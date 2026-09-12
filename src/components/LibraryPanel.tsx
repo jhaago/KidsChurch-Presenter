@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { arrangedSlides, occurrenceLabel } from '../domain/songArrangement';
+import type { ProgramUpdate } from '../domain/programs';
 import type {
   OutputState,
   Playlist,
@@ -10,6 +11,7 @@ import type {
   Slide,
   Song,
 } from '../domain/types';
+import { ProgramHeaderActions, ProgramSidebar } from './ProgramControls';
 import { Icon, type IconName } from './ui/Icon';
 
 interface LibraryPanelProps {
@@ -37,7 +39,7 @@ interface LibraryPanelProps {
   onCreateService: () => void;
   onDuplicateService: () => void;
   onDeleteService: () => void;
-  onUpdateService: (updates: Partial<Pick<Playlist, 'title' | 'serviceDate' | 'description'>>) => void;
+  onUpdateService: (updates: ProgramUpdate) => void;
 }
 
 interface CanvasSlide {
@@ -76,13 +78,6 @@ function isLiveItem(item: PlaylistItem, output: OutputState, songs: Song[]) {
     return output.slide?.presentationId === song?.presentationId || output.media?.id === song?.lyricsVideoAssetId;
   }
   return output.slide?.presentationId === item.resourceId || output.media?.id === item.resourceId;
-}
-
-function serviceDateLabel(value?: string) {
-  if (!value) return '';
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.valueOf())) return value;
-  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
 function slideText(slide: Slide) {
@@ -295,7 +290,7 @@ export function LibraryPanel({
         {count ? <small>{count}×</small> : null}
         <button
           type="button"
-          title="Add to current service"
+          title="Add to current program"
           onClick={() => onAddPresentationToService(presentation.id)}
         >
           ＋
@@ -305,21 +300,21 @@ export function LibraryPanel({
   });
 
   const serviceCanvas = (
-    <section className="serviceCanvasPortal" aria-label={`${playlist.title} service canvas`}>
-      <header className="serviceCanvasHeader">
+    <section className="serviceCanvasPortal" aria-label={`${playlist.title} program canvas`}>
+      <header className="serviceCanvasHeader programCanvasHeader">
         <div className="serviceCanvasTitleRow">
           <Icon name="playlist" />
           <div>
             <input
-              aria-label="Service name"
+              aria-label="Program name"
               className="serviceCanvasTitleInput"
               value={playlist.title}
               onChange={(event) => onUpdateService({ title: event.target.value })}
             />
-            <span>{playlist.items.length} items · scroll through the full service</span>
+            <span>{playlist.items.length} items · scroll through the full program</span>
           </div>
           <input
-            aria-label="Service date"
+            aria-label="Program date"
             className="serviceCanvasDateInput"
             type="date"
             value={playlist.serviceDate ?? ''}
@@ -327,29 +322,34 @@ export function LibraryPanel({
           />
         </div>
         <input
-          aria-label="Service description"
+          aria-label="Program description"
           className="serviceCanvasDescriptionInput"
-          placeholder="Optional service note"
+          placeholder="Optional program note"
           value={playlist.description ?? ''}
           onChange={(event) => onUpdateService({ description: event.target.value || undefined })}
+        />
+        <ProgramHeaderActions
+          onDuplicateService={onDuplicateService}
+          onUpdateService={onUpdateService}
+          playlist={playlist}
         />
       </header>
 
       <div className="serviceNowNext">
         <div className={liveIndex >= 0 ? 'isLive' : ''}>
           <span>{liveIndex >= 0 ? 'LIVE' : 'CURRENT'}</span>
-          <strong>{currentEntry?.item.title ?? 'No service item selected'}</strong>
+          <strong>{currentEntry?.item.title ?? 'No program item selected'}</strong>
           <small>{currentSlide ? `Slide ${currentSlide.sequence} · ${currentSlide.groupLabel}` : currentEntry ? `${currentEntry.slides.length} slides` : ''}</small>
         </div>
         <i />
         <div>
           <span>NEXT</span>
-          <strong>{nextEntry?.item.title ?? 'End of service'}</strong>
+          <strong>{nextEntry?.item.title ?? 'End of program'}</strong>
           <small>{nextEntry ? `${nextEntry.slides.length} slides` : 'No more items'}</small>
         </div>
         <div className="serviceNowNextActions">
-          <button type="button" disabled={!canManageSelected} onClick={onDuplicateSelected}>Duplicate</button>
-          <button className="danger" type="button" disabled={!canManageSelected} onClick={onDeleteSelected}>Delete</button>
+          <button type="button" disabled={!canManageSelected} onClick={onDuplicateSelected}>Duplicate Item</button>
+          <button className="danger" type="button" disabled={!canManageSelected} onClick={onDeleteSelected}>Delete Item</button>
         </div>
       </div>
 
@@ -378,7 +378,7 @@ export function LibraryPanel({
                   </button>
                   <button type="button" title="Move up" disabled={index === 0} onClick={() => onMoveServiceItem(item.id, -1)}>↑</button>
                   <button type="button" title="Move down" disabled={index === playlist.items.length - 1} onClick={() => onMoveServiceItem(item.id, 1)}>↓</button>
-                  <button className="danger" type="button" title="Remove from service" onClick={() => onRemoveServiceItem(item.id)}>×</button>
+                  <button className="danger" type="button" title="Remove from program" onClick={() => onRemoveServiceItem(item.id)}>×</button>
                 </div>
               </header>
 
@@ -427,7 +427,7 @@ export function LibraryPanel({
         }) : (
           <div className="serviceCanvasEmpty">
             <Icon name="playlist" />
-            <strong>This service is empty</strong>
+            <strong>This program is empty</strong>
             <span>Add Songs, slides or Bible content from the Library on the left.</span>
           </div>
         )}
@@ -446,39 +446,20 @@ export function LibraryPanel({
 
           {editorOpen ? (
             <button className="backToServiceCanvas" type="button" onClick={() => setEditorOpen(false)}>
-              ← Back to full service
+              ← Back to full program
             </button>
           ) : null}
 
-          <section className="servicesManager compactServicesManager" aria-label="Saved services">
-            <div className="servicesManagerHeader">
-              <span>SERVICES</span>
-              <small>{playlists.length}</small>
-              <button type="button" onClick={onCreateService}>＋ New</button>
-            </div>
-            <div className="servicesList">
-              {playlists.map((service) => (
-                <button
-                  className={service.id === activePlaylistId ? 'isActive' : ''}
-                  key={service.id}
-                  onClick={() => selectService(service.id)}
-                  type="button"
-                  title={service.description || service.title}
-                >
-                  <Icon name="playlist" />
-                  <span>
-                    <strong>{service.title}</strong>
-                    <small>{serviceDateLabel(service.serviceDate) || `${service.items.length} items`}</small>
-                  </span>
-                  <em>{service.items.length}</em>
-                </button>
-              ))}
-            </div>
-            <div className="servicesActions">
-              <button type="button" onClick={onDuplicateService}>Duplicate</button>
-              <button className="danger" type="button" disabled={playlists.length <= 1} onClick={onDeleteService}>Delete</button>
-            </div>
-          </section>
+          <ProgramSidebar
+            activePlaylistId={activePlaylistId}
+            onCreateService={onCreateService}
+            onDeleteService={onDeleteService}
+            onDuplicateService={onDuplicateService}
+            onSelectService={selectService}
+            onUpdateService={onUpdateService}
+            playlist={playlist}
+            playlists={playlists}
+          />
 
           <div className="libraryCreateRow">
             <button type="button" onClick={onCreatePresentation}>
@@ -511,7 +492,7 @@ export function LibraryPanel({
                     <Icon name="audio" />
                     <span title={song.title}>{song.title}</span>
                     {count ? <small>{count}×</small> : null}
-                    <button type="button" title="Add Song to current service" onClick={() => onAddSongToService(song.id)}>＋</button>
+                    <button type="button" title="Add Song to current program" onClick={() => onAddSongToService(song.id)}>＋</button>
                   </div>
                 );
               }) : <span className="libraryCategoryEmpty">No matching songs</span>}
