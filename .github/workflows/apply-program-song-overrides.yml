@@ -1,11 +1,9 @@
 name: Apply Program Song Overrides
 
 on:
-  push:
+  pull_request:
     branches:
-      - feature/program-song-overrides
-    paths:
-      - .github/apply-program-song-overrides.cjs
+      - feature/saved-programs
 
 permissions:
   contents: write
