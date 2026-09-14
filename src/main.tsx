@@ -5,6 +5,8 @@ import './styles/app.css';
 import './styles/media-playback.css';
 import './styles/audio-cues.css';
 import './styles/cue-deck.css';
+import './styles/service-canvas.css';
+import './styles/programs.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element not found');

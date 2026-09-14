@@ -367,6 +367,7 @@ svg { display: block; width: 18px; height: 18px; }
   font-size: 10px;
 }
 .primaryAction svg { width: 13px; height: 13px; }
+.primaryAction.secondaryAction{margin-left:6px;border-color:#4a5965;background:#28333b}
 .toolPlaceholder {
   width: min(470px, 88%);
   padding: 24px;
@@ -400,7 +401,7 @@ svg { display: block; width: 18px; height: 18px; }
 .audienceMonitor .preview { width: 100%; aspect-ratio: 16/9; position: relative; overflow: hidden; background: radial-gradient(circle at 70% 28%,rgba(70,125,169,.29),transparent 28%), linear-gradient(143deg,#0c1722,#171a22 52%,#0d1116); }
 .audienceMonitor .preview.black { background: #000; }
 .audienceMonitor .preview.hasMedia { background: radial-gradient(circle at 68% 33%,rgba(67,126,178,.55),transparent 28%),linear-gradient(145deg,#0d1b2a,#172232 50%,#0c1118); }
-.monitorLabel { position: absolute; left: 5px; top: 5px; z-index: 4; padding: 2px 4px; border-radius: 1px; background: rgba(0,0,0,.68); color: #9ea5ab; font-size: 6px; font-weight: 750; letter-spacing: .08em; }
+.monitorLabel { position: absolute; left: 5px; top: 5px; z-index: 120; padding: 2px 4px; border-radius: 1px; background: rgba(0,0,0,.68); color: #9ea5ab; font-size: 6px; font-weight: 750; letter-spacing: .08em; }
 .previewText {
   position: absolute;
   inset: 14% 10%;
@@ -763,6 +764,8 @@ kbd {
 
 /* Real local media output */
 .audienceMediaElement,.audienceMediaFallback{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.audienceMedia-background{z-index:0}
+.audienceMedia-media{z-index:50}
 .audienceMediaFallback{background:radial-gradient(circle at 68% 33%,rgba(67,126,178,.55),transparent 28%),linear-gradient(145deg,#0d1b2a,#172232 50%,#0c1118)}
 .audienceText,.previewText{z-index:2}
 .audienceMessage{z-index:3}

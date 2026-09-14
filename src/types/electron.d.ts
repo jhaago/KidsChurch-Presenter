@@ -32,6 +32,7 @@ declare global {
       }>;
       getResourceLibrary: () => Promise<ResourceLibrarySnapshot>;
       addResourceFolder: () => Promise<ResourceLibrarySnapshot>;
+      importResourceFiles: () => Promise<ResourceLibrarySnapshot>;
       removeResourceFolder: (sourceId: string) => Promise<ResourceLibrarySnapshot>;
       rescanResourceLibrary: () => Promise<ResourceLibrarySnapshot>;
       readAudioAsset: (assetId: string) => Promise<ArrayBuffer>;

@@ -7,12 +7,21 @@ interface AudienceOutputProps {
   preview?: boolean;
 }
 
-function MediaLayer({ output, preview }: { output: OutputState; preview: boolean }) {
-  const media = output.media;
+function MediaLayer({
+  media,
+  preview,
+  layer,
+}: {
+  media: OutputState['media'];
+  preview: boolean;
+  layer: 'background' | 'media';
+}) {
   if (!media) return null;
 
+  const className = `audienceMediaElement audienceMedia-${layer}`;
+
   if (media.fileUrl && media.kind === 'still') {
-    return <img className="audienceMediaElement" src={media.fileUrl} alt="" />;
+    return <img className={className} src={media.fileUrl} alt="" />;
   }
 
   if (media.fileUrl && (media.kind === 'motion' || media.kind === 'video')) {
@@ -31,7 +40,7 @@ function MediaLayer({ output, preview }: { output: OutputState; preview: boolean
     return (
       <video
         key={playbackKey}
-        className="audienceMediaElement"
+        className={className}
         src={media.fileUrl}
         autoPlay
         loop={shouldLoop && !needsManualLoop}
@@ -71,7 +80,7 @@ function MediaLayer({ output, preview }: { output: OutputState; preview: boolean
     );
   }
 
-  return <div className="audienceMediaFallback" />;
+  return <div className={`${className} audienceMediaFallback`} />;
 }
 
 function liveTextStyle(
@@ -180,7 +189,7 @@ function SlideElementLayer({
 }
 
 export function AudienceOutput({ output, preview = false }: AudienceOutputProps) {
-  const classes = [preview ? 'preview' : 'audienceCanvas', output.media ? 'hasMedia' : '']
+  const classes = [preview ? 'preview' : 'audienceCanvas', output.background || output.media ? 'hasMedia' : '']
     .filter(Boolean)
     .join(' ');
 
@@ -195,11 +204,11 @@ export function AudienceOutput({ output, preview = false }: AudienceOutputProps)
     );
   }
 
-  const hasAnyOutput = Boolean(output.slide || output.media || output.prop || output.message);
+  const hasAnyOutput = Boolean(output.background || output.slide || output.media || output.prop || output.message);
 
   return (
     <div className={classes}>
-      <MediaLayer output={output} preview={preview} />
+      <MediaLayer media={output.background} preview={preview} layer="background" />
       {output.slide ? (
         output.slide.elements?.length ? (
           <>
@@ -225,6 +234,7 @@ export function AudienceOutput({ output, preview = false }: AudienceOutputProps)
       ) : preview && !hasAnyOutput ? (
         <div className="noOut">No Slide Output</div>
       ) : null}
+      <MediaLayer media={output.media} preview={preview} layer="media" />
       {output.message ? <div className="audienceMessage">{output.message.text}</div> : null}
       {output.black ? <div className="audienceBlackout" aria-label="Audience output is black" /> : null}
     </div>

@@ -22,6 +22,37 @@ function friendlyTitle(filePath) {
   return path.basename(filePath, path.extname(filePath)).replaceAll('_', ' ').replaceAll('-', ' ');
 }
 
+function importedAsset(record, managedDirectory) {
+  const managedPath = path.join(managedDirectory, record.fileName);
+  return {
+    id: record.id,
+    title: record.title,
+    kind: record.kind,
+    managedPath,
+    fileUrl: pathToFileURL(managedPath).toString(),
+    source: 'local',
+    sourceId: 'imported-media',
+    sourceLabel: 'Imported Media',
+    relativePath: record.fileName,
+    extension: record.extension,
+  };
+}
+
+async function availableDestination(directory, fileName) {
+  const parsed = path.parse(fileName);
+  let candidate = path.join(directory, fileName);
+  let suffix = 2;
+  while (true) {
+    try {
+      await fs.access(candidate);
+      candidate = path.join(directory, `${parsed.name} ${suffix}${parsed.ext}`);
+      suffix += 1;
+    } catch {
+      return candidate;
+    }
+  }
+}
+
 async function scanFolder(source) {
   const assets = [];
   const queue = [{ directory: source.path, depth: 0 }];
@@ -73,7 +104,9 @@ async function scanFolder(source) {
 class ResourceLibrary {
   constructor(userDataPath) {
     this.configPath = path.join(userDataPath, 'resource-library.json');
+    this.managedDirectory = path.join(userDataPath, 'Imported Media');
     this.sources = [];
+    this.imports = [];
     this.assets = [];
     this.lastError = null;
   }
@@ -83,9 +116,11 @@ class ResourceLibrary {
       const raw = await fs.readFile(this.configPath, 'utf8');
       const parsed = JSON.parse(raw);
       this.sources = Array.isArray(parsed.sources) ? parsed.sources : [];
+      this.imports = Array.isArray(parsed.imports) ? parsed.imports : [];
     } catch (error) {
       if (error?.code !== 'ENOENT') this.lastError = error?.message || String(error);
       this.sources = [];
+      this.imports = [];
     }
 
     await this.rescan();
@@ -96,7 +131,7 @@ class ResourceLibrary {
     await fs.mkdir(path.dirname(this.configPath), { recursive: true });
     await fs.writeFile(
       this.configPath,
-      JSON.stringify({ version: 1, sources: this.sources }, null, 2),
+      JSON.stringify({ version: 2, sources: this.sources, imports: this.imports }, null, 2),
       'utf8',
     );
   }
@@ -128,10 +163,46 @@ class ResourceLibrary {
     return this.snapshot();
   }
 
+  async importFiles(filePaths) {
+    await fs.mkdir(this.managedDirectory, { recursive: true });
+
+    for (const filePath of filePaths) {
+      const extension = path.extname(filePath).toLowerCase();
+      const kind = mediaKind(extension);
+      if (!kind) continue;
+
+      const destination = await availableDestination(this.managedDirectory, path.basename(filePath));
+      await fs.copyFile(filePath, destination);
+      this.imports.push({
+        id: stableId('imported-media', `${destination.toLowerCase()}:${Date.now()}:${crypto.randomUUID()}`),
+        title: friendlyTitle(destination),
+        kind,
+        fileName: path.basename(destination),
+        extension,
+        addedAt: new Date().toISOString(),
+      });
+    }
+
+    await this.save();
+    await this.rescan();
+    return this.snapshot();
+  }
+
   async rescan() {
     this.lastError = null;
     const results = await Promise.all(this.sources.map((source) => scanFolder(source)));
-    this.assets = results.flat();
+    const imported = [];
+    for (const record of this.imports) {
+      const asset = importedAsset(record, this.managedDirectory);
+      try {
+        await fs.access(asset.managedPath);
+        imported.push(asset);
+      } catch {
+        // Keep the import record so a temporarily unavailable file is not
+        // silently forgotten; it simply stays out of the current snapshot.
+      }
+    }
+    this.assets = [...imported, ...results.flat()];
     return this.snapshot();
   }
 

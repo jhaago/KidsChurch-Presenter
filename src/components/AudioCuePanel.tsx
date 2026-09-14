@@ -8,6 +8,7 @@ import {
 } from '../domain/mediaPlayback';
 import type { MediaAsset, Song } from '../domain/types';
 import { Icon } from './ui/Icon';
+import { writeServiceResourceDrag } from '../domain/serviceDrag';
 
 interface AudioCuePanelProps {
   assets: MediaAsset[];
@@ -168,9 +169,11 @@ export function AudioCuePanel({
               <button
                 className={`${selected ? 'isSelected' : ''} ${active ? 'isActive' : ''}`}
                 key={asset.id}
+                draggable
+                onDragStart={(event) => writeServiceResourceDrag(event.dataTransfer, { type: 'media', resourceId: asset.id, assetKind: 'audio' })}
                 onClick={() => setSelectedAssetId(asset.id)}
                 type="button"
-                title={asset.relativePath || asset.title}
+                title={`${asset.relativePath || asset.title} · drag onto a Song in the set list to associate it`}
                 tabIndex={hidden ? -1 : undefined}
               >
                 <Icon name="audio" />

@@ -52,6 +52,7 @@ interface SlideWorkspaceProps {
   onSelectSlide: (slideId: string, arrangementEntryId?: string) => void;
   onTriggerSlide: (presentation: Presentation, slide: Slide, arrangementEntryId?: string) => void;
   onTriggerMedia: (asset: MediaAsset) => void;
+  onTriggerBackground: (asset: MediaAsset) => void;
   onTriggerLyricsVideo: (asset: MediaAsset) => void;
 }
 
@@ -97,6 +98,7 @@ export function SlideWorkspace({
   onSelectSlide,
   onTriggerSlide,
   onTriggerMedia,
+  onTriggerBackground,
   onTriggerLyricsVideo,
 }: SlideWorkspaceProps) {
   const [viewMode, setViewMode] = useState<WorkspaceViewMode>('slides');
@@ -577,10 +579,15 @@ export function SlideWorkspace({
               <div>
                 <span className="eyebrow">MEDIA PLAYLIST ITEM</span>
                 <h2>{media.title}</h2>
-                <p>Prepared only. Triggering the media tile sends it to the independent Media layer.</p>
+                <p>Choose whether this item should replace the persistent Background layer or appear on the foreground Media layer.</p>
                 <button className="primaryAction" onClick={() => onTriggerMedia(media)} type="button">
-                  <Icon name="media" /> Trigger Media
+                  <Icon name="media" /> Show as Media
                 </button>
+                {media.kind !== 'audio' ? (
+                  <button className="primaryAction secondaryAction" onClick={() => onTriggerBackground(media)} type="button">
+                    <Icon name="media" /> Set as Background
+                  </button>
+                ) : null}
               </div>
             </div>
           </div>

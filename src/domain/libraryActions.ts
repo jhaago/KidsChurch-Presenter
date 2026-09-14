@@ -8,6 +8,7 @@ import type {
   Song,
   SongStem,
 } from './types';
+import { genericSlidesFromText, songStructureFromLyrics } from './quickCreate';
 
 function newId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -77,6 +78,23 @@ export function createBlankSong(title = 'New Song') {
     song,
     item: playlistItemForSong(song),
   };
+}
+
+export function createSongFromLyrics(title: string, lyrics: string, maxLines = 4) {
+  const created = createBlankSong(title.trim() || 'New Song');
+  const structure = songStructureFromLyrics(lyrics, maxLines);
+  created.presentation.groups = structure.groups;
+  created.song.arrangement = structure.arrangement;
+  return created;
+}
+
+export function createPresentationFromText(title: string, text: string, maxLines = 4) {
+  const created = createBlankPresentation(title.trim() || 'New Slides');
+  created.presentation.groups = [{
+    ...created.presentation.groups[0],
+    slides: genericSlidesFromText(text, maxLines),
+  }];
+  return created;
 }
 
 export function duplicatePresentationResource(source: Presentation) {
@@ -183,6 +201,15 @@ export function playlistItemForPresentation(presentation: Presentation): Playlis
   };
 }
 
+export function playlistItemForMedia(asset: { id: string; title: string }): PlaylistItem {
+  return {
+    id: newId('playlist-item'),
+    title: asset.title,
+    type: 'media',
+    resourceId: asset.id,
+  };
+}
+
 export function playlistItemForSong(song: Song): PlaylistItem {
   return {
     id: newId('playlist-item'),
@@ -207,6 +234,6 @@ export function duplicateService(source: Playlist): Playlist {
     id: newId('playlist'),
     title: `${source.title} Copy`,
     serviceDate: undefined,
-    items: source.items.map((item) => ({ ...item, id: newId('playlist-item') })),
+    items: source.items.map((item) => ({ ...structuredClone(item), id: newId('playlist-item') })),
   };
 }

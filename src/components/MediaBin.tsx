@@ -11,6 +11,7 @@ import type {
 import { AudioCuePanel } from './AudioCuePanel';
 import { Icon } from './ui/Icon';
 import { MediaPlaybackEditor } from './MediaPlaybackEditor';
+import { writeServiceResourceDrag } from '../domain/serviceDrag';
 
 export type MediaBinTab = 'Media' | 'Audio' | 'Stage' | 'Timers';
 
@@ -31,7 +32,10 @@ interface MediaBinProps {
   onSeekSong: (positionMs: number) => void;
   onToggleStem: (stemId: string, enabled: boolean) => void;
   onRescanResources: () => void;
+  onImportFiles: () => void;
   onTriggerMedia: (asset: MediaAsset) => void;
+  onSetBackground: (asset: MediaAsset) => void;
+  onAddToService: (assetId: string) => void;
 }
 
 const tabs: Array<{ label: MediaBinTab; icon: 'media' | 'audio' | 'stage' | 'timer' }> = [
@@ -51,7 +55,7 @@ function PlaceholderTab({ tab, detail }: { tab: Exclude<MediaBinTab, 'Media'>; d
   );
 }
 
-function AssetArtwork({ asset, live }: { asset: MediaAsset; live: boolean }) {
+function AssetArtwork({ asset, liveLabel }: { asset: MediaAsset; liveLabel?: string }) {
   return (
     <span className={`assetArtwork asset-${asset.id}`}>
       {asset.kind === 'still' && asset.fileUrl ? (
@@ -62,7 +66,7 @@ function AssetArtwork({ asset, live }: { asset: MediaAsset; live: boolean }) {
           <Icon name="media" />
         </>
       ) : null}
-      {live ? <b>LIVE</b> : null}
+      {liveLabel ? <b>{liveLabel}</b> : null}
     </span>
   );
 }
@@ -83,7 +87,10 @@ export function MediaBin({
   onStopSong,
   onSeekSong,
   onRescanResources,
+  onImportFiles,
   onTriggerMedia,
+  onSetBackground,
+  onAddToService,
 }: MediaBinProps) {
   const [filter, setFilter] = useState<'all' | 'backgrounds' | string>('all');
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
@@ -103,8 +110,10 @@ export function MediaBin({
     if (explicitlySelected) return explicitlySelected;
     return output.media
       ? visualAssets.find((asset) => asset.id === output.media?.id)
+      : output.background
+        ? visualAssets.find((asset) => asset.id === output.background?.id)
       : undefined;
-  }, [output.media, selectedAssetId, visualAssets]);
+  }, [output.background, output.media, selectedAssetId, visualAssets]);
   const selectedAssetIsLive = Boolean(selectedAsset && output.media?.id === selectedAsset.id);
   const selectedAssetDefaultLoop = selectedAssetIsLive
     ? Boolean(output.media?.loop)
@@ -121,6 +130,9 @@ export function MediaBin({
           ))}
         </div>
         <div className="binHeaderActions">
+          {(activeTab === 'Media' || activeTab === 'Audio') ? (
+            <button className="importMediaButton" type="button" onClick={onImportFiles}>＋ Import Files</button>
+          ) : null}
           {activeTab === 'Media' && resourceSources.length ? (
             <button type="button" onClick={onRescanResources}>Rescan Folders</button>
           ) : null}
@@ -145,6 +157,9 @@ export function MediaBin({
               <button className={filter === 'backgrounds' ? 'isSelected' : ''} type="button" onClick={() => setFilter('backgrounds')}>
                 <Icon name="folder"/>Backgrounds <span>{backgrounds}</span>
               </button>
+              <button className={filter === 'imported-media' ? 'isSelected' : ''} type="button" onClick={() => setFilter('imported-media')}>
+                <Icon name="folder"/>Imported Media <span>{visualAssets.filter((asset) => asset.sourceId === 'imported-media').length}</span>
+              </button>
               {resourceSources.map((source) => (
                 <button className={filter === source.id ? 'isSelected' : ''} key={source.id} type="button" onClick={() => setFilter(source.id)} title={source.path}>
                   <Icon name="folder"/>{source.label}
@@ -154,7 +169,9 @@ export function MediaBin({
             </nav>
             <div className="mediaAssetStrip">
               {visibleAssets.length ? visibleAssets.map((asset) => {
-                const live = output.media?.id === asset.id;
+                const foregroundLive = output.media?.id === asset.id;
+                const backgroundLive = output.background?.id === asset.id;
+                const live = foregroundLive || backgroundLive;
                 const selected = selectedAsset?.id === asset.id;
                 return (
                   <button
@@ -162,12 +179,14 @@ export function MediaBin({
                     key={asset.id}
                     onClick={() => {
                       setSelectedAssetId(asset.id);
-                      onTriggerMedia(asset);
                     }}
+                    onDoubleClick={() => onTriggerMedia(asset)}
+                    draggable
+                    onDragStart={(event) => writeServiceResourceDrag(event.dataTransfer, { type: 'media', resourceId: asset.id, assetKind: 'visual' })}
                     type="button"
                     title={asset.relativePath || asset.title}
                   >
-                    <AssetArtwork asset={asset} live={live} />
+                    <AssetArtwork asset={asset} liveLabel={foregroundLive ? 'MEDIA' : backgroundLive ? 'BG' : undefined} />
                     <span className="assetName">{asset.title}</span>
                     <small>{asset.kind.toUpperCase()}{asset.sourceLabel ? ' · ' + asset.sourceLabel : ''}</small>
                   </button>
@@ -179,6 +198,15 @@ export function MediaBin({
                   <span>Add a OneDrive/local resource folder or choose another media category.</span>
                 </div>
               )}
+            </div>
+            <div className="mediaQuickActions">
+              <div>
+                <strong>{selectedAsset?.title ?? 'Select an item'}</strong>
+                <span>{selectedAsset ? 'Choose exactly how this item should be used.' : 'Single-click selects without changing the live output.'}</span>
+              </div>
+              <button type="button" disabled={!selectedAsset} onClick={() => selectedAsset && onSetBackground(selectedAsset)}>Set as Background</button>
+              <button className="primary" type="button" disabled={!selectedAsset} onClick={() => selectedAsset && onTriggerMedia(selectedAsset)}>Show as Media</button>
+              <button type="button" disabled={!selectedAsset} onClick={() => selectedAsset && onAddToService(selectedAsset.id)}>＋ Add to Set List</button>
             </div>
             <MediaPlaybackEditor
               asset={selectedAsset}

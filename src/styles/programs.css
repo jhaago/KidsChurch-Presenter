@@ -1,0 +1,325 @@
+/* Saved-program workflow -------------------------------------------------- */
+
+.programManager {
+  flex: 0 0 auto;
+  margin: 0 0 7px;
+  padding: 0 0 7px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.programManagerHeader {
+  min-height: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 0 3px 4px;
+}
+
+.programManagerHeader > span {
+  color: #838b94;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .11em;
+}
+
+.programManagerHeader > small {
+  color: #626a72;
+  font-size: 8px;
+}
+
+.programManagerHeader > button,
+.programManagerActions button,
+.restoreProgramButton {
+  min-height: 24px;
+  padding: 3px 7px;
+  border: 1px solid #3a4046;
+  border-radius: 3px;
+  background: #23272b;
+  color: #b9bec4;
+  cursor: pointer;
+  font-size: 8.5px;
+}
+
+.programManagerHeader > button:hover,
+.programManagerActions button:hover,
+.restoreProgramButton:hover {
+  border-color: #56616b;
+  background: #2b3035;
+  color: #fff;
+}
+
+.programList {
+  max-height: 118px;
+  overflow: auto;
+  padding: 1px 0;
+}
+
+.programListRow {
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 5px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  display: grid;
+  grid-template-columns: 17px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  color: #adb3b9;
+  cursor: pointer;
+  text-align: left;
+}
+
+.programListRow:hover {
+  background: #22262a;
+}
+
+.programListRow.isActive {
+  border-color: #35658d;
+  background: #213a50;
+  color: #fff;
+}
+
+.programListRow > svg {
+  width: 14px;
+  height: 14px;
+  color: #7d8790;
+}
+
+.programListRow.isActive > svg {
+  color: #9ec9eb;
+}
+
+.programListText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.programListText strong,
+.archivedProgramRow strong {
+  overflow: hidden;
+  font-size: 9.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.programListText small,
+.archivedProgramRow small {
+  color: #6c747c;
+  font-size: 7.5px;
+}
+
+.programState {
+  padding: 2px 4px;
+  border: 1px solid #3c434a;
+  border-radius: 999px;
+  background: #22262a;
+  color: #8f969d;
+  font-size: 6.8px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+
+.programState-saved {
+  border-color: rgba(85, 201, 121, .42);
+  background: rgba(85, 201, 121, .10);
+  color: #78d492;
+}
+
+.programState-changed {
+  border-color: rgba(227, 170, 79, .52);
+  background: rgba(227, 170, 79, .10);
+  color: #e3b866;
+}
+
+.programState-draft {
+  border-color: rgba(74, 155, 226, .48);
+  background: rgba(74, 155, 226, .10);
+  color: #80b9ea;
+}
+
+.programState-archived {
+  color: #777f87;
+}
+
+.programManagerActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 4px;
+  padding: 4px 0 0;
+}
+
+.programManagerActions .danger,
+.programSaveButtons .danger {
+  color: #e68181;
+}
+
+.programManagerActions button:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+.programEmptyState {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #69717a;
+  font-size: 9px;
+}
+
+.programEmptyState svg {
+  width: 14px;
+  height: 14px;
+}
+
+.archivedPrograms {
+  margin-top: 5px;
+  border-top: 1px solid #282d31;
+}
+
+.archivedPrograms > summary {
+  min-height: 25px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #69717a;
+  cursor: pointer;
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.archivedPrograms > summary small {
+  color: #565e66;
+}
+
+.archivedProgramList {
+  max-height: 92px;
+  overflow: auto;
+  padding-bottom: 3px;
+}
+
+.archivedProgramRow {
+  min-height: 35px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.archivedProgramRow > button:first-child {
+  min-width: 0;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+  color: #8a929a;
+  cursor: pointer;
+  text-align: left;
+}
+
+.archivedProgramRow > button:first-child > svg {
+  width: 13px;
+  height: 13px;
+}
+
+.archivedProgramRow > button:first-child > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.programCanvasHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.programHeaderActions {
+  min-width: 0;
+  min-height: 37px;
+  padding: 6px 0 0;
+  border-top: 1px solid #2c3034;
+  display: grid;
+  grid-template-columns: minmax(145px, 1fr) auto;
+  align-items: center;
+  gap: 7px 10px;
+}
+
+.programSaveState {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.programSaveState > small {
+  min-width: 0;
+  overflow: hidden;
+  color: #717981;
+  font-size: 8px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.programSaveButtons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.programSaveButtons button {
+  min-height: 25px;
+  padding: 4px 8px;
+  border: 1px solid #3b4249;
+  border-radius: 3px;
+  background: #24282c;
+  color: #b8bec4;
+  cursor: pointer;
+  font-size: 8.5px;
+  font-weight: 650;
+}
+
+.programSaveButtons button:hover {
+  border-color: #59636d;
+  background: #2d3237;
+  color: #fff;
+}
+
+.programSaveButtons .programPrimaryButton {
+  border-color: #3973a2;
+  background: linear-gradient(#2d6e9f, #265d89);
+  color: #fff;
+}
+
+.programSaveButtons .programPrimaryButton:hover {
+  background: linear-gradient(#347eB5, #2c6c9d);
+}
+
+.programAutosaveNote {
+  grid-column: 1 / -1;
+  color: #555e66;
+  font-size: 7.2px;
+}
+
+@media (max-width: 1160px) {
+  .programHeaderActions {
+    grid-template-columns: 1fr;
+  }
+
+  .programSaveButtons {
+    flex-wrap: wrap;
+  }
+}

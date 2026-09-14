@@ -27,14 +27,24 @@ async function main() {
   assert.equal(library.assetById(motion.id)?.managedPath, motion.managedPath);
   assert.equal(library.assetById('missing-asset'), null);
 
+  const importSource = path.join(root, 'Import Me.wav');
+  await fs.writeFile(importSource, 'audio');
+  snapshot = await library.importFiles([importSource]);
+  const imported = snapshot.assets.find((asset) => asset.title === 'Import Me');
+  assert.ok(imported);
+  assert.equal(imported.kind, 'audio');
+  assert.equal(imported.sourceLabel, 'Imported Media');
+  assert.notEqual(imported.managedPath, importSource);
+  assert.equal(await fs.readFile(imported.managedPath, 'utf8'), 'audio');
+
   const reloaded = new ResourceLibrary(userData);
   snapshot = await reloaded.load();
   assert.equal(snapshot.sources.length, 1);
-  assert.equal(snapshot.assets.length, 2);
+  assert.equal(snapshot.assets.length, 3);
 
   snapshot = await reloaded.removeFolder(snapshot.sources[0].id);
   assert.equal(snapshot.sources.length, 0);
-  assert.equal(snapshot.assets.length, 0);
+  assert.equal(snapshot.assets.length, 1);
 
   await fs.rm(root, { recursive: true, force: true });
 }
