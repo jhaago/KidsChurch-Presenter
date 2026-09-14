@@ -301,6 +301,26 @@ app.whenReady().then(async () => {
     return publishResourceLibrary(await resourceLibrary.addFolder(result.filePaths[0]));
   });
 
+  ipcMain.handle('resource-library:import-files', async () => {
+    const options = {
+      title: 'Import Media Files',
+      buttonLabel: 'Import',
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Images, video and audio', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'mp4', 'webm', 'm4v', 'mov', 'mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'] },
+      ],
+    };
+    const result = operatorWindow && !operatorWindow.isDestroyed()
+      ? await dialog.showOpenDialog(operatorWindow, options)
+      : await dialog.showOpenDialog(options);
+
+    if (result.canceled || !result.filePaths.length) {
+      return resourceLibrary?.snapshot() ?? { sources: [], assets: [], lastError: null };
+    }
+
+    return publishResourceLibrary(await resourceLibrary.importFiles(result.filePaths));
+  });
+
   ipcMain.handle('resource-library:remove-folder', async (_event, sourceId) => {
     return publishResourceLibrary(await resourceLibrary.removeFolder(String(sourceId)));
   });

@@ -729,3 +729,15 @@ html.service-editor-open .operatorMain > .slideWorkspace {
     grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
   }
 }
+.quickCreateOverlay{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:24px;background:rgba(3,5,7,.78);backdrop-filter:blur(4px)}
+.quickCreateDialog{width:min(720px,94vw);max-height:90vh;overflow:auto;border:1px solid #46515b;border-radius:6px;background:#171b1f;box-shadow:0 24px 80px rgba(0,0,0,.55);color:#dfe4e8}
+.quickCreateDialog>header{display:flex;justify-content:space-between;gap:20px;padding:18px 20px;border-bottom:1px solid #30373d;background:#1d2227}
+.quickCreateDialog>header div{display:flex;flex-direction:column;gap:4px}.quickCreateDialog>header strong{font-size:13px;letter-spacing:.08em}.quickCreateDialog>header span{color:#929ba3;font-size:11px}.quickCreateDialog>header button{width:30px;height:30px;border:1px solid #3d454c;background:#262c31;color:#bbc2c8;cursor:pointer}
+.quickCreateDialog>label{display:flex;flex-direction:column;gap:6px;margin:16px 20px}.quickCreateDialog label>span,.quickCreateOptions span{color:#87919a;font-size:9px;font-weight:750;letter-spacing:.09em}.quickCreateDialog input,.quickCreateDialog textarea,.quickCreateDialog select{border:1px solid #3a434b;border-radius:3px;background:#101316;color:#e7ebee;font:inherit}.quickCreateDialog input{height:36px;padding:0 10px}.quickCreateDialog textarea{width:100%;min-height:300px;padding:12px;resize:vertical;line-height:1.45}
+.quickCreateOptions{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0 20px 18px}.quickCreateOptions label,.quickCreateOptions>div{display:flex;flex-direction:column;gap:6px}.quickCreateOptions select{height:34px;padding:0 8px}.quickCreateOptions strong{font-size:12px}
+.quickCreateDialog>footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #30373d;background:#14181b}.quickCreateDialog>footer button{height:34px;padding:0 13px;border:1px solid #3b444c;border-radius:3px;background:#252b30;color:#d3d8dc;cursor:pointer}.quickCreateDialog>footer button.primary{border-color:#367caf;background:#23699b;color:white}
+.libraryResourceRow[draggable="true"]{cursor:grab}.libraryResourceRow[draggable="true"]:active{cursor:grabbing}
+.serviceSongPlay{border-color:#347db1!important;background:#205b85!important;color:#fff!important;font-weight:700}
+.libraryCategoryHint{display:block;padding:4px 7px 6px;color:#69747d;font-size:7px;line-height:1.35}
+.libraryResourceRow{grid-template-columns:18px minmax(0,1fr) auto 34px}
+.libraryResourceRow>button{width:32px;padding:0 4px;font-size:6.5px;font-weight:800}

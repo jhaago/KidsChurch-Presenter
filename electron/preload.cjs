@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('kidsPresenter', {
   savePresenterLibrary: (data) => ipcRenderer.invoke('presenter-library:save', data),
   getResourceLibrary: () => ipcRenderer.invoke('resource-library:get'),
   addResourceFolder: () => ipcRenderer.invoke('resource-library:add-folder'),
+  importResourceFiles: () => ipcRenderer.invoke('resource-library:import-files'),
   removeResourceFolder: (sourceId) => ipcRenderer.invoke('resource-library:remove-folder', sourceId),
   rescanResourceLibrary: () => ipcRenderer.invoke('resource-library:rescan'),
   readAudioAsset: (assetId) => ipcRenderer.invoke('audio:read-asset', assetId),

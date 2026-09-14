@@ -8,7 +8,7 @@ The second goal is to extend that workflow where Kids Church benefits from it, e
 
 ## Current status
 
-**v0.5.10-alpha.1 — Slide Layout Templates + Grouping**
+**v0.5.12-alpha.1 — Testing Workflow Pass**
 
 Implemented in source:
 
@@ -24,6 +24,8 @@ Implemented in source:
 - explicit Windows x64 installer target
 - operator selection kept separate from live output
 - ProPresenter-style independent output layers
+- genuinely separate persistent Background and foreground Media output layers
+- independent Clear Background (F7) and Clear Media (F3) controls
 - slide triggering and live-state indication
 - next / previous navigation
 - Clear All / Slide / Media / Props / Audio / Message / Logo / Black controls
@@ -34,6 +36,8 @@ Implemented in source:
 - placeholder first-class playlist entries for **Spin the Wheel** and **Donuts Bingo**
 - an optional external-media-provider interface for future integration with the separate video downloader
 - persistent local/OneDrive-synced resource folders
+- cross-platform Import Files picker for images, video and audio
+- imported files copied into Presenter-managed app storage so moving the source cannot break a service
 - recursive media scanning and per-folder Media Bin filters
 - still-image and looping motion backgrounds behind live slide text
 - direct playback from library folders without copying the source files
@@ -65,11 +69,17 @@ Implemented in source:
 - editable Song names with linked lyrics-presentation/service-title synchronization
 - live Audience/Stage text updates when the currently-live slide is edited
 - create new Presentations and Songs from the Library pane
+- Quick Create Song/Slides workflow with pasted text, heading recognition and automatic slide splitting
+- repeated pasted Song sections reference one shared source section in the generated arrangement
+- explicit Save to Library and Save & Add to Set List actions
 - saved Song resources automatically create linked lyric presentations
 - duplicate Presentations with fresh group/slide IDs
 - duplicate Songs with fresh presentation/stem/cue IDs while preserving assigned media/audio
 - delete Presentation/Song resources with service-reference cleanup
 - add any saved Presentation/Song back into the current service
+- ADD buttons and drag-from-Library insertion into the full-service canvas
+- Media Bin drag-and-drop into the set list and audio-to-Song track association
+- Play/Pause/Resume/Stop track controls directly on Song cards in the main service canvas
 - remove an item from the service without deleting its library resource
 - move service items up/down while preserving live output
 - Library pane now lists saved Presentation/Song resources independently from the current service
@@ -232,6 +242,8 @@ See `docs/WINDOWS.md` for the Windows laptop + projector setup and test checklis
 ## Resource folders
 
 Use the **+** button in the Library panel to add any normal folder visible to Windows or macOS. A synced OneDrive folder works because Presenter reads the local synced filesystem path; no Microsoft sign-in is required inside Presenter.
+
+Use **Import Files** in the Media or Audio bin to choose individual images, videos or audio files. Presenter copies imported files into its own managed app-data folder on both Windows and macOS.
 
 The current v0.3 scanner recognises:
 

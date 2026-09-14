@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type DragEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { arrangedSlides, occurrenceLabel } from '../domain/songArrangement';
 import type { ProgramUpdate } from '../domain/programs';
 import { songForProgramItem } from '../domain/songProgramOverrides';
+import { readServiceResourceDrag, writeServiceResourceDrag, type ServiceResourceDrag } from '../domain/serviceDrag';
 import type {
+  MediaAsset,
   OutputState,
   Playlist,
   PlaylistItem,
@@ -13,6 +15,8 @@ import type {
   Song,
 } from '../domain/types';
 import { ProgramHeaderActions, ProgramSidebar } from './ProgramControls';
+import { QuickCreateDialog, type QuickCreateDraft } from './QuickCreateDialog';
+import type { SongTransportSnapshot } from '../audio/useSongTransport';
 import { Icon, type IconName } from './ui/Icon';
 
 interface LibraryPanelProps {
@@ -23,14 +27,22 @@ interface LibraryPanelProps {
   activePlaylistId: string;
   presentations: Presentation[];
   songs: Song[];
+  mediaAssets: MediaAsset[];
+  songTransport: SongTransportSnapshot;
   resourceSources: ResourceSource[];
   resourceAssetCountBySource: Record<string, number>;
   onAddResourceFolder: () => void;
   onRemoveResourceFolder: (sourceId: string) => void;
-  onCreatePresentation: () => void;
-  onCreateSong: () => void;
-  onAddPresentationToService: (presentationId: string) => void;
-  onAddSongToService: (songId: string) => void;
+  onCreatePresentation: (draft?: QuickCreateDraft, addToService?: boolean) => void;
+  onCreateSong: (draft?: QuickCreateDraft, addToService?: boolean) => void;
+  onAddPresentationToService: (presentationId: string, atIndex?: number) => void;
+  onAddSongToService: (songId: string, atIndex?: number) => void;
+  onAddMediaToService: (assetId: string, atIndex?: number) => void;
+  onAssociateSongTrack: (programItemId: string, assetId: string) => void;
+  onPlaySong: (song: Song, programItemId: string) => void;
+  onPauseSong: () => void;
+  onResumeSong: () => void;
+  onStopSong: () => void;
   onDuplicateSelected: () => void;
   onDeleteSelected: () => void;
   onRemoveServiceItem: (itemId: string) => void;
@@ -145,7 +157,7 @@ function LibraryCategory({
 }: {
   title: string;
   count: number;
-  children: React.ReactNode;
+  children: ReactNode;
   open?: boolean;
 }) {
   return (
@@ -167,6 +179,8 @@ export function LibraryPanel({
   activePlaylistId,
   presentations,
   songs,
+  mediaAssets,
+  songTransport,
   resourceSources,
   resourceAssetCountBySource,
   onAddResourceFolder,
@@ -175,6 +189,12 @@ export function LibraryPanel({
   onCreateSong,
   onAddPresentationToService,
   onAddSongToService,
+  onAddMediaToService,
+  onAssociateSongTrack,
+  onPlaySong,
+  onPauseSong,
+  onResumeSong,
+  onStopSong,
   onDuplicateSelected,
   onDeleteSelected,
   onRemoveServiceItem,
@@ -189,6 +209,7 @@ export function LibraryPanel({
 }: LibraryPanelProps) {
   const [libraryQuery, setLibraryQuery] = useState('');
   const [editorOpen, setEditorOpen] = useState(false);
+  const [quickCreate, setQuickCreate] = useState<'song' | 'slides' | null>(null);
   const [portalTarget, setPortalTarget] = useState<Element | null>(null);
 
   useEffect(() => {
@@ -279,6 +300,26 @@ export function LibraryPanel({
     });
   };
 
+  const addDraggedResource = (payload: ServiceResourceDrag, atIndex?: number) => {
+    if (payload.type === 'media' && payload.assetKind === 'audio') {
+      const target = atIndex === undefined ? undefined : playlist.items[atIndex];
+      if (target?.type === 'song' && mediaAssets.some((asset) => asset.id === payload.resourceId && asset.kind === 'audio')) {
+        onAssociateSongTrack(target.id, payload.resourceId);
+      }
+      return;
+    }
+    if (payload.type === 'song') onAddSongToService(payload.resourceId, atIndex);
+    else if (payload.type === 'presentation') onAddPresentationToService(payload.resourceId, atIndex);
+    else onAddMediaToService(payload.resourceId, atIndex);
+  };
+
+  const handleResourceDrop = (event: DragEvent, atIndex?: number) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const payload = readServiceResourceDrag(event.dataTransfer);
+    if (payload) addDraggedResource(payload, atIndex);
+  };
+
   const renderPresentationRows = (items: Presentation[]) => items.map((presentation) => {
     const count = playlist.items.filter((item) => item.resourceId === presentation.id).length;
     const icon: IconName = presentation.category === 'scripture'
@@ -287,7 +328,12 @@ export function LibraryPanel({
         ? 'timer'
         : 'presentation';
     return (
-      <div className="libraryResourceRow" key={presentation.id}>
+      <div
+        className="libraryResourceRow"
+        draggable
+        key={presentation.id}
+        onDragStart={(event) => writeServiceResourceDrag(event.dataTransfer, { type: 'presentation', resourceId: presentation.id })}
+      >
         <Icon name={icon} />
         <span title={presentation.title}>{presentation.title}</span>
         {count ? <small>{count}×</small> : null}
@@ -296,7 +342,7 @@ export function LibraryPanel({
           title="Add to current program"
           onClick={() => onAddPresentationToService(presentation.id)}
         >
-          ＋
+          ADD
         </button>
       </div>
     );
@@ -356,7 +402,11 @@ export function LibraryPanel({
         </div>
       </div>
 
-      <div className="serviceCanvasScroll">
+      <div
+        className="serviceCanvasScroll"
+        onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; }}
+        onDrop={(event) => handleResourceDrop(event)}
+      >
         {canvasItems.length ? canvasItems.map(({ item, slides, live }, index) => {
           const selected = selectedItemId === item.id;
           const groups = groupedSlides(slides);
@@ -364,6 +414,8 @@ export function LibraryPanel({
             <section
               className={`serviceCanvasItem tone-${itemTone(item, presentations)} ${selected ? 'isSelected' : ''} ${live ? 'isLive' : ''}`}
               key={item.id}
+              onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; }}
+              onDrop={(event) => handleResourceDrop(event, index)}
             >
               <header className="serviceCanvasItemHeader">
                 <button className="serviceCanvasItemIdentity" type="button" onClick={() => onSelectItem(item.id)}>
@@ -376,6 +428,32 @@ export function LibraryPanel({
                   {live ? <em>LIVE</em> : null}
                 </button>
                 <div className="serviceCanvasItemActions">
+                  {item.type === 'song' ? (() => {
+                    const cardSong = songForProgramItem(item, songs);
+                    const active = Boolean(cardSong && songTransport.songId === cardSong.id);
+                    if (!cardSong) return null;
+                    const playable = cardSong.playbackMode === 'slides-track'
+                      ? Boolean(cardSong.audio.singleTrackAssetId)
+                      : cardSong.playbackMode === 'slides-stems'
+                        ? cardSong.audio.stems.some((stem) => Boolean(stem.assetId))
+                        : false;
+                    return active && songTransport.status === 'playing' ? (
+                      <button className="serviceSongPlay" type="button" onClick={onPauseSong}>Ⅱ Pause</button>
+                    ) : active && songTransport.status === 'paused' ? (
+                      <button className="serviceSongPlay" type="button" onClick={onResumeSong}>▶ Resume</button>
+                    ) : (
+                      <button
+                        className="serviceSongPlay"
+                        type="button"
+                        disabled={!playable}
+                        title={playable ? 'Play the associated track' : 'Assign a track in Song setup first'}
+                        onClick={() => { onSelectItem(item.id); onPlaySong(cardSong, item.id); }}
+                      >{playable ? '▶ Play Track' : 'No Track'}</button>
+                    );
+                  })() : null}
+                  {item.type === 'song' && songTransport.songId === item.resourceId && songTransport.status !== 'idle' ? (
+                    <button type="button" onClick={onStopSong}>■</button>
+                  ) : null}
                   {item.type === 'song' && item.songOverride ? (
                     <button type="button" title="Discard this Program-specific Song setup" onClick={() => onResetSongOverride(item.id)}>Use Library Setup</button>
                   ) : null}
@@ -468,11 +546,11 @@ export function LibraryPanel({
           />
 
           <div className="libraryCreateRow">
-            <button type="button" onClick={onCreatePresentation}>
+            <button type="button" onClick={() => setQuickCreate('slides')}>
               <Icon name="presentation" />
               New Slides
             </button>
-            <button type="button" onClick={onCreateSong}>
+            <button type="button" onClick={() => setQuickCreate('song')}>
               <Icon name="audio" />
               New Song
             </button>
@@ -491,14 +569,20 @@ export function LibraryPanel({
 
           <div className="libraryCategories">
             <LibraryCategory title="SONGS" count={sortedSongs.length}>
+              <span className="libraryCategoryHint">Saved once · click ADD or drag a Song into the set list.</span>
               {sortedSongs.length ? sortedSongs.map((song) => {
                 const count = playlist.items.filter((item) => item.type === 'song' && item.resourceId === song.id).length;
                 return (
-                  <div className="libraryResourceRow" key={song.id}>
+                  <div
+                    className="libraryResourceRow"
+                    draggable
+                    key={song.id}
+                    onDragStart={(event) => writeServiceResourceDrag(event.dataTransfer, { type: 'song', resourceId: song.id })}
+                  >
                     <Icon name="audio" />
                     <span title={song.title}>{song.title}</span>
                     {count ? <small>{count}×</small> : null}
-                    <button type="button" title="Add Song to current program" onClick={() => onAddSongToService(song.id)}>＋</button>
+                    <button type="button" title="Add Song to current program" onClick={() => onAddSongToService(song.id)}>ADD</button>
                   </div>
                 );
               }) : <span className="libraryCategoryEmpty">No matching songs</span>}
@@ -549,6 +633,13 @@ export function LibraryPanel({
         </section>
       </aside>
       {portalTarget && !editorOpen ? createPortal(serviceCanvas, portalTarget) : null}
+      {quickCreate ? (
+        <QuickCreateDialog
+          kind={quickCreate}
+          onClose={() => setQuickCreate(null)}
+          onCreate={quickCreate === 'song' ? onCreateSong : onCreatePresentation}
+        />
+      ) : null}
     </>
   );
 }

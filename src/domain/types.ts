@@ -343,10 +343,11 @@ export interface LiveMediaState {
   sourceLabel?: string;
   muted?: boolean;
   loop?: boolean;
-  playbackRole?: 'background' | 'video';
+  playbackRole?: 'background' | 'foreground';
 }
 
 export interface OutputState {
+  background: LiveMediaState | null;
   slide: LiveSlideState | null;
   media: LiveMediaState | null;
   prop: { id: string; title: string } | null;
@@ -359,6 +360,7 @@ export interface OutputState {
 }
 
 export const EMPTY_OUTPUT_STATE: OutputState = {
+  background: null,
   slide: null,
   media: null,
   prop: null,

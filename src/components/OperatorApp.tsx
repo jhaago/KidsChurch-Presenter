@@ -16,15 +16,17 @@ import {
   createBlankPresentation,
   createBlankService,
   createBlankSong,
+  createPresentationFromText,
+  createSongFromLyrics,
   duplicatePresentationResource,
   duplicateService,
   duplicateSongResource,
   playlistItemForPresentation,
+  playlistItemForMedia,
   playlistItemForSong,
 } from '../domain/libraryActions';
 import {
   mediaAssets as demoMediaAssets,
-  mediaById,
   presentations as demoPresentations,
   songs as demoSongs,
   sundayKidsPlaylist as demoPlaylist,
@@ -58,7 +60,7 @@ function allSlides(presentation: Presentation) {
   return presentation.groups.flatMap((group) => group.slides);
 }
 
-function liveMediaFromAsset(asset: MediaAsset, playbackRole: 'background' | 'video' = 'background') {
+function liveMediaFromAsset(asset: MediaAsset, playbackRole: 'background' | 'foreground' = 'foreground') {
   return {
     id: asset.id,
     title: asset.title,
@@ -68,7 +70,7 @@ function liveMediaFromAsset(asset: MediaAsset, playbackRole: 'background' | 'vid
     sourceLabel: asset.sourceLabel,
     playbackRole,
     muted: playbackRole === 'background',
-    loop: playbackRole === 'background' && asset.kind === 'motion',
+    loop: playbackRole === 'background' && (asset.kind === 'motion' || asset.kind === 'video'),
   } as const;
 }
 
@@ -135,11 +137,13 @@ export function OperatorApp() {
   const selectedPresentation = selectedSong
     ? presentations.find((presentation) => presentation.id === selectedSong.presentationId)
     : presentations.find((presentation) => presentation.id === selectedItem?.resourceId);
-  const selectedMedia = selectedItem?.type === 'media' ? mediaById(selectedItem.resourceId) : undefined;
   const allMediaAssets = useMemo(
     () => [...demoMediaAssets, ...resourceLibrary.assets],
     [resourceLibrary.assets],
   );
+  const selectedMedia = selectedItem?.type === 'media'
+    ? allMediaAssets.find((asset) => asset.id === selectedItem.resourceId)
+    : undefined;
   const resourceAssetCountBySource = useMemo(
     () => resourceLibrary.assets.reduce<Record<string, number>>((counts, asset) => {
       if (asset.sourceId) counts[asset.sourceId] = (counts[asset.sourceId] ?? 0) + 1;
@@ -376,7 +380,7 @@ export function OperatorApp() {
         layout,
         elements,
       },
-      media: background ? liveMediaFromAsset(background, 'background') : current.media,
+      background: background ? liveMediaFromAsset(background, 'background') : current.background,
       black: false,
       logo: false,
     }));
@@ -395,10 +399,18 @@ export function OperatorApp() {
   }, [activeSong, allMediaAssets, customThemes, selectedSong, songs]);
 
   const triggerMedia = useCallback((asset: MediaAsset) => {
-    const playbackRole = asset.kind === 'video' ? 'video' : 'background';
     setOutput((current) => ({
       ...current,
-      media: liveMediaFromAsset(asset, playbackRole),
+      media: liveMediaFromAsset(asset, 'foreground'),
+      black: false,
+      logo: false,
+    }));
+  }, []);
+
+  const triggerBackground = useCallback((asset: MediaAsset) => {
+    setOutput((current) => ({
+      ...current,
+      background: liveMediaFromAsset(asset, 'background'),
       black: false,
       logo: false,
     }));
@@ -408,17 +420,17 @@ export function OperatorApp() {
     setOutput((current) => ({
       ...current,
       slide: null,
-      media: liveMediaFromAsset(asset, 'video'),
+      media: liveMediaFromAsset(asset, 'foreground'),
       black: false,
       logo: false,
     }));
   }, []);
 
-  const playSong = useCallback(async (song: Song) => {
+  const playSong = useCallback(async (song: Song, programItemIdHint?: string) => {
     timingTransport.stop();
-    const programItemId = selectedItem?.type === 'song' && selectedItem.resourceId === song.id
+    const programItemId = programItemIdHint ?? (selectedItem?.type === 'song' && selectedItem.resourceId === song.id
       ? selectedItem.id
-      : null;
+      : null);
     const started = await songTransport.play(song);
     if (!started) return;
     setActiveSongItemId(programItemId);
@@ -430,9 +442,9 @@ export function OperatorApp() {
     setOutput((current) => ({
       ...current,
       audio: { id: song.id, title: song.title },
-      media: background && song.playbackMode !== 'lyrics-video'
+      background: background && song.playbackMode !== 'lyrics-video'
         ? liveMediaFromAsset(background, 'background')
-        : current.media,
+        : current.background,
       black: false,
       logo: false,
     }));
@@ -557,11 +569,11 @@ export function OperatorApp() {
             allMediaAssets,
           ),
         } : null,
-        media: liveBackground
+        background: liveBackground
           ? liveMediaFromAsset(liveBackground, 'background')
-          : current.media?.playbackRole === 'background'
+          : current.background?.playbackRole === 'background'
             ? null
-            : current.media,
+            : current.background,
       }));
     }
 
@@ -776,35 +788,73 @@ export function OperatorApp() {
     songTransport.state.songId,
   ]);
 
-  const appendAndSelectServiceItem = useCallback((item: Playlist['items'][number]) => {
-    setPlaylist((current) => ({ ...current, items: [...current.items, item] }));
+  const insertAndSelectServiceItem = useCallback((item: Playlist['items'][number], atIndex?: number) => {
+    setPlaylist((current) => {
+      const nextItems = [...current.items];
+      const safeIndex = atIndex === undefined
+        ? nextItems.length
+        : Math.max(0, Math.min(atIndex, nextItems.length));
+      nextItems.splice(safeIndex, 0, item);
+      return { ...current, items: nextItems };
+    });
     setSelectedItemId(item.id);
   }, []);
 
-  const createPresentation = useCallback(() => {
-    const created = createBlankPresentation();
+  const createPresentation = useCallback((draft?: { title: string; text: string; maxLines: number }, addToService = true) => {
+    const created = draft
+      ? createPresentationFromText(draft.title, draft.text, draft.maxLines)
+      : createBlankPresentation();
     setPresentations((current) => [...current, created.presentation]);
-    appendAndSelectServiceItem(created.item);
-  }, [appendAndSelectServiceItem]);
+    if (addToService) insertAndSelectServiceItem(created.item);
+  }, [insertAndSelectServiceItem]);
 
-  const createSong = useCallback(() => {
-    const created = createBlankSong();
+  const createSong = useCallback((draft?: { title: string; text: string; maxLines: number }, addToService = true) => {
+    const created = draft
+      ? createSongFromLyrics(draft.title, draft.text, draft.maxLines)
+      : createBlankSong();
     setPresentations((current) => [...current, created.presentation]);
     setSongs((current) => [...current, created.song]);
-    appendAndSelectServiceItem(created.item);
-  }, [appendAndSelectServiceItem]);
+    if (addToService) insertAndSelectServiceItem(created.item);
+  }, [insertAndSelectServiceItem]);
 
-  const addPresentationToService = useCallback((presentationId: string) => {
+  const addPresentationToService = useCallback((presentationId: string, atIndex?: number) => {
     const presentation = presentations.find((candidate) => candidate.id === presentationId);
     if (!presentation) return;
-    appendAndSelectServiceItem(playlistItemForPresentation(presentation));
-  }, [appendAndSelectServiceItem, presentations]);
+    insertAndSelectServiceItem(playlistItemForPresentation(presentation), atIndex);
+  }, [insertAndSelectServiceItem, presentations]);
 
-  const addSongToService = useCallback((songId: string) => {
+  const addSongToService = useCallback((songId: string, atIndex?: number) => {
     const song = songs.find((candidate) => candidate.id === songId);
     if (!song) return;
-    appendAndSelectServiceItem(playlistItemForSong(song));
-  }, [appendAndSelectServiceItem, songs]);
+    insertAndSelectServiceItem(playlistItemForSong(song), atIndex);
+  }, [insertAndSelectServiceItem, songs]);
+
+  const addMediaToService = useCallback((assetId: string, atIndex?: number) => {
+    const asset = allMediaAssets.find((candidate) => candidate.id === assetId);
+    if (!asset) return;
+    insertAndSelectServiceItem(playlistItemForMedia(asset), atIndex);
+  }, [allMediaAssets, insertAndSelectServiceItem]);
+
+  const associateSongTrack = useCallback((programItemId: string, assetId: string) => {
+    const asset = allMediaAssets.find((candidate) => candidate.id === assetId && candidate.kind === 'audio');
+    const item = playlist.items.find((candidate) => candidate.id === programItemId && candidate.type === 'song');
+    const song = songForProgramItem(item, songs);
+    if (!asset || !item || !song) return;
+    if (songTransport.state.songId === song.id && ['playing', 'paused'].includes(songTransport.state.status)) {
+      window.alert('Stop this Song before changing its associated track.');
+      return;
+    }
+    const updated: Song = {
+      ...song,
+      playbackMode: 'slides-track',
+      audio: { ...song.audio, mode: 'single-track', singleTrackAssetId: asset.id },
+    };
+    setPlaylist((current) => ({
+      ...current,
+      items: current.items.map((candidate) => candidate.id === item.id ? itemWithSongOverride(candidate, updated) : candidate),
+    }));
+    setSelectedItemId(item.id);
+  }, [allMediaAssets, playlist.items, setPlaylist, songTransport.state.songId, songTransport.state.status, songs]);
 
   const duplicateSelected = useCallback(() => {
     if (!selectedItem) return;
@@ -1011,6 +1061,7 @@ export function OperatorApp() {
   }, [songTransport.stop]);
   const clearSlide = useCallback(() => setOutput((current) => ({ ...current, slide: null })), []);
   const clearMedia = useCallback(() => setOutput((current) => ({ ...current, media: null })), []);
+  const clearBackground = useCallback(() => setOutput((current) => ({ ...current, background: null })), []);
   const clearProps = useCallback(() => setOutput((current) => ({ ...current, prop: null })), []);
   const clearAudio = useCallback(() => stopSong(), [stopSong]);
   const clearMessage = useCallback(
@@ -1147,7 +1198,7 @@ export function OperatorApp() {
           target.closest('[data-presenter-editor="true"]')
         )
       );
-      if (isEditingControl && !/^F(?:1|2|3|4|5|6|12)$/.test(event.key)) return;
+      if (isEditingControl && !/^F(?:1|2|3|4|5|6|7|12)$/.test(event.key)) return;
 
       if (event.key === 'ArrowRight') {
         event.preventDefault();
@@ -1173,6 +1224,9 @@ export function OperatorApp() {
       } else if (event.key === 'F6') {
         event.preventDefault();
         clearMessage();
+      } else if (event.key === 'F7') {
+        event.preventDefault();
+        clearBackground();
       } else if (event.key === 'F12') {
         event.preventDefault();
         clearToLogo();
@@ -1181,7 +1235,7 @@ export function OperatorApp() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [clearAll, clearAudio, clearMedia, clearMessage, clearProps, clearSlide, clearToLogo, navigate, openSearch, searchOpen]);
+  }, [clearAll, clearAudio, clearBackground, clearMedia, clearMessage, clearProps, clearSlide, clearToLogo, navigate, openSearch, searchOpen]);
 
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -1198,10 +1252,10 @@ export function OperatorApp() {
     if (item) {
       setSelectedItemId(item.id);
     } else if (matchingSong) {
-      appendAndSelectServiceItem(playlistItemForSong(matchingSong));
+      insertAndSelectServiceItem(playlistItemForSong(matchingSong));
     } else {
       const presentation = presentations.find((candidate) => candidate.id === presentationId);
-      if (presentation) appendAndSelectServiceItem(playlistItemForPresentation(presentation));
+      if (presentation) insertAndSelectServiceItem(playlistItemForPresentation(presentation));
     }
     setSearchOpen(false);
   };
@@ -1222,10 +1276,18 @@ export function OperatorApp() {
           activePlaylistId={activePlaylistId}
           presentations={presentations}
           songs={songs}
+          mediaAssets={allMediaAssets}
+          songTransport={songTransport.state}
           onCreatePresentation={createPresentation}
           onCreateSong={createSong}
           onAddPresentationToService={addPresentationToService}
           onAddSongToService={addSongToService}
+          onAddMediaToService={addMediaToService}
+          onAssociateSongTrack={associateSongTrack}
+          onPlaySong={(song, itemId) => void playSong(song, itemId)}
+          onPauseSong={pauseSong}
+          onResumeSong={resumeSong}
+          onStopSong={stopSong}
           onDuplicateSelected={duplicateSelected}
           onDeleteSelected={deleteSelected}
           onMoveServiceItem={moveServiceItem}
@@ -1263,6 +1325,7 @@ export function OperatorApp() {
               setSelectedArrangementEntryId(arrangementEntryId ?? null);
             }}
             onTriggerLyricsVideo={triggerLyricsVideo}
+            onTriggerBackground={triggerBackground}
             onTriggerMedia={triggerMedia}
             onTriggerSlide={triggerSlide}
             output={output}
@@ -1299,6 +1362,7 @@ export function OperatorApp() {
           networkStage={networkStage}
           onClearAll={clearAll}
           onClearAudio={clearAudio}
+          onClearBackground={clearBackground}
           onClearMedia={clearMedia}
           onClearMessage={clearMessage}
           onClearProps={clearProps}
@@ -1336,6 +1400,11 @@ export function OperatorApp() {
         onRescanResources={() => {
           void window.kidsPresenter?.rescanResourceLibrary().then(setResourceLibrary);
         }}
+        onImportFiles={() => {
+          void window.kidsPresenter?.importResourceFiles().then(setResourceLibrary);
+        }}
+        onSetBackground={triggerBackground}
+        onAddToService={addMediaToService}
         onTriggerMedia={triggerMedia}
         output={output}
         songTransport={songTransport.state}

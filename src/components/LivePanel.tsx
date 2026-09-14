@@ -11,6 +11,7 @@ interface LivePanelProps {
   onNavigate: (direction: -1 | 1) => void;
   onClearAll: () => void;
   onClearSlide: () => void;
+  onClearBackground: () => void;
   onClearMedia: () => void;
   onClearProps: () => void;
   onClearAudio: () => void;
@@ -22,14 +23,15 @@ interface LivePanelProps {
 function outputLabel(output: OutputState) {
   if (output.black) return 'Black';
   if (output.logo) return 'Logo';
-  if (output.slide) return output.slide.presentationTitle;
   if (output.media) return output.media.title;
+  if (output.slide) return output.slide.presentationTitle;
+  if (output.background) return output.background.title;
   return 'No active content';
 }
 
 function hasLiveContent(output: OutputState) {
   return Boolean(
-    output.black || output.logo || output.slide || output.media || output.prop || output.message ||
+    output.black || output.logo || output.background || output.slide || output.media || output.prop || output.message ||
     output.announcement || output.audio || output.liveVideo,
   );
 }
@@ -45,6 +47,7 @@ export function LivePanel({
   onNavigate,
   onClearAll,
   onClearSlide,
+  onClearBackground,
   onClearMedia,
   onClearProps,
   onClearAudio,
@@ -65,7 +68,7 @@ export function LivePanel({
 
   const live = hasLiveContent(output) || audioCueLive;
   const layerRows = [
-    ['Background', Boolean(output.media)],
+    ['Background', Boolean(output.background)],
     ['Media', Boolean(output.media)],
     ['Slide', Boolean(output.slide)],
     ['Prop', Boolean(output.prop)],
@@ -108,6 +111,13 @@ export function LivePanel({
             <span>{output.media.kind.toUpperCase()}</span>
           </div>
         ) : null}
+        {output.background ? (
+          <div className="mediaNowPlaying backgroundNowPlaying">
+            <Icon name="media" />
+            <div><small>BACKGROUND LAYER</small><strong>{output.background.title}</strong></div>
+            <span>{output.background.kind.toUpperCase()}</span>
+          </div>
+        ) : null}
         <div className="transportControls">
           <button onClick={() => onNavigate(-1)} type="button"><Icon name="previous" />Previous</button>
           <button onClick={() => onNavigate(1)} type="button">Next<Icon name="next" /></button>
@@ -120,6 +130,7 @@ export function LivePanel({
           <button className="clearAllButton" onClick={clearAllLayers} type="button"><kbd>F1</kbd><span>Clear All</span></button>
           <button onClick={onClearSlide} type="button"><kbd>F2</kbd><span>Slide</span></button>
           <button onClick={onClearMedia} type="button"><kbd>F3</kbd><span>Media</span></button>
+          <button onClick={onClearBackground} type="button"><kbd>F7</kbd><span>Background</span></button>
           <button onClick={onClearProps} type="button"><kbd>F4</kbd><span>Props</span></button>
           <button onClick={clearAudioLayer} type="button"><kbd>F5</kbd><span>Audio</span></button>
           <button onClick={onClearMessage} type="button"><kbd>F6</kbd><span>Message</span></button>
